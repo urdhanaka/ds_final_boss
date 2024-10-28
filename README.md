@@ -10,4 +10,9 @@ the kubernetes cluster. There are several ways to do this, one of them is using 
 cluster
 
 ## Progression
+- Monday, 7 October 2024
+  - Picked the final title
 
+- Wednesday, 9 October 2024
+  - First assignment
+  - start to learn how Kubernetes work
