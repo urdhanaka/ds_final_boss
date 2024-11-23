@@ -28,3 +28,7 @@ cluster
 
 - Wednesday, 20 November 2024
   - Using minikube again, learn about vcluster to create virtual cluster
+
+## How-to implement multi-tenancy
+1. Cluster-per-tenant
+2. Namespace-per-tenant
