@@ -30,5 +30,10 @@ cluster
   - Using minikube again, learn about vcluster to create virtual cluster
 
 ## How-to implement multi-tenancy
-1. Cluster-per-tenant
-2. Namespace-per-tenant
+1. [Namespace-per-tenant](/namespace-per-tenant/NAMESPACE_PER_TENANT.md)
+2. Cluster-per-tenant
+
+<!-- ## Multi-tenancy scenario -->
+<!-- 1.  -->
+<!-- 2.  -->
+<!-- 3.  -->

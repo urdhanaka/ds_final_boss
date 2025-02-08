@@ -1,0 +1,5 @@
+* node grpc
+* start cluster (master + worker) with grpc from http request on frontend
+
+- http for frontend
+- what to do after creating cluster

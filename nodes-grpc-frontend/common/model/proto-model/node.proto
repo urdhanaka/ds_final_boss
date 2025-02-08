@@ -1,0 +1,39 @@
+syntax = "proto3";
+option go_package = "./common/model/proto-model";
+
+enum Status {
+  UNDEFINED = 0;
+  STATUS_AVAILABLE = 1;
+  STATUS_UNAVAILABLE = 2;
+}
+
+message Empty {}
+
+message NodeStatus {
+  string hostname = 1;
+  string ip_address = 2;
+  string grpc_port = 3;
+  Status status = 4;
+}
+
+message MasterNode {
+  string ip_address = 1;
+  string grpc_port = 2;
+  string node_token = 3;
+}
+
+// token for joining agent to server
+message ServerToken {
+  string token = 1;
+}
+
+message NodeList {
+  repeated NodeStatus nodes = 1;
+}
+
+service Node {
+  rpc Heartbeat(Empty) returns (NodeStatus) {}
+  rpc StartMaster(ServerToken) returns (Empty) {}
+  rpc StartWorker(MasterNode) returns (Empty) {}
+  rpc GetAllNode(Empty) returns (NodeList) {}
+}
