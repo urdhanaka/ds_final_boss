@@ -11,7 +11,6 @@ import (
 	"net/http"
 	"nodes-grpc/common/config"
 	"nodes-grpc/common/model"
-	"nodes-grpc/utils"
 	"os"
 	"os/exec"
 
@@ -40,6 +39,30 @@ func init() {
 	thisNode = config.ThisNodeIdentification()
 }
 
+func connectToMainServer(mainServerIPAddress string) error {
+	bodyBytes, _ := json.Marshal(thisNode)
+	bodyReader := bytes.NewReader(bodyBytes)
+
+	req, err := http.NewRequest(http.MethodPost, mainServerIPAddress, bodyReader)
+	if err != nil {
+		slog.Error("Error connecting main server",
+			"error", err.Error())
+
+		return err
+	}
+
+	req.Header.Set("Content-Type", "application/json")
+	_, err = http.DefaultClient.Do(req)
+	if err != nil {
+		slog.Error("Error getting main server response",
+			"error", err.Error())
+
+		return err
+	}
+
+	return nil
+}
+
 func (NodeServer) Heartbeat(context.Context, *model.Empty) (*model.NodeStatus, error) {
 	nodeStatus := model.NodeStatus{
 		Hostname:  thisNode.Hostname,
@@ -52,7 +75,11 @@ func (NodeServer) Heartbeat(context.Context, *model.Empty) (*model.NodeStatus, e
 }
 
 func (NodeServer) StartMaster(_ context.Context, serverToken *model.ServerToken) (*model.Empty, error) {
-	command := config.StartCommand(true, serverToken.GetToken(), "")
+	command := config.StartCommand(
+		true,                   // is this node the master node?
+		serverToken.GetToken(), // string of token
+		"",                     // IP of master node (used if this node is the worker node)
+	)
 
 	cmd := exec.Command("bash", "-c",
 		command,
@@ -69,7 +96,11 @@ func (NodeServer) StartMaster(_ context.Context, serverToken *model.ServerToken)
 }
 
 func (NodeServer) StartWorker(_ context.Context, masterNode *model.MasterNode) (*model.Empty, error) {
-	command := config.StartCommand(false, masterNode.NodeToken, masterNode.IpAddress)
+	command := config.StartCommand(
+		false,                // is this node the master node?
+		masterNode.NodeToken, // string of token
+		masterNode.IpAddress, // IP of master node (used if this node is the worker node)
+	)
 
 	cmd := exec.Command("bash", "-c",
 		command,
@@ -101,7 +132,8 @@ func main() {
 	model.RegisterNodeServer(srv, nodeSrv)
 
 	slog.Info("Starting node server...",
-		"port", config.NodeServiceGRPCPort)
+		"port", config.NodeServiceGRPCPort,
+	)
 
 	l, err := net.Listen("tcp", ":"+config.NodeServiceGRPCPort)
 	if err != nil {
@@ -109,25 +141,13 @@ func main() {
 		os.Exit(1)
 	}
 
-	hostname := utils.GetHostname()
-	ipAddress, err := utils.GetNodeIP()
+	err = connectToMainServer(mainServerAddress)
 	if err != nil {
-		ipAddress = "0.0.0.0"
+		slog.Error("Could not start node service",
+			"error", err.Error(),
+		)
+		os.Exit(1)
 	}
-
-	registerRequest := RegisterThisNode{
-		Hostname:  hostname,
-		IpAddress: ipAddress,
-		GrpcPort:  config.NodeServiceGRPCPort,
-	}
-	bodyBytes, _ := json.Marshal(registerRequest)
-
-	bodyReader := bytes.NewReader(bodyBytes)
-
-	req, err := http.NewRequest(http.MethodPost, mainServerAddress, bodyReader)
-	req.Header.Set("Content-Type", "application/json")
-	res, _ := http.DefaultClient.Do(req)
-	fmt.Println(res)
 
 	log.Fatal(srv.Serve(l))
 }

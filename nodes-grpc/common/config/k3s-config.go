@@ -12,7 +12,7 @@ const (
 // check for k3s binary
 //
 // return true if binary exists and executable. Using
-// default locations from k3s script
+// default locations from k3s script (/usr/local/bin/k3s, /opt/bin/k3s)
 func checkK3SBinary() bool {
 	isExistAndExecutable := false
 

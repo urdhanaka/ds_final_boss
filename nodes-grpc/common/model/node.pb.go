@@ -233,7 +233,6 @@ func (x *MasterNode) GetNodeToken() string {
 	return ""
 }
 
-// token for joining agent to server
 type ServerToken struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Token         string                 `protobuf:"bytes,1,opt,name=token,proto3" json:"token,omitempty"`
