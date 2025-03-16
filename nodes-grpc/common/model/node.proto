@@ -31,8 +31,9 @@ message NodeList {
 }
 
 service Node {
-  rpc Heartbeat(Empty) returns (NodeStatus) {}
   rpc StartMaster(ServerToken) returns (Empty) {}
   rpc StartWorker(MasterNode) returns (Empty) {}
-  rpc GetAllNode(Empty) returns (NodeList) {}
+  rpc Heartbeat(Empty) returns (NodeStatus) {}
+  rpc StopNode(Empty) returns (Empty) {}
+  rpc NodeStatus(Empty) returns (Empty) {}
 }

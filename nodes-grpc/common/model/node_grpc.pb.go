@@ -19,20 +19,20 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	Node_Heartbeat_FullMethodName   = "/Node/Heartbeat"
 	Node_StartMaster_FullMethodName = "/Node/StartMaster"
 	Node_StartWorker_FullMethodName = "/Node/StartWorker"
-	Node_GetAllNode_FullMethodName  = "/Node/GetAllNode"
+	Node_Heartbeat_FullMethodName   = "/Node/Heartbeat"
+	Node_StopNode_FullMethodName    = "/Node/StopNode"
 )
 
 // NodeClient is the client API for Node service.
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type NodeClient interface {
-	Heartbeat(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*NodeStatus, error)
 	StartMaster(ctx context.Context, in *ServerToken, opts ...grpc.CallOption) (*Empty, error)
 	StartWorker(ctx context.Context, in *MasterNode, opts ...grpc.CallOption) (*Empty, error)
-	GetAllNode(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*NodeList, error)
+	Heartbeat(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*NodeStatus, error)
+	StopNode(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*Empty, error)
 }
 
 type nodeClient struct {
@@ -41,16 +41,6 @@ type nodeClient struct {
 
 func NewNodeClient(cc grpc.ClientConnInterface) NodeClient {
 	return &nodeClient{cc}
-}
-
-func (c *nodeClient) Heartbeat(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*NodeStatus, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(NodeStatus)
-	err := c.cc.Invoke(ctx, Node_Heartbeat_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
 }
 
 func (c *nodeClient) StartMaster(ctx context.Context, in *ServerToken, opts ...grpc.CallOption) (*Empty, error) {
@@ -73,10 +63,20 @@ func (c *nodeClient) StartWorker(ctx context.Context, in *MasterNode, opts ...gr
 	return out, nil
 }
 
-func (c *nodeClient) GetAllNode(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*NodeList, error) {
+func (c *nodeClient) Heartbeat(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*NodeStatus, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(NodeList)
-	err := c.cc.Invoke(ctx, Node_GetAllNode_FullMethodName, in, out, cOpts...)
+	out := new(NodeStatus)
+	err := c.cc.Invoke(ctx, Node_Heartbeat_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *nodeClient) StopNode(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*Empty, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(Empty)
+	err := c.cc.Invoke(ctx, Node_StopNode_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -87,10 +87,10 @@ func (c *nodeClient) GetAllNode(ctx context.Context, in *Empty, opts ...grpc.Cal
 // All implementations must embed UnimplementedNodeServer
 // for forward compatibility.
 type NodeServer interface {
-	Heartbeat(context.Context, *Empty) (*NodeStatus, error)
 	StartMaster(context.Context, *ServerToken) (*Empty, error)
 	StartWorker(context.Context, *MasterNode) (*Empty, error)
-	GetAllNode(context.Context, *Empty) (*NodeList, error)
+	Heartbeat(context.Context, *Empty) (*NodeStatus, error)
+	StopNode(context.Context, *Empty) (*Empty, error)
 	mustEmbedUnimplementedNodeServer()
 }
 
@@ -101,17 +101,17 @@ type NodeServer interface {
 // pointer dereference when methods are called.
 type UnimplementedNodeServer struct{}
 
-func (UnimplementedNodeServer) Heartbeat(context.Context, *Empty) (*NodeStatus, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method Heartbeat not implemented")
-}
 func (UnimplementedNodeServer) StartMaster(context.Context, *ServerToken) (*Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method StartMaster not implemented")
 }
 func (UnimplementedNodeServer) StartWorker(context.Context, *MasterNode) (*Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method StartWorker not implemented")
 }
-func (UnimplementedNodeServer) GetAllNode(context.Context, *Empty) (*NodeList, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method GetAllNode not implemented")
+func (UnimplementedNodeServer) Heartbeat(context.Context, *Empty) (*NodeStatus, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Heartbeat not implemented")
+}
+func (UnimplementedNodeServer) StopNode(context.Context, *Empty) (*Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method StopNode not implemented")
 }
 func (UnimplementedNodeServer) mustEmbedUnimplementedNodeServer() {}
 func (UnimplementedNodeServer) testEmbeddedByValue()              {}
@@ -132,24 +132,6 @@ func RegisterNodeServer(s grpc.ServiceRegistrar, srv NodeServer) {
 		t.testEmbeddedByValue()
 	}
 	s.RegisterService(&Node_ServiceDesc, srv)
-}
-
-func _Node_Heartbeat_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(Empty)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(NodeServer).Heartbeat(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: Node_Heartbeat_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(NodeServer).Heartbeat(ctx, req.(*Empty))
-	}
-	return interceptor(ctx, in, info, handler)
 }
 
 func _Node_StartMaster_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
@@ -188,20 +170,38 @@ func _Node_StartWorker_Handler(srv interface{}, ctx context.Context, dec func(in
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Node_GetAllNode_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _Node_Heartbeat_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(Empty)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(NodeServer).GetAllNode(ctx, in)
+		return srv.(NodeServer).Heartbeat(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: Node_GetAllNode_FullMethodName,
+		FullMethod: Node_Heartbeat_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(NodeServer).GetAllNode(ctx, req.(*Empty))
+		return srv.(NodeServer).Heartbeat(ctx, req.(*Empty))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Node_StopNode_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(Empty)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(NodeServer).StopNode(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Node_StopNode_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(NodeServer).StopNode(ctx, req.(*Empty))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -214,10 +214,6 @@ var Node_ServiceDesc = grpc.ServiceDesc{
 	HandlerType: (*NodeServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
-			MethodName: "Heartbeat",
-			Handler:    _Node_Heartbeat_Handler,
-		},
-		{
 			MethodName: "StartMaster",
 			Handler:    _Node_StartMaster_Handler,
 		},
@@ -226,8 +222,12 @@ var Node_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _Node_StartWorker_Handler,
 		},
 		{
-			MethodName: "GetAllNode",
-			Handler:    _Node_GetAllNode_Handler,
+			MethodName: "Heartbeat",
+			Handler:    _Node_Heartbeat_Handler,
+		},
+		{
+			MethodName: "StopNode",
+			Handler:    _Node_StopNode_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
