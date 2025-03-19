@@ -1,11 +1,16 @@
 package virtualization
 
 import (
+	"archive/tar"
+	"bytes"
 	"context"
 	"fmt"
+	"io"
+	"log/slog"
 	"os"
 	"strings"
 
+	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/image"
 	"github.com/docker/docker/api/types/network"
@@ -13,9 +18,13 @@ import (
 	"github.com/docker/go-connections/nat"
 )
 
+const (
+	USED_DOCKERFILE_NAME = "k3s_alpine.Dockerfile"
+)
+
 // initialize docker connection using docker socket
 func initDockerConnection() *client.Client {
-	apiClient, err := client.NewClientWithOpts()
+	apiClient, err := client.NewClientWithOpts(client.FromEnv)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Could not connect to docker daemon: %s", err.Error())
 		os.Exit(1)
@@ -25,17 +34,102 @@ func initDockerConnection() *client.Client {
 }
 
 type DockerVirtualization struct {
-	Connection *client.Client
+	connection *client.Client
 }
 
 func NewDockerVirtualization() *DockerVirtualization {
 	return &DockerVirtualization{
-		Connection: initDockerConnection(),
+		connection: initDockerConnection(),
 	}
 }
 
+func (d DockerVirtualization) Spawn() error {
+	// check if image exists in local
+	localImages, err := d.connection.ImageList(context.Background(), image.ListOptions{})
+	if err != nil {
+		return err
+	}
+
+	for _, image := range localImages {
+		imageTags := image.RepoTags
+
+		for _, tag := range imageTags {
+			if strings.Contains(tag, "docker-virt") {
+				slog.Info("Spawn(): docker-virt image exists on local")
+				return nil
+			}
+		}
+	}
+
+	err = d.buildImage()
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (d DockerVirtualization) buildImage() error {
+	dockerfileContext, err := getDockerfileTar("containers/k3s_alpine.Dockerfile")
+	if err != nil {
+		return err
+	}
+
+	buildResponse, err := d.connection.ImageBuild(context.Background(), dockerfileContext, types.ImageBuildOptions{
+		Tags: []string{
+			"localhost/docker-virt",
+		},
+		Context:    dockerfileContext,
+		Dockerfile: USED_DOCKERFILE_NAME,
+		Remove:     true,
+	})
+	if err != nil {
+		return err
+	}
+	defer buildResponse.Body.Close()
+
+	_, err = io.Copy(os.Stdout, buildResponse.Body)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func getDockerfileTar(dockerfilePath string) (*bytes.Reader, error) {
+	buf := new(bytes.Buffer)
+	tw := tar.NewWriter(buf)
+	defer tw.Close()
+
+	dockerFileReader, err := os.Open(dockerfilePath)
+	if err != nil {
+		return new(bytes.Reader), err
+	}
+	readDockerFile, err := io.ReadAll(dockerFileReader)
+	if err != nil {
+		return new(bytes.Reader), err
+	}
+
+	tarHeader := &tar.Header{
+		Name: USED_DOCKERFILE_NAME,
+		Size: int64(len(readDockerFile)),
+	}
+	err = tw.WriteHeader(tarHeader)
+	if err != nil {
+		return new(bytes.Reader), err
+	}
+	_, err = tw.Write(readDockerFile)
+	if err != nil {
+		return new(bytes.Reader), err
+	}
+
+	dockerFileTarReader := bytes.NewReader(buf.Bytes())
+
+	return dockerFileTarReader, nil
+}
+
 func (d DockerVirtualization) ListContainers() []container.Summary {
-	containers, err := d.Connection.ContainerList(context.Background(), container.ListOptions{All: true})
+	containers, err := d.connection.ContainerList(context.Background(), container.ListOptions{All: true})
 	if err != nil {
 		fmt.Println(err.Error())
 	}
@@ -44,7 +138,7 @@ func (d DockerVirtualization) ListContainers() []container.Summary {
 }
 
 func (d DockerVirtualization) ListPulledImages() []string {
-	imagesList, err := d.Connection.ImageList(context.Background(), image.ListOptions{All: true})
+	imagesList, err := d.connection.ImageList(context.Background(), image.ListOptions{All: true})
 	if err != nil {
 		fmt.Println(err)
 	}
@@ -69,7 +163,7 @@ func (d DockerVirtualization) pullImage() error {
 		}
 	}
 
-	reader, err := d.Connection.ImagePull(context.Background(), "docker.io/library/k3s", image.PullOptions{})
+	reader, err := d.connection.ImagePull(context.Background(), "docker.io/library/k3s", image.PullOptions{})
 	if err != nil {
 		return err
 	}
@@ -84,7 +178,7 @@ func (d DockerVirtualization) CreateMainContainer(token string) error {
 		return err
 	}
 
-	resp, err := d.Connection.ContainerCreate(context.Background(), &container.Config{
+	resp, err := d.connection.ContainerCreate(context.Background(), &container.Config{
 		Image:    "rancher/k3s",
 		Cmd:      []string{"agent", "--server", "https://", "--token"},
 		Hostname: "server-1",
@@ -97,7 +191,7 @@ func (d DockerVirtualization) CreateMainContainer(token string) error {
 		return err
 	}
 
-	err = d.Connection.ContainerStart(context.Background(), resp.ID, container.StartOptions{})
+	err = d.connection.ContainerStart(context.Background(), resp.ID, container.StartOptions{})
 	if err != nil {
 		return err
 	}
@@ -111,7 +205,7 @@ func (d DockerVirtualization) CreateWorkerContainer() error {
 		return err
 	}
 
-	_, err = d.Connection.ContainerCreate(context.Background(), &container.Config{
+	_, err = d.connection.ContainerCreate(context.Background(), &container.Config{
 		Image:    "rancher/k3s",
 		Cmd:      []string{"server"},
 		Hostname: "worker-1",
