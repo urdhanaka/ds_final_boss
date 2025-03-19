@@ -8,6 +8,8 @@ package page
 import "github.com/a-h/templ"
 import templruntime "github.com/a-h/templ/runtime"
 
+import "nodes-grpc-frontend/components/requirements"
+
 import (
 	"nodes-grpc-frontend/common/model/proto-model"
 	"nodes-grpc-frontend/components/base"
@@ -47,7 +49,11 @@ func Dashboard(nodesModel *proto_model.NodeList) templ.Component {
 				}()
 			}
 			ctx = templ.InitializeContext(ctx)
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<button>Create Cluster</button>")
+			templ_7745c5c3_Err = requirements.Requirements().Render(ctx, templ_7745c5c3_Buffer)
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, " ")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}

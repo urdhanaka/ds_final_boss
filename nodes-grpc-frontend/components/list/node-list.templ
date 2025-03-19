@@ -3,14 +3,15 @@ package list
 import "nodes-grpc-frontend/common/model/proto-model"
 
 templ NodeList(nodeList *proto_model.NodeList) {
-  <div>
-    <h2>Node List</h2>
+<div>
+  <h2>Available Nodes:</h2>
+  <div class="flex">
     for _, node := range nodeList.Nodes {
-      <div>
-        <p>{ node.Hostname }</p>
-        <p>{ node.IpAddress }</p>
-        // <p>{ node.Status.Enum().String() }</p>
-      </div>
+    <div>
+      <p>{ node.Hostname }</p>
+      <p>{ node.IpAddress }</p>
+    </div>
     }
   </div>
+</div>
 }

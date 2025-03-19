@@ -1,14 +1,16 @@
 package page
 
+import "nodes-grpc-frontend/components/requirements"
+
 import (
-	"nodes-grpc-frontend/components/base"
-	"nodes-grpc-frontend/components/list"
-	"nodes-grpc-frontend/common/model/proto-model"
-)
+    "nodes-grpc-frontend/common/model/proto-model"
+    "nodes-grpc-frontend/components/base"
+    "nodes-grpc-frontend/components/list"
+    )
 
 templ Dashboard(nodesModel *proto_model.NodeList) {
-	@base.Page() {
-		<button>Create Cluster</button>
-		@list.NodeList(nodesModel)
-	}
+  @base.Page() {
+    @requirements.Requirements()
+      @list.NodeList(nodesModel)
+  }
 }

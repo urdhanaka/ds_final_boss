@@ -15,6 +15,9 @@ func SetRouter(fiberApp *fiber.App) {
 
 	// static assets
 	fiberApp.Get("assets/styles.css", static.New("assets/css/styles.css"))
+	fiberApp.Get("assets/htmx.js", static.New("assets/js/htmx.js"))
+	fiberApp.Get("assets/htmx-json-enc.js", static.New("assets/js/htmx-json-enc.js"))
+	fiberApp.Get("assets/oval.svg", static.New("assets/svg/oval.svg"))
 
 	// welcome page
 	fiberApp.Get("/", func(c fiber.Ctx) error {
@@ -23,10 +26,16 @@ func SetRouter(fiberApp *fiber.App) {
 		return Render(c, page.Dashboard(nodes))
 	})
 
-    // nodes related
+	// nodes related
 	fiberApp.Get("/nodes", nodeHandler.GetNodes)
 	fiberApp.Post("/nodes", nodeHandler.Register)
 
-    // create the cluster
+	// get nodes status
+	fiberApp.Get("/nodes-status", nodeHandler.GetNodesStatus)
+
+	// create the cluster
 	fiberApp.Post("/create-cluster", nodeHandler.CreateCluster)
+
+	// temp
+	fiberApp.Post("/tmp", nodeHandler.TestHtmx)
 }

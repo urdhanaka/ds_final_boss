@@ -14,11 +14,6 @@
 
 # fiberApp.Post("/create-cluster", nodeHandler.CreateCluster)
 POST http://localhost:3000/create-cluster
-# {
-#   "token": "12345678"
-# }
-
-# GET http://localhost:3000/nodes
-
-	# Hostname  string `json:"hostname"`
-	# IpAddress string `json:"ip_address"`
+{
+  "token": "12345678"
+}
