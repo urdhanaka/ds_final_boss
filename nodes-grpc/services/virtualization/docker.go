@@ -4,6 +4,7 @@ import (
 	"archive/tar"
 	"bytes"
 	"context"
+	"database/sql"
 	"fmt"
 	"io"
 	"log/slog"
@@ -22,30 +23,21 @@ const (
 	USED_DOCKERFILE_NAME = "k3s_alpine.Dockerfile"
 )
 
-// initialize docker connection using docker socket
-func initDockerConnection() *client.Client {
-	apiClient, err := client.NewClientWithOpts(client.FromEnv)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Could not connect to docker daemon: %s", err.Error())
-		os.Exit(1)
-	}
-
-	return apiClient
-}
-
 type DockerVirtualization struct {
-	connection *client.Client
+	dockerConnection *client.Client
+	dbConnection     *sql.DB
 }
 
-func NewDockerVirtualization() *DockerVirtualization {
+func NewDockerVirtualization(dockerConnection *client.Client, dbConnection *sql.DB) *DockerVirtualization {
 	return &DockerVirtualization{
-		connection: initDockerConnection(),
+		dockerConnection: dockerConnection,
+		dbConnection:     dbConnection,
 	}
 }
 
 func (d DockerVirtualization) Spawn() error {
 	// check if image exists in local
-	localImages, err := d.connection.ImageList(context.Background(), image.ListOptions{})
+	localImages, err := d.dockerConnection.ImageList(context.Background(), image.ListOptions{})
 	if err != nil {
 		return err
 	}
@@ -69,13 +61,21 @@ func (d DockerVirtualization) Spawn() error {
 	return nil
 }
 
+func (d DockerVirtualization) Stop() error {
+	return nil
+}
+
+func (d DockerVirtualization) List() error {
+	return nil
+}
+
 func (d DockerVirtualization) buildImage() error {
 	dockerfileContext, err := getDockerfileTar("containers/k3s_alpine.Dockerfile")
 	if err != nil {
 		return err
 	}
 
-	buildResponse, err := d.connection.ImageBuild(context.Background(), dockerfileContext, types.ImageBuildOptions{
+	buildResponse, err := d.dockerConnection.ImageBuild(context.Background(), dockerfileContext, types.ImageBuildOptions{
 		Tags: []string{
 			"localhost/docker-virt",
 		},
@@ -129,7 +129,7 @@ func getDockerfileTar(dockerfilePath string) (*bytes.Reader, error) {
 }
 
 func (d DockerVirtualization) ListContainers() []container.Summary {
-	containers, err := d.connection.ContainerList(context.Background(), container.ListOptions{All: true})
+	containers, err := d.dockerConnection.ContainerList(context.Background(), container.ListOptions{All: true})
 	if err != nil {
 		fmt.Println(err.Error())
 	}
@@ -138,7 +138,7 @@ func (d DockerVirtualization) ListContainers() []container.Summary {
 }
 
 func (d DockerVirtualization) ListPulledImages() []string {
-	imagesList, err := d.connection.ImageList(context.Background(), image.ListOptions{All: true})
+	imagesList, err := d.dockerConnection.ImageList(context.Background(), image.ListOptions{All: true})
 	if err != nil {
 		fmt.Println(err)
 	}
@@ -163,7 +163,7 @@ func (d DockerVirtualization) pullImage() error {
 		}
 	}
 
-	reader, err := d.connection.ImagePull(context.Background(), "docker.io/library/k3s", image.PullOptions{})
+	reader, err := d.dockerConnection.ImagePull(context.Background(), "docker.io/library/k3s", image.PullOptions{})
 	if err != nil {
 		return err
 	}
@@ -178,7 +178,7 @@ func (d DockerVirtualization) CreateMainContainer(token string) error {
 		return err
 	}
 
-	resp, err := d.connection.ContainerCreate(context.Background(), &container.Config{
+	resp, err := d.dockerConnection.ContainerCreate(context.Background(), &container.Config{
 		Image:    "rancher/k3s",
 		Cmd:      []string{"agent", "--server", "https://", "--token"},
 		Hostname: "server-1",
@@ -191,7 +191,7 @@ func (d DockerVirtualization) CreateMainContainer(token string) error {
 		return err
 	}
 
-	err = d.connection.ContainerStart(context.Background(), resp.ID, container.StartOptions{})
+	err = d.dockerConnection.ContainerStart(context.Background(), resp.ID, container.StartOptions{})
 	if err != nil {
 		return err
 	}
@@ -205,7 +205,7 @@ func (d DockerVirtualization) CreateWorkerContainer() error {
 		return err
 	}
 
-	_, err = d.connection.ContainerCreate(context.Background(), &container.Config{
+	_, err = d.dockerConnection.ContainerCreate(context.Background(), &container.Config{
 		Image:    "rancher/k3s",
 		Cmd:      []string{"server"},
 		Hostname: "worker-1",

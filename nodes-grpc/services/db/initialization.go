@@ -1,0 +1,51 @@
+package db
+
+import (
+	"database/sql"
+	"errors"
+	"log/slog"
+	"os"
+
+	_ "github.com/mattn/go-sqlite3"
+)
+
+func InitDB() *sql.DB {
+	not_exist := false
+
+	// check if db file exist
+	_, err := os.Stat("node.db")
+	if errors.Is(err, os.ErrNotExist) {
+		not_exist = true
+
+		_, err := os.Create("node.db")
+		if err != nil {
+			slog.Error("DB: cannot create sqlite db file",
+				"error", err.Error(),
+			)
+			os.Exit(1)
+		}
+	}
+
+	db, err := sql.Open("sqlite3", "node.db")
+	if err != nil {
+		slog.Error("DB: cannot open sqlite db file",
+			"error", err.Error(),
+		)
+		os.Exit(1)
+	}
+
+	if not_exist {
+		if _, err := db.Exec(`
+        CREATE TABLE Nodes (
+            UUID    BLOB PRIMARY KEY,
+            NodeIP  TEXT
+        );`); err != nil {
+			slog.Error("DB: cannot create table inside db file",
+				"error", err.Error(),
+			)
+			os.Exit(1)
+		}
+	}
+
+	return db
+}
