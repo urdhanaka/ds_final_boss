@@ -1,0 +1,28 @@
+<domain type="kvm">
+  <name>temp</name>
+  <memory>786432</memory>
+  <vcpu>2</vcpu>
+  <os>
+    <type arch="x86_64">hvm</type>
+    <boot dev="cdrom"/>
+  </os>
+  <devices>
+    <!-- <emulator>/usr/bin/qemu-system-x86_64</emulator> -->
+    <disk type="file" device="cdrom">
+      <driver name="qemu" type="raw"/>
+      <source file="/var/home/urdhanaka/Downloads/alpine-virt-3.21.3-x86_64.iso"/>
+      <target dev="hda" bus="ide"/>
+      <readonly/>
+    </disk>
+    <disk type="file" device="disk">
+      <driver name="qemu" type="qcow2"/>
+      <source file="/var/lib/libvirt/images/test.qcow2"/>
+      <target dev="vda" bus="virtio"/>
+    </disk>
+    <interface type="network">
+      <source network="default"/>
+    </interface>
+    <graphics type="vnc" port='-1' listen="127.0.0.1"/>
+  </devices>
+</domain>
+
