@@ -1,5 +1,6 @@
 package db
 
 type DatabaseInterface interface {
-	Store() error
+	Store(nodeModel NodesModel) error
+	Delete(nodeModel NodesModel) error
 }
