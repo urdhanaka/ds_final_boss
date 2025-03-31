@@ -1,50 +1,61 @@
 syntax = "proto3";
 option go_package = "./common/model/proto";
 
-enum Status {
-  UNDEFINED = 0;
-  STATUS_AVAILABLE = 1;
-  STATUS_UNAVAILABLE = 2;
-}
+// enum Status {
+//   UNDEFINED = 0;
+//   STATUS_AVAILABLE = 1;
+//   STATUS_UNAVAILABLE = 2;
+// }
 
 message Empty {}
-
-message Temp {
-  string status = 1;
-}
-
-message NodeStatus {
-  string hostname = 1;
-  string ip_address = 2;
-  string grpc_port = 3;
-  Status status = 4;
-}
-
-message MasterNode {
-  string ip_address = 1;
-  string grpc_port = 2;
-  string node_token = 3;
-}
-
-message ServerToken {
-  string token = 1;
-}
-
-message NodeList {
-  repeated NodeStatus nodes = 1;
-}
 
 message NodeRequirements {
   int64 cpu = 1;
   int64 memory = 2;
+  int64 storage = 3;
 }
 
-service Node {
-  rpc ThisNodeStatus(Empty) returns (Temp) {}
-  rpc CreateNode(NodeRequirements) returns (Empty) {}
+message MasterRequirement {
+  string token = 1;
+  NodeRequirements requirements = 2;
+}
 
-  rpc CreateMaster(ServerToken) returns (Empty) {}
-  rpc CreateWorker(MasterNode) returns (Empty) {}
-  rpc Status(Empty) returns (NodeStatus) {}
-  rpc StopNode(Empty) returns (Empty) {}
+message WorkerRequirement {
+  string token = 1;
+  NodeRequirements requirements = 2;
+}
+
+message IpAddress {
+  string ip_address = 1;
+}
+
+// message Temp {
+//   string status = 1;
+// }
+
+// message NodeStatus {
+//   string hostname = 1;
+//   string ip_address = 2;
+//   string grpc_port = 3;
+//   Status status = 4;
+// }
+
+// message ServerToken {
+//   string token = 1;
+// }
+
+// message NodeList {
+//   repeated NodeStatus nodes = 1;
+// }
+
+service Node {
+  // TODO: COMPLETE THIS FIRST
+  rpc CreateMaster(MasterRequirement) returns (IpAddress) {}
+  rpc CreateWorker(WorkerRequirement) returns (Empty) {}
+
+  // do this later...
+  // rpc CreateNode(NodeRequirements) returns (Empty) {}
+  // rpc ThisNodeStatus(Empty) returns (Temp) {}
+  // rpc Status(Empty) returns (NodeStatus) {}
+  // rpc StopNode(Empty) returns (Empty) {}
 }

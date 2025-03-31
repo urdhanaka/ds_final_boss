@@ -1,0 +1,5 @@
+<network>
+  <name>wireless-network</name>
+  <bridge name="%s"/>
+  <forward mode="bridge"/>
+</network>

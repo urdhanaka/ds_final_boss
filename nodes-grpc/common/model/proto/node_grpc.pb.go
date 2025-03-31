@@ -19,24 +19,17 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	Node_ThisNodeStatus_FullMethodName = "/Node/ThisNodeStatus"
-	Node_CreateNode_FullMethodName     = "/Node/CreateNode"
-	Node_CreateMaster_FullMethodName   = "/Node/CreateMaster"
-	Node_CreateWorker_FullMethodName   = "/Node/CreateWorker"
-	Node_Status_FullMethodName         = "/Node/Status"
-	Node_StopNode_FullMethodName       = "/Node/StopNode"
+	Node_CreateMaster_FullMethodName = "/Node/CreateMaster"
+	Node_CreateWorker_FullMethodName = "/Node/CreateWorker"
 )
 
 // NodeClient is the client API for Node service.
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type NodeClient interface {
-	ThisNodeStatus(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*Temp, error)
-	CreateNode(ctx context.Context, in *NodeRequirements, opts ...grpc.CallOption) (*Empty, error)
-	CreateMaster(ctx context.Context, in *ServerToken, opts ...grpc.CallOption) (*Empty, error)
-	CreateWorker(ctx context.Context, in *MasterNode, opts ...grpc.CallOption) (*Empty, error)
-	Status(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*NodeStatus, error)
-	StopNode(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*Empty, error)
+	// TODO: COMPLETE THIS FIRST
+	CreateMaster(ctx context.Context, in *MasterRequirement, opts ...grpc.CallOption) (*IpAddress, error)
+	CreateWorker(ctx context.Context, in *WorkerRequirement, opts ...grpc.CallOption) (*Empty, error)
 }
 
 type nodeClient struct {
@@ -47,29 +40,9 @@ func NewNodeClient(cc grpc.ClientConnInterface) NodeClient {
 	return &nodeClient{cc}
 }
 
-func (c *nodeClient) ThisNodeStatus(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*Temp, error) {
+func (c *nodeClient) CreateMaster(ctx context.Context, in *MasterRequirement, opts ...grpc.CallOption) (*IpAddress, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(Temp)
-	err := c.cc.Invoke(ctx, Node_ThisNodeStatus_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *nodeClient) CreateNode(ctx context.Context, in *NodeRequirements, opts ...grpc.CallOption) (*Empty, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(Empty)
-	err := c.cc.Invoke(ctx, Node_CreateNode_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *nodeClient) CreateMaster(ctx context.Context, in *ServerToken, opts ...grpc.CallOption) (*Empty, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(Empty)
+	out := new(IpAddress)
 	err := c.cc.Invoke(ctx, Node_CreateMaster_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -77,30 +50,10 @@ func (c *nodeClient) CreateMaster(ctx context.Context, in *ServerToken, opts ...
 	return out, nil
 }
 
-func (c *nodeClient) CreateWorker(ctx context.Context, in *MasterNode, opts ...grpc.CallOption) (*Empty, error) {
+func (c *nodeClient) CreateWorker(ctx context.Context, in *WorkerRequirement, opts ...grpc.CallOption) (*Empty, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(Empty)
 	err := c.cc.Invoke(ctx, Node_CreateWorker_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *nodeClient) Status(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*NodeStatus, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(NodeStatus)
-	err := c.cc.Invoke(ctx, Node_Status_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *nodeClient) StopNode(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*Empty, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(Empty)
-	err := c.cc.Invoke(ctx, Node_StopNode_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -111,12 +64,9 @@ func (c *nodeClient) StopNode(ctx context.Context, in *Empty, opts ...grpc.CallO
 // All implementations must embed UnimplementedNodeServer
 // for forward compatibility.
 type NodeServer interface {
-	ThisNodeStatus(context.Context, *Empty) (*Temp, error)
-	CreateNode(context.Context, *NodeRequirements) (*Empty, error)
-	CreateMaster(context.Context, *ServerToken) (*Empty, error)
-	CreateWorker(context.Context, *MasterNode) (*Empty, error)
-	Status(context.Context, *Empty) (*NodeStatus, error)
-	StopNode(context.Context, *Empty) (*Empty, error)
+	// TODO: COMPLETE THIS FIRST
+	CreateMaster(context.Context, *MasterRequirement) (*IpAddress, error)
+	CreateWorker(context.Context, *WorkerRequirement) (*Empty, error)
 	mustEmbedUnimplementedNodeServer()
 }
 
@@ -127,23 +77,11 @@ type NodeServer interface {
 // pointer dereference when methods are called.
 type UnimplementedNodeServer struct{}
 
-func (UnimplementedNodeServer) ThisNodeStatus(context.Context, *Empty) (*Temp, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method ThisNodeStatus not implemented")
-}
-func (UnimplementedNodeServer) CreateNode(context.Context, *NodeRequirements) (*Empty, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method CreateNode not implemented")
-}
-func (UnimplementedNodeServer) CreateMaster(context.Context, *ServerToken) (*Empty, error) {
+func (UnimplementedNodeServer) CreateMaster(context.Context, *MasterRequirement) (*IpAddress, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CreateMaster not implemented")
 }
-func (UnimplementedNodeServer) CreateWorker(context.Context, *MasterNode) (*Empty, error) {
+func (UnimplementedNodeServer) CreateWorker(context.Context, *WorkerRequirement) (*Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CreateWorker not implemented")
-}
-func (UnimplementedNodeServer) Status(context.Context, *Empty) (*NodeStatus, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method Status not implemented")
-}
-func (UnimplementedNodeServer) StopNode(context.Context, *Empty) (*Empty, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method StopNode not implemented")
 }
 func (UnimplementedNodeServer) mustEmbedUnimplementedNodeServer() {}
 func (UnimplementedNodeServer) testEmbeddedByValue()              {}
@@ -166,44 +104,8 @@ func RegisterNodeServer(s grpc.ServiceRegistrar, srv NodeServer) {
 	s.RegisterService(&Node_ServiceDesc, srv)
 }
 
-func _Node_ThisNodeStatus_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(Empty)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(NodeServer).ThisNodeStatus(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: Node_ThisNodeStatus_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(NodeServer).ThisNodeStatus(ctx, req.(*Empty))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _Node_CreateNode_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(NodeRequirements)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(NodeServer).CreateNode(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: Node_CreateNode_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(NodeServer).CreateNode(ctx, req.(*NodeRequirements))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
 func _Node_CreateMaster_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(ServerToken)
+	in := new(MasterRequirement)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -215,13 +117,13 @@ func _Node_CreateMaster_Handler(srv interface{}, ctx context.Context, dec func(i
 		FullMethod: Node_CreateMaster_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(NodeServer).CreateMaster(ctx, req.(*ServerToken))
+		return srv.(NodeServer).CreateMaster(ctx, req.(*MasterRequirement))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
 func _Node_CreateWorker_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(MasterNode)
+	in := new(WorkerRequirement)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -233,43 +135,7 @@ func _Node_CreateWorker_Handler(srv interface{}, ctx context.Context, dec func(i
 		FullMethod: Node_CreateWorker_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(NodeServer).CreateWorker(ctx, req.(*MasterNode))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _Node_Status_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(Empty)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(NodeServer).Status(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: Node_Status_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(NodeServer).Status(ctx, req.(*Empty))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _Node_StopNode_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(Empty)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(NodeServer).StopNode(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: Node_StopNode_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(NodeServer).StopNode(ctx, req.(*Empty))
+		return srv.(NodeServer).CreateWorker(ctx, req.(*WorkerRequirement))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -282,28 +148,12 @@ var Node_ServiceDesc = grpc.ServiceDesc{
 	HandlerType: (*NodeServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
-			MethodName: "ThisNodeStatus",
-			Handler:    _Node_ThisNodeStatus_Handler,
-		},
-		{
-			MethodName: "CreateNode",
-			Handler:    _Node_CreateNode_Handler,
-		},
-		{
 			MethodName: "CreateMaster",
 			Handler:    _Node_CreateMaster_Handler,
 		},
 		{
 			MethodName: "CreateWorker",
 			Handler:    _Node_CreateWorker_Handler,
-		},
-		{
-			MethodName: "Status",
-			Handler:    _Node_Status_Handler,
-		},
-		{
-			MethodName: "StopNode",
-			Handler:    _Node_StopNode_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

@@ -2,12 +2,8 @@ package config
 
 import (
 	"log/slog"
-	"nodes-grpc/common/model"
 	"nodes-grpc/utils"
-)
-
-const (
-	NodeServiceGRPCPort = "7000" // port for running the grpc service
+	"os"
 )
 
 type NodeIdentification struct {
@@ -25,9 +21,9 @@ func ThisNodeIdentification() (NodeIdentification, error) {
 
 		return NodeIdentification{}, err
 	}
-	thisNodeHostname, err := utils.GetHostname()
+	thisNodeHostname, err := os.Hostname()
 	if err != nil {
-		slog.Error("Could not get node IP hostname",
+		slog.Error("Could not get node hostname",
 			"error", err.Error(),
 		)
 
@@ -37,15 +33,7 @@ func ThisNodeIdentification() (NodeIdentification, error) {
 	thisNode := NodeIdentification{
 		Hostname:  thisNodeHostname,
 		IpAddress: thisNodeIP,
-		GrpcPort:  NodeServiceGRPCPort,
 	}
 
 	return thisNode, nil
-}
-
-func NewNodeList() *model.NodeList {
-	nodeList := new(model.NodeList)
-	nodeList.Nodes = make([]*model.NodeStatus, 0)
-
-	return nodeList
 }

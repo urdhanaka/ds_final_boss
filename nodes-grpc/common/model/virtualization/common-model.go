@@ -12,14 +12,16 @@ type VirtualizationCreateRequest struct {
 }
 
 type NodeCreateRequest struct {
-	// IsMaster    bool
-	// Hostname    string
+	// is the instance the master?
+	IsMaster bool
 
-	Cpu         int64
-	Memory      int64
-	MemorySize  string // B, MB, GB, etc..
-	Storage     int64
-	StorageSize string // B, MB, GB, etc..
+	// token for k3s
+	Token string
+
+	// vm requirements
+	Cpu     int64
+	Memory  int64
+	Storage int64
 }
 
 type VirtualizationCreateResponse struct {

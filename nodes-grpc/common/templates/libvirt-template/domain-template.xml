@@ -20,7 +20,8 @@
       <target dev="vda" bus="virtio"/>
     </disk>
     <interface type="network">
-      <source network="default"/>
+      <source network="macvlan-network"/>
+      <model type='virtio'/>
     </interface>
     <graphics type="vnc" port='-1' listen="127.0.0.1"/>
   </devices>
