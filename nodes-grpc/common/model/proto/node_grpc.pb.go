@@ -19,141 +19,141 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	Node_CreateMaster_FullMethodName = "/Node/CreateMaster"
-	Node_CreateWorker_FullMethodName = "/Node/CreateWorker"
+	NodeService_CreateMaster_FullMethodName = "/NodeService/CreateMaster"
+	NodeService_CreateWorker_FullMethodName = "/NodeService/CreateWorker"
 )
 
-// NodeClient is the client API for Node service.
+// NodeServiceClient is the client API for NodeService service.
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
-type NodeClient interface {
+type NodeServiceClient interface {
 	// TODO: COMPLETE THIS FIRST
-	CreateMaster(ctx context.Context, in *MasterRequirement, opts ...grpc.CallOption) (*IpAddress, error)
-	CreateWorker(ctx context.Context, in *WorkerRequirement, opts ...grpc.CallOption) (*Empty, error)
+	CreateMaster(ctx context.Context, in *CreateMasterRequest, opts ...grpc.CallOption) (*CreateMasterResponse, error)
+	CreateWorker(ctx context.Context, in *CreateWorkerRequest, opts ...grpc.CallOption) (*CreateWorkerResponse, error)
 }
 
-type nodeClient struct {
+type nodeServiceClient struct {
 	cc grpc.ClientConnInterface
 }
 
-func NewNodeClient(cc grpc.ClientConnInterface) NodeClient {
-	return &nodeClient{cc}
+func NewNodeServiceClient(cc grpc.ClientConnInterface) NodeServiceClient {
+	return &nodeServiceClient{cc}
 }
 
-func (c *nodeClient) CreateMaster(ctx context.Context, in *MasterRequirement, opts ...grpc.CallOption) (*IpAddress, error) {
+func (c *nodeServiceClient) CreateMaster(ctx context.Context, in *CreateMasterRequest, opts ...grpc.CallOption) (*CreateMasterResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(IpAddress)
-	err := c.cc.Invoke(ctx, Node_CreateMaster_FullMethodName, in, out, cOpts...)
+	out := new(CreateMasterResponse)
+	err := c.cc.Invoke(ctx, NodeService_CreateMaster_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *nodeClient) CreateWorker(ctx context.Context, in *WorkerRequirement, opts ...grpc.CallOption) (*Empty, error) {
+func (c *nodeServiceClient) CreateWorker(ctx context.Context, in *CreateWorkerRequest, opts ...grpc.CallOption) (*CreateWorkerResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(Empty)
-	err := c.cc.Invoke(ctx, Node_CreateWorker_FullMethodName, in, out, cOpts...)
+	out := new(CreateWorkerResponse)
+	err := c.cc.Invoke(ctx, NodeService_CreateWorker_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-// NodeServer is the server API for Node service.
-// All implementations must embed UnimplementedNodeServer
+// NodeServiceServer is the server API for NodeService service.
+// All implementations must embed UnimplementedNodeServiceServer
 // for forward compatibility.
-type NodeServer interface {
+type NodeServiceServer interface {
 	// TODO: COMPLETE THIS FIRST
-	CreateMaster(context.Context, *MasterRequirement) (*IpAddress, error)
-	CreateWorker(context.Context, *WorkerRequirement) (*Empty, error)
-	mustEmbedUnimplementedNodeServer()
+	CreateMaster(context.Context, *CreateMasterRequest) (*CreateMasterResponse, error)
+	CreateWorker(context.Context, *CreateWorkerRequest) (*CreateWorkerResponse, error)
+	mustEmbedUnimplementedNodeServiceServer()
 }
 
-// UnimplementedNodeServer must be embedded to have
+// UnimplementedNodeServiceServer must be embedded to have
 // forward compatible implementations.
 //
 // NOTE: this should be embedded by value instead of pointer to avoid a nil
 // pointer dereference when methods are called.
-type UnimplementedNodeServer struct{}
+type UnimplementedNodeServiceServer struct{}
 
-func (UnimplementedNodeServer) CreateMaster(context.Context, *MasterRequirement) (*IpAddress, error) {
+func (UnimplementedNodeServiceServer) CreateMaster(context.Context, *CreateMasterRequest) (*CreateMasterResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CreateMaster not implemented")
 }
-func (UnimplementedNodeServer) CreateWorker(context.Context, *WorkerRequirement) (*Empty, error) {
+func (UnimplementedNodeServiceServer) CreateWorker(context.Context, *CreateWorkerRequest) (*CreateWorkerResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CreateWorker not implemented")
 }
-func (UnimplementedNodeServer) mustEmbedUnimplementedNodeServer() {}
-func (UnimplementedNodeServer) testEmbeddedByValue()              {}
+func (UnimplementedNodeServiceServer) mustEmbedUnimplementedNodeServiceServer() {}
+func (UnimplementedNodeServiceServer) testEmbeddedByValue()                     {}
 
-// UnsafeNodeServer may be embedded to opt out of forward compatibility for this service.
-// Use of this interface is not recommended, as added methods to NodeServer will
+// UnsafeNodeServiceServer may be embedded to opt out of forward compatibility for this service.
+// Use of this interface is not recommended, as added methods to NodeServiceServer will
 // result in compilation errors.
-type UnsafeNodeServer interface {
-	mustEmbedUnimplementedNodeServer()
+type UnsafeNodeServiceServer interface {
+	mustEmbedUnimplementedNodeServiceServer()
 }
 
-func RegisterNodeServer(s grpc.ServiceRegistrar, srv NodeServer) {
-	// If the following call pancis, it indicates UnimplementedNodeServer was
+func RegisterNodeServiceServer(s grpc.ServiceRegistrar, srv NodeServiceServer) {
+	// If the following call pancis, it indicates UnimplementedNodeServiceServer was
 	// embedded by pointer and is nil.  This will cause panics if an
 	// unimplemented method is ever invoked, so we test this at initialization
 	// time to prevent it from happening at runtime later due to I/O.
 	if t, ok := srv.(interface{ testEmbeddedByValue() }); ok {
 		t.testEmbeddedByValue()
 	}
-	s.RegisterService(&Node_ServiceDesc, srv)
+	s.RegisterService(&NodeService_ServiceDesc, srv)
 }
 
-func _Node_CreateMaster_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(MasterRequirement)
+func _NodeService_CreateMaster_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CreateMasterRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(NodeServer).CreateMaster(ctx, in)
+		return srv.(NodeServiceServer).CreateMaster(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: Node_CreateMaster_FullMethodName,
+		FullMethod: NodeService_CreateMaster_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(NodeServer).CreateMaster(ctx, req.(*MasterRequirement))
+		return srv.(NodeServiceServer).CreateMaster(ctx, req.(*CreateMasterRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Node_CreateWorker_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(WorkerRequirement)
+func _NodeService_CreateWorker_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CreateWorkerRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(NodeServer).CreateWorker(ctx, in)
+		return srv.(NodeServiceServer).CreateWorker(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: Node_CreateWorker_FullMethodName,
+		FullMethod: NodeService_CreateWorker_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(NodeServer).CreateWorker(ctx, req.(*WorkerRequirement))
+		return srv.(NodeServiceServer).CreateWorker(ctx, req.(*CreateWorkerRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-// Node_ServiceDesc is the grpc.ServiceDesc for Node service.
+// NodeService_ServiceDesc is the grpc.ServiceDesc for NodeService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
-var Node_ServiceDesc = grpc.ServiceDesc{
-	ServiceName: "Node",
-	HandlerType: (*NodeServer)(nil),
+var NodeService_ServiceDesc = grpc.ServiceDesc{
+	ServiceName: "NodeService",
+	HandlerType: (*NodeServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
 			MethodName: "CreateMaster",
-			Handler:    _Node_CreateMaster_Handler,
+			Handler:    _NodeService_CreateMaster_Handler,
 		},
 		{
 			MethodName: "CreateWorker",
-			Handler:    _Node_CreateWorker_Handler,
+			Handler:    _NodeService_CreateWorker_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

@@ -9,25 +9,28 @@ option go_package = "./common/model/proto";
 
 message Empty {}
 
-message NodeRequirements {
+message CreateNodeRequirements {
   int64 cpu = 1;
   int64 memory = 2;
   int64 storage = 3;
 }
 
-message MasterRequirement {
+message CreateMasterRequest {
   string token = 1;
-  NodeRequirements requirements = 2;
+  CreateNodeRequirements requirements = 2;
 }
 
-message WorkerRequirement {
-  string token = 1;
-  NodeRequirements requirements = 2;
-}
-
-message IpAddress {
+message CreateMasterResponse {
   string ip_address = 1;
 }
+
+message CreateWorkerRequest {
+  string token = 1;
+  string ip_address = 2;
+  CreateNodeRequirements requirements = 3;
+}
+
+message CreateWorkerResponse {}
 
 // message Temp {
 //   string status = 1;
@@ -48,10 +51,10 @@ message IpAddress {
 //   repeated NodeStatus nodes = 1;
 // }
 
-service Node {
+service NodeService {
   // TODO: COMPLETE THIS FIRST
-  rpc CreateMaster(MasterRequirement) returns (IpAddress) {}
-  rpc CreateWorker(WorkerRequirement) returns (Empty) {}
+  rpc CreateMaster(CreateMasterRequest) returns (CreateMasterResponse) {}
+  rpc CreateWorker(CreateWorkerRequest) returns (CreateWorkerResponse) {}
 
   // do this later...
   // rpc CreateNode(NodeRequirements) returns (Empty) {}
