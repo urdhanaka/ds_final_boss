@@ -1,1 +1,1 @@
-<div id=\"container\" class=\"w-full flex p-4 gap-4\"><div id=\"start\" class=\"font-bold text-3xl\">Dashboard</div><div id=\"end\" class=\"flex justify-center items-center text-xl\">Hello, User</div></div>
+<div id=\"container\" class=\"w-full flex p-4 gap-4\"><div id=\"start\" class=\"font-bold text-3xl\">Dashboard</div></div>

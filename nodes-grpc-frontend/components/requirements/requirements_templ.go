@@ -29,7 +29,7 @@ func Requirements() templ.Component {
 			templ_7745c5c3_Var1 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<form hx-ext=\"json-enc\" hx-post=\"/tmp\" hx-swap=\"none\"><div class=\"flex gap-4 py-1\"><div><label for=\"vcpu\">CPU:</label> <select name=\"vcpu\" id=\"vcpu\"><option value=\"1\">1 vCPUs</option> <option value=\"2\">2 vCPUs</option> <option value=\"3\">3 vCPUs</option> <option value=\"4\">4 vCPUs</option></select></div><div><label for=\"memory\">Memory:</label> <input type=\"text\" inputmode=\"numeric\" id=\"memory\" name=\"memory\" class=\"appearance-none border border-zinc-600 px-2\" placeholder=\"memory in gb...\"></div></div><button type=\"submit\" class=\"p-4 bg-blue-700 rounded-lg text-white hover:cursor-pointer\">Create Cluster</button> <img class=\"htmx-indicator\" src=\"/assets/oval.svg\"></form>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<form><div class=\"flex gap-4 py-1\"><div><label for=\"vcpu\">CPU:</label> <select name=\"vcpu\" id=\"vcpu\"><option value=\"1\">1 vCPUs</option> <option value=\"2\">2 vCPUs</option> <option value=\"3\">3 vCPUs</option> <option value=\"4\">4 vCPUs</option></select></div><div><label for=\"memory\">Memory:</label> <input type=\"number\" inputmode=\"numeric\" id=\"memory\" name=\"memory\" class=\"appearance-none border border-zinc-600 px-2\" placeholder=\"memory in gb...\" required></div></div><div class=\"flex\"><button type=\"submit\" class=\"p-4 bg-blue-700 rounded-lg text-white hover:cursor-pointer\" onclick=\"sendRequirementJson()\">Create Cluster</button></div></form>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

@@ -1,16 +1,16 @@
 package page
 
 import "nodes-grpc-frontend/components/requirements"
+import "nodes-grpc-frontend/services/db_service"
 
 import (
-    "nodes-grpc-frontend/common/model/proto-model"
-    "nodes-grpc-frontend/components/base"
-    "nodes-grpc-frontend/components/list"
-    )
+"nodes-grpc-frontend/components/base"
+"nodes-grpc-frontend/components/list"
+)
 
-templ Dashboard(nodesModel *proto_model.NodeList) {
-  @base.Page() {
-    @requirements.Requirements()
-      @list.NodeList(nodesModel)
-  }
+templ Dashboard(nodes []db_service.Node) {
+@base.Page() {
+@requirements.Requirements()
+@list.NodeList(nodes)
+}
 }

@@ -1,15 +1,15 @@
 package list
 
-import "nodes-grpc-frontend/common/model/proto-model"
+import "nodes-grpc-frontend/services/db_service"
 
-templ NodeList(nodeList *proto_model.NodeList) {
+templ NodeList(nodes []db_service.Node) {
 <div>
   <h2>Available Nodes:</h2>
   <div class="flex">
-    for _, node := range nodeList.Nodes {
+    for _, node := range nodes {
     <div>
-      <p>{ node.Hostname }</p>
-      <p>{ node.IpAddress }</p>
+      <p>{ node.NodeIP }</p>
+      <p>{ node.GrpcPort }</p>
     </div>
     }
   </div>
