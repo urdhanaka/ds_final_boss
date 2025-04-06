@@ -1,49 +1,43 @@
 package handlers
 
 import (
-	"errors"
+	"fmt"
 	"log/slog"
-	"nodes-grpc-frontend/utils"
-
-	proto_model "nodes-grpc-frontend/common/model/proto-model"
-	web_model "nodes-grpc-frontend/common/model/web-model"
-	usecases "nodes-grpc-frontend/use-cases"
+	"nodes-grpc-frontend/common/model/web"
+	"nodes-grpc-frontend/services/db_service"
+	"nodes-grpc-frontend/services/node_service"
 
 	"github.com/gofiber/fiber/v3"
 )
 
 type NodeHandlerImpl interface {
-	GetLocalStorage(c fiber.Ctx) *proto_model.NodeList
 	Register(c fiber.Ctx) error
-	GetNodes(c fiber.Ctx) error
-	GetNodesStatus(c fiber.Ctx) error
+	GetNodes(c fiber.Ctx) []db_service.Node
 	CreateCluster(c fiber.Ctx) error
-	TestHtmx(c fiber.Ctx) error
+	// GetNodesStatus(c fiber.Ctx) error
 }
 
 type nodeHandler struct {
-	nodeUsecase usecases.NodeUsecase
+	nodeUsecase node_service.NodeUsecase
 }
 
-func NewNodeHandler(nodeUsecase usecases.NodeUsecase) NodeHandlerImpl {
+func NewNodeHandler(nodeService node_service.NodeUsecase) NodeHandlerImpl {
 	return &nodeHandler{
-		nodeUsecase: nodeUsecase,
+		nodeUsecase: nodeService,
 	}
-}
-
-func (h *nodeHandler) GetLocalStorage(c fiber.Ctx) *proto_model.NodeList {
-	return h.nodeUsecase.GetAllNodes(c.Context())
 }
 
 func (h *nodeHandler) Register(c fiber.Ctx) error {
 	// accepts only json request
 	c.Accepts("application/json")
 
-	reqBody := new(web_model.RegisterNodeRequest)
+	fmt.Println(c.GetReqHeaders())
+
+	reqBody := new(web.RegisterNodeRequest)
 
 	err := c.Bind().Body(reqBody)
 	if err != nil {
-		slog.Error("Could not get request body",
+		slog.Error("Register(): Could not get request body",
 			"error", err.Error(),
 		)
 
@@ -52,7 +46,7 @@ func (h *nodeHandler) Register(c fiber.Ctx) error {
 
 	err = h.nodeUsecase.RegisterNode(c.Context(), reqBody)
 	if err != nil {
-		slog.Error("Could not register node",
+		slog.Error("RegisterNode(): Could not register node",
 			"error", err.Error(),
 		)
 
@@ -62,65 +56,82 @@ func (h *nodeHandler) Register(c fiber.Ctx) error {
 	return c.SendString("Register node successful")
 }
 
-func (h *nodeHandler) GetNodes(c fiber.Ctx) error {
-	nodes := h.nodeUsecase.GetAllNodes(c.Context())
-
-	response := make([]web_model.GetNodesResponse, 0)
-
-	for _, node := range nodes.Nodes {
-		thisNode := web_model.GetNodesResponse{
-			Hostname:  node.Hostname,
-			IpAddress: node.IpAddress,
-			GrpcPort:  node.GrpcPort,
-		}
-
-		response = append(response, thisNode)
-	}
-
-	return c.JSON(response)
-}
-
-func (h *nodeHandler) GetNodesStatus(c fiber.Ctx) error {
-	nodesStatus, err := h.nodeUsecase.CheckNodesHealth(c.Context())
+func (h *nodeHandler) GetNodes(c fiber.Ctx) []db_service.Node {
+	nodes, err := h.nodeUsecase.GetAllNodes(c.Context())
 	if err != nil {
-		slog.Error("Could not check nodes status",
+		slog.Error("GetNodes(): error getting nodes",
 			"error", err.Error(),
 		)
-
-		return c.SendString("could not check nodes status")
 	}
 
-	return c.JSON(nodesStatus)
+	return nodes
 }
 
 func (h *nodeHandler) CreateCluster(c fiber.Ctx) error {
 	c.Accepts("application/json")
 
-	createClusterRequest := new(web_model.CreateClusterRequest)
-	serverTokenProto := new(proto_model.ServerToken)
+	fmt.Println(c.GetReqHeaders())
 
-	err := c.Bind().Body(createClusterRequest)
-	if err != nil && errors.Is(err, fiber.ErrUnprocessableEntity) {
-		createClusterRequest.Token = utils.RandomString(16)
-	}
+	reqBody := new(web.CreateClusterRequest)
 
-	serverTokenProto.Token = createClusterRequest.Token
-
-	err = h.nodeUsecase.CreateCluster(c.Context(), serverTokenProto)
+	err := c.Bind().Body(reqBody)
 	if err != nil {
+		slog.Error("CreateCluster(): Could not get request body",
+			"error", err.Error(),
+		)
+
 		return err
 	}
 
-	return nil
+	fmt.Println(reqBody)
+
+	return c.SendString("test")
 }
 
-func (h *nodeHandler) TestHtmx(c fiber.Ctx) error {
-	test := new(web_model.NodeRequirement)
+// func (h *nodeHandler) GetNodesStatus(c fiber.Ctx) error {
+// 	nodesStatus, err := h.nodeUsecase.CheckNodesHealth(c.Context())
+// 	if err != nil {
+// 		slog.Error("Could not check nodes status",
+// 			"error", err.Error(),
+// 		)
+//
+// 		return c.SendString("could not check nodes status")
+// 	}
+//
+// 	return c.JSON(nodesStatus)
+// }
 
-	err := c.Bind().JSON(test)
-	if err != nil {
-		return err
-	}
+// func (h *nodeHandler) CreateCluster(c fiber.Ctx) error {
+// 	c.Accepts("application/json")
+//
+// 	reqBody := new(web.NodeRequirement)
+// 	err := c.Bind().JSON(reqBody)
+// 	if err != nil {
+// 		return err
+// 	}
+//
+// 	tokenModel := &proto.ServerToken{
+// 		Token: utils.RandomString(16),
+// 	}
+//
+// 	err = h.nodeUsecase.CreateCluster(c.Context(), tokenModel)
+//
+// 	return nil
 
-	return nil
-}
+// createClusterRequest := new(web_model.CreateClusterRequest)
+// serverTokenProto := new(proto_model.ServerToken)
+//
+// err := c.Bind().Body(createClusterRequest)
+// if err != nil && errors.Is(err, fiber.ErrUnprocessableEntity) {
+// 	createClusterRequest.Token = utils.RandomString(16)
+// }
+//
+// serverTokenProto.Token = createClusterRequest.Token
+//
+// err = h.nodeUsecase.CreateCluster(c.Context(), serverTokenProto)
+// if err != nil {
+// 	return err
+// }
+//
+// return nil
+// }
