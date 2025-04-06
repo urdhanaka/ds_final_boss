@@ -19,6 +19,7 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
+	NodeService_RegisterNode_FullMethodName = "/NodeService/RegisterNode"
 	NodeService_CreateMaster_FullMethodName = "/NodeService/CreateMaster"
 	NodeService_CreateWorker_FullMethodName = "/NodeService/CreateWorker"
 )
@@ -28,6 +29,7 @@ const (
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type NodeServiceClient interface {
 	// TODO: COMPLETE THIS FIRST
+	RegisterNode(ctx context.Context, in *RegisterNodeRequest, opts ...grpc.CallOption) (*RegisterNodeResponse, error)
 	CreateMaster(ctx context.Context, in *CreateMasterRequest, opts ...grpc.CallOption) (*CreateMasterResponse, error)
 	CreateWorker(ctx context.Context, in *CreateWorkerRequest, opts ...grpc.CallOption) (*CreateWorkerResponse, error)
 }
@@ -38,6 +40,16 @@ type nodeServiceClient struct {
 
 func NewNodeServiceClient(cc grpc.ClientConnInterface) NodeServiceClient {
 	return &nodeServiceClient{cc}
+}
+
+func (c *nodeServiceClient) RegisterNode(ctx context.Context, in *RegisterNodeRequest, opts ...grpc.CallOption) (*RegisterNodeResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(RegisterNodeResponse)
+	err := c.cc.Invoke(ctx, NodeService_RegisterNode_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
 }
 
 func (c *nodeServiceClient) CreateMaster(ctx context.Context, in *CreateMasterRequest, opts ...grpc.CallOption) (*CreateMasterResponse, error) {
@@ -65,6 +77,7 @@ func (c *nodeServiceClient) CreateWorker(ctx context.Context, in *CreateWorkerRe
 // for forward compatibility.
 type NodeServiceServer interface {
 	// TODO: COMPLETE THIS FIRST
+	RegisterNode(context.Context, *RegisterNodeRequest) (*RegisterNodeResponse, error)
 	CreateMaster(context.Context, *CreateMasterRequest) (*CreateMasterResponse, error)
 	CreateWorker(context.Context, *CreateWorkerRequest) (*CreateWorkerResponse, error)
 	mustEmbedUnimplementedNodeServiceServer()
@@ -77,6 +90,9 @@ type NodeServiceServer interface {
 // pointer dereference when methods are called.
 type UnimplementedNodeServiceServer struct{}
 
+func (UnimplementedNodeServiceServer) RegisterNode(context.Context, *RegisterNodeRequest) (*RegisterNodeResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method RegisterNode not implemented")
+}
 func (UnimplementedNodeServiceServer) CreateMaster(context.Context, *CreateMasterRequest) (*CreateMasterResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CreateMaster not implemented")
 }
@@ -102,6 +118,24 @@ func RegisterNodeServiceServer(s grpc.ServiceRegistrar, srv NodeServiceServer) {
 		t.testEmbeddedByValue()
 	}
 	s.RegisterService(&NodeService_ServiceDesc, srv)
+}
+
+func _NodeService_RegisterNode_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RegisterNodeRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(NodeServiceServer).RegisterNode(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: NodeService_RegisterNode_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(NodeServiceServer).RegisterNode(ctx, req.(*RegisterNodeRequest))
+	}
+	return interceptor(ctx, in, info, handler)
 }
 
 func _NodeService_CreateMaster_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
@@ -147,6 +181,10 @@ var NodeService_ServiceDesc = grpc.ServiceDesc{
 	ServiceName: "NodeService",
 	HandlerType: (*NodeServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "RegisterNode",
+			Handler:    _NodeService_RegisterNode_Handler,
+		},
 		{
 			MethodName: "CreateMaster",
 			Handler:    _NodeService_CreateMaster_Handler,

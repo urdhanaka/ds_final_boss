@@ -1,4 +1,5 @@
 syntax = "proto3";
+
 option go_package = "./common/model/proto";
 
 // enum Status {
@@ -15,6 +16,7 @@ message CreateNodeRequirements {
   int64 storage = 3;
 }
 
+// create master
 message CreateMasterRequest {
   string token = 1;
   CreateNodeRequirements requirements = 2;
@@ -24,6 +26,7 @@ message CreateMasterResponse {
   string ip_address = 1;
 }
 
+// create worker
 message CreateWorkerRequest {
   string token = 1;
   string ip_address = 2;
@@ -31,6 +34,19 @@ message CreateWorkerRequest {
 }
 
 message CreateWorkerResponse {}
+
+// register node
+message RegisterNodeRequest {
+  string hostname = 1;
+  string ip_address = 2;
+
+  // TODO: port, in case of port forwarding
+  // but I still don't know if I really need to use
+  // port forwarding
+  string port = 3;
+}
+
+message RegisterNodeResponse {}
 
 // message Temp {
 //   string status = 1;
@@ -53,6 +69,7 @@ message CreateWorkerResponse {}
 
 service NodeService {
   // TODO: COMPLETE THIS FIRST
+  rpc RegisterNode(RegisterNodeRequest) returns (RegisterNodeResponse) {}
   rpc CreateMaster(CreateMasterRequest) returns (CreateMasterResponse) {}
   rpc CreateWorker(CreateWorkerRequest) returns (CreateWorkerResponse) {}
 
