@@ -24,16 +24,14 @@ const (
 
 type IncusVirtualization struct {
 	incusConnection incus.InstanceServer
-	dbConnection    db.DatabaseInterface
 }
 
 func NewIncusVirtualization(
 	incusConnection incus.InstanceServer,
 	dbConnection db.DatabaseInterface,
-) *IncusVirtualization {
+) VirtualizationInterface {
 	return &IncusVirtualization{
 		incusConnection: incusConnection,
-		dbConnection:    dbConnection,
 	}
 }
 
@@ -148,12 +146,37 @@ func (c *IncusVirtualization) Spawn(
 	return nil
 }
 
+// stop the instance
+//
+// because the instance is set as ephemeral, we can just poweroff it
+// and it will be deleted
 func (c *IncusVirtualization) Stop(
 	ctx context.Context,
 	instanceIdentification virtualization_model.InstanceIdentification,
 ) error {
 	slog.Info(fmt.Sprintf(
 		"ID: %s, Stop(): stopping instance(s)...", ctx.Value("contextId")),
+	)
+
+	instanceName := instanceIdentification.InstanceID.String()
+
+	poweroffExecReq := api.InstanceExecPost{
+		Command: []string{
+			"bash", "-c", "poweroff",
+		},
+		WaitForWS: true,
+	}
+	poweroffExecOp, err := c.incusConnection.ExecInstance(instanceName, poweroffExecReq, nil)
+	if err != nil {
+		return err
+	}
+	err = poweroffExecOp.WaitContext(ctx)
+	if err != nil {
+		return err
+	}
+
+	slog.Info(fmt.Sprintf(
+		"ID: %s, Stop(): instance %s successfully stopped", ctx.Value("contextId"), instanceName),
 	)
 
 	return nil
@@ -313,7 +336,7 @@ func (c *IncusVirtualization) spawnBase(
 				"limits.cpu":           fmt.Sprintf("%d", virtRequest.Cpu),
 				"limits.memory":        fmt.Sprintf("%dGiB", virtRequest.Memory),
 			},
-			Ephemeral: true,
+			Ephemeral: true, // delete the instance when poweroff
 			Profiles: []string{
 				"default",
 			},
@@ -366,6 +389,8 @@ func (c *IncusVirtualization) spawnBase(
 	return nil
 }
 
+// TODO: proxy
+// might not needed if we can use bridge network
 func (c *IncusVirtualization) createProxy(
 	ctx context.Context,
 	instanceName string,
