@@ -241,7 +241,7 @@ func (c *IncusVirtualization) SpawnMaster(
 	// setting env var for helm
 	envExecReq := api.InstanceExecPost{
 		Command: []string{
-			"bash", "-c", "export KUBECONFIG=/etc/rancher/k3s/k3s.yaml",
+			"bash", "-c", "echo KUBECONFIG=/etc/rancher/k3s/k3s.yaml >> /etc/environment",
 		},
 		WaitForWS: true,
 	}
