@@ -7,22 +7,23 @@ async function sendRequirementJson() {
     memory: memory,
   }
 
-  try {
-    const response = await fetch("http://localhost:3000/create-cluster", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(data)
-    });
+  console.log(data)
 
-    if (response.ok) {
-      const result = await response.json();
-      console.log('Success:', result);
-    } else {
-      console.error('Error:', response.status, response.statusText);
-    }
-  } catch (error) {
-    console.error('Error:', error.message);
-  }
+  // try {
+  //   const response = await fetch("http://localhost:3000/create_cluster", {
+  //     method: "POST",
+  //     headers: {
+  //       "Content-Type": "application/json",
+  //     },
+  //     body: JSON.stringify(data)
+  //   });
+  //
+  //   console.log("here")
+  //
+  //   const result = await response.json();
+  //   console.log('Success:', result);
+  //
+  // } catch (error) {
+  //   console.error('Error:', error.message);
+  // }
 }
