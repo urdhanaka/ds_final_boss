@@ -11,11 +11,13 @@ import (
 )
 
 const (
-	TABLE_NAME = "nodes"
-	FILE_NAME  = "nodes.db"
+	NODE_TABLE_NAME      = "nodes"
+	DASHBOARD_TABLE_NAME = "dashboard"
+
+	FILE_NAME = "nodes.db"
 )
 
-func InitDB() *sqlx.DB {
+func NewDB() *sqlx.DB {
 	file_not_exist := false
 
 	// check if db file exist
@@ -40,27 +42,35 @@ func InitDB() *sqlx.DB {
 		os.Exit(1)
 	}
 
-	execString := []string{
-		// create table
-		fmt.Sprintf(`
+	// create table
+	execString := fmt.Sprintf(`
+            -- nodes table, contains record of nodes running
+            -- and it's ip and grpc port
             CREATE TABLE IF NOT EXISTS %s (
                 uuid        TEXT PRIMARY KEY,
                 node_ip     TEXT,
                 grpc_port   TEXT,
                 created_at  TEXT NOT NULL DEFAULT (datetime(current_timestamp, 'localtime')),
                 deleted_at  TEXT
-            );`,
-			TABLE_NAME,
-		),
-	}
+            );
+
+            -- ui table, contains record of master node
+            -- and it's ip
+            CREATE TABLE IF NOT EXISTS %s (
+                uuid        TEXT PRIMARY KEY,
+                node_ip     TEXT,
+                created_at  TEXT NOT NULL DEFAULT (datetime(current_timestamp, 'localtime'))
+            );
+            `,
+		NODE_TABLE_NAME, DASHBOARD_TABLE_NAME,
+	)
+
 	if file_not_exist {
-		for _, exec := range execString {
-			if _, err := db.Exec(exec); err != nil {
-				slog.Error("DB: cannot create table inside db file",
-					"error", err.Error(),
-				)
-				os.Exit(1)
-			}
+		if _, err := db.Exec(execString); err != nil {
+			slog.Error("DB: cannot create table inside db file",
+				"error", err.Error(),
+			)
+			os.Exit(1)
 		}
 	}
 
