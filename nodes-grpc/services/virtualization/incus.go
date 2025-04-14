@@ -3,10 +3,8 @@ package virtualization
 import (
 	"context"
 	"fmt"
-	"log"
 	"log/slog"
 	virtualization_model "nodes-grpc/common/model/virtualization"
-	"nodes-grpc/services/db"
 	virtualization_utils "nodes-grpc/services/virtualization/utils"
 	"os"
 	"strings"
@@ -28,123 +26,122 @@ type IncusVirtualization struct {
 
 func NewIncusVirtualization(
 	incusConnection incus.InstanceServer,
-	dbConnection db.DatabaseInterface,
 ) VirtualizationInterface {
 	return &IncusVirtualization{
 		incusConnection: incusConnection,
 	}
 }
 
-func (c *IncusVirtualization) Spawn(
-	ctx context.Context,
-	virtRequest virtualization_model.InstanceCreateRequest,
-) error {
-	slog.Info(fmt.Sprintf(
-		"ID: %s, Spawn(): creating incus vm instance...", ctx.Value("contextId")),
-	)
-
-	profileFile, err := os.ReadFile("./common/templates/cloud-init-templates/user-cloud-init.yaml")
-	if err != nil {
-		log.Fatal(err.Error())
-	}
-
-	newUuid := uuid.New().String()
-	req := api.InstancesPost{
-		InstancePut: api.InstancePut{
-			Architecture: "amd64",
-			Config: map[string]string{
-				"security.secureboot":  "false",
-				"cloud-init.user-data": string(profileFile),
-				"limits.cpu":           "2",
-				"limits.memory":        "2GiB",
-			},
-			Ephemeral: true,
-			Profiles: []string{
-				"default",
-			},
-		},
-		Name: newUuid,
-		Type: api.InstanceTypeVM,
-		Source: api.InstanceSource{
-			Type:  "image",
-			Alias: "debian/bookworm/cloud",
-			// Alias: "alpine/edge/cloud",
-			// Properties: map[string]string{
-			// 	"os":      "Debian",
-			// 	"release": "bookworm",
-			// 	"variant": "cloud",
-			// },
-			Server:   "https://images.linuxcontainers.org",
-			Protocol: "simplestreams",
-		},
-		Start: true,
-	}
-
-	instanceOp, err := c.incusConnection.CreateInstance(req)
-	if err != nil {
-		return err
-	}
-
-	err = instanceOp.WaitContext(ctx)
-	if err != nil {
-		return err
-	}
-
-	// wait until cloud-init process is complete
-	cloudExecReq := api.InstanceExecPost{
-		Command: []string{
-			"cloud-init", "status", "--wait",
-		},
-		WaitForWS: true,
-	}
-	cloudExecOp, err := c.incusConnection.ExecInstance(req.Name, cloudExecReq, nil)
-	if err != nil {
-		return err
-	}
-	err = cloudExecOp.WaitContext(ctx)
-	if err != nil {
-		slog.Error("cloudExec()",
-			"error", err.Error(),
-		)
-
-		return err
-	}
-
-	execReq := api.InstanceExecPost{
-		Command: []string{
-			"bash", "-c", "curl -sfL https://get.k3s.io | sh -s -",
-		},
-		WaitForWS: true,
-		Environment: map[string]string{
-			"K3S_TOKEN": virtRequest.Token,
-		},
-		Cwd: "/root",
-	}
-	if virtRequest.IsMaster {
-		execReq.Environment["INSTALL_K3S_EXEC"] = "server"
-	} else {
-		execReq.Environment["INSTALL_K3S_EXEC"] = "agent"
-	}
-	execOp, err := c.incusConnection.ExecInstance(req.Name, execReq, &incus.InstanceExecArgs{
-		Stdout: os.Stdout,
-	})
-	if err != nil {
-		return err
-	}
-
-	err = execOp.WaitContext(ctx)
-	if err != nil {
-		slog.Error("exec()",
-			"error", err.Error(),
-		)
-
-		return err
-	}
-
-	slog.Info("Spawn(): spawning incus vm instance successful")
-
-	return nil
-}
+// func (c *IncusVirtualization) Spawn(
+// 	ctx context.Context,
+// 	virtRequest virtualization_model.InstanceCreateRequest,
+// ) error {
+// 	slog.Info(fmt.Sprintf(
+// 		"ID: %s, Spawn(): creating incus vm instance...", ctx.Value("contextId")),
+// 	)
+//
+// 	profileFile, err := os.ReadFile("./common/templates/cloud-init-templates/user-cloud-init.yaml")
+// 	if err != nil {
+// 		log.Fatal(err.Error())
+// 	}
+//
+// 	newUuid := uuid.New().String()
+// 	req := api.InstancesPost{
+// 		InstancePut: api.InstancePut{
+// 			Architecture: "amd64",
+// 			Config: map[string]string{
+// 				"security.secureboot":  "false",
+// 				"cloud-init.user-data": string(profileFile),
+// 				"limits.cpu":           "2",
+// 				"limits.memory":        "2GiB",
+// 			},
+// 			Ephemeral: true,
+// 			Profiles: []string{
+// 				"default",
+// 			},
+// 		},
+// 		Name: newUuid,
+// 		Type: api.InstanceTypeVM,
+// 		Source: api.InstanceSource{
+// 			Type:  "image",
+// 			Alias: "debian/bookworm/cloud",
+// 			// Alias: "alpine/edge/cloud",
+// 			// Properties: map[string]string{
+// 			// 	"os":      "Debian",
+// 			// 	"release": "bookworm",
+// 			// 	"variant": "cloud",
+// 			// },
+// 			Server:   "https://images.linuxcontainers.org",
+// 			Protocol: "simplestreams",
+// 		},
+// 		Start: true,
+// 	}
+//
+// 	instanceOp, err := c.incusConnection.CreateInstance(req)
+// 	if err != nil {
+// 		return err
+// 	}
+//
+// 	err = instanceOp.WaitContext(ctx)
+// 	if err != nil {
+// 		return err
+// 	}
+//
+// 	// wait until cloud-init process is complete
+// 	cloudExecReq := api.InstanceExecPost{
+// 		Command: []string{
+// 			"cloud-init", "status", "--wait",
+// 		},
+// 		WaitForWS: true,
+// 	}
+// 	cloudExecOp, err := c.incusConnection.ExecInstance(req.Name, cloudExecReq, nil)
+// 	if err != nil {
+// 		return err
+// 	}
+// 	err = cloudExecOp.WaitContext(ctx)
+// 	if err != nil {
+// 		slog.Error("cloudExec()",
+// 			"error", err.Error(),
+// 		)
+//
+// 		return err
+// 	}
+//
+// 	execReq := api.InstanceExecPost{
+// 		Command: []string{
+// 			"bash", "-c", "curl -sfL https://get.k3s.io | sh -s -",
+// 		},
+// 		WaitForWS: true,
+// 		Environment: map[string]string{
+// 			"K3S_TOKEN": virtRequest.Token,
+// 		},
+// 		Cwd: "/root",
+// 	}
+// 	if virtRequest.IsMaster {
+// 		execReq.Environment["INSTALL_K3S_EXEC"] = "server"
+// 	} else {
+// 		execReq.Environment["INSTALL_K3S_EXEC"] = "agent"
+// 	}
+// 	execOp, err := c.incusConnection.ExecInstance(req.Name, execReq, &incus.InstanceExecArgs{
+// 		Stdout: os.Stdout,
+// 	})
+// 	if err != nil {
+// 		return err
+// 	}
+//
+// 	err = execOp.WaitContext(ctx)
+// 	if err != nil {
+// 		slog.Error("exec()",
+// 			"error", err.Error(),
+// 		)
+//
+// 		return err
+// 	}
+//
+// 	slog.Info("Spawn(): spawning incus vm instance successful")
+//
+// 	return nil
+// }
 
 // stop the instance
 //
@@ -190,13 +187,23 @@ func (c *IncusVirtualization) SpawnMaster(
 	ctx context.Context,
 	virtRequest virtualization_model.InstanceCreateRequest,
 ) (string, error) {
-	slog.Info(fmt.Sprintf("%d: Spawn(): spawning incus master vm...", ctx.Value("contextId")))
+	slog.Info(fmt.Sprintf("%s: Spawn(): spawning incus master vm...", ctx.Value("contextId")))
 
 	instanceName := uuid.New().String()
 	err := c.spawnBase(ctx, instanceName, virtRequest)
 	if err != nil {
 		return "", err
 	}
+
+    // get content
+
+	err = c.incusConnection.CreateInstanceFile(instanceName, "/root/setup-master.sh", incus.InstanceFileArgs{
+		UID:       0,
+		GID:       0,
+		Mode:      755,
+		Type:      "file",
+		WriteMode: "append",
+	})
 
 	// installing k3s
 	k3sExecReq := api.InstanceExecPost{
@@ -254,6 +261,7 @@ func (c *IncusVirtualization) SpawnMaster(
 		return "", err
 	}
 
+	// get instance ip address
 	networkAllocations, err := c.incusConnection.GetNetworkAllocations(false)
 	if err != nil {
 		return "", err
@@ -273,7 +281,7 @@ func (c *IncusVirtualization) SpawnMaster(
 		}
 	}
 
-	slog.Info(fmt.Sprintf("%d: Spawn(): spawning incus master vm successful", ctx.Value("contextId")))
+	slog.Info(fmt.Sprintf("%s: Spawn(): spawning incus master vm successful", ctx.Value("contextId")))
 
 	return "", nil
 }
@@ -282,7 +290,7 @@ func (c *IncusVirtualization) SpawnWorker(
 	ctx context.Context,
 	virtRequest virtualization_model.InstanceCreateRequest,
 ) error {
-	slog.Info(fmt.Sprintf("%d: Spawn(): spawning incus worker vm...", ctx.Value("contextId")))
+	slog.Info(fmt.Sprintf("%s: Spawn(): spawning incus worker vm...", ctx.Value("contextId")))
 
 	instanceName := uuid.New().String()
 	err := c.spawnBase(ctx, instanceName, virtRequest)
@@ -312,7 +320,7 @@ func (c *IncusVirtualization) SpawnWorker(
 		return err
 	}
 
-	slog.Info(fmt.Sprintf("%d: Spawn(): spawning incus worker vm successful", ctx.Value("contextId")))
+	slog.Info(fmt.Sprintf("%s: Spawn(): spawning incus worker vm successful", ctx.Value("contextId")))
 
 	return nil
 }
@@ -368,8 +376,8 @@ func (c *IncusVirtualization) spawnBase(
 	}
 
 	// fucking vm-agent is not automatically running
-	// wait for like 5-10 seconds before executing any command
-	time.Sleep(time.Second * 10)
+	// wait for 20 seconds before executing any command
+	time.Sleep(time.Second * 20)
 
 	cloudExecReq := api.InstanceExecPost{
 		Command: []string{

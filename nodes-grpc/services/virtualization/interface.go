@@ -10,6 +10,6 @@ type VirtualizationInterface interface {
 	SpawnMaster(ctx context.Context, virtRequest virtualization_model.InstanceCreateRequest) (string, error)
 	SpawnWorker(ctx context.Context, virtRequest virtualization_model.InstanceCreateRequest) error
 
-	Stop(ctx context.Context, instanceIdentification virtualization_model.InstanceIdentification) error
-	List() error
+	// Stop(ctx context.Context, instanceIdentification virtualization_model.InstanceIdentification) error
+	// List() error
 }

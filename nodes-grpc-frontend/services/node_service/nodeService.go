@@ -2,6 +2,7 @@ package node_service
 
 import (
 	"context"
+	"errors"
 	"log/slog"
 	"nodes-grpc-frontend/common/config"
 	"nodes-grpc-frontend/common/model/proto"
@@ -13,10 +14,10 @@ import (
 )
 
 type NodeUsecase interface {
-	GetAllNodes(ctx context.Context) ([]db_service.Node, error)
+	GetAllNodes(ctx context.Context) ([]web.Node, error)
 	RegisterNode(ctx context.Context, nodeModel *web.RegisterNodeRequest) error
 	CreateCluster(ctx context.Context, createClusterRequest *web.CreateClusterRequest) error
-	AccessCluster(ctx context.Context) error
+	AccessCluster(ctx context.Context, token string) (web.Dashboard, error)
 	// CheckNodesHealth(context.Context) ([]*proto_model.NodeStatus, error)
 }
 
@@ -30,10 +31,10 @@ func NewNodeUsecaseImpl(dbConnection db_service.DatabaseInterface) NodeUsecase {
 	}
 }
 
-func (u *NodeUsecaseImpl) GetAllNodes(ctx context.Context) ([]db_service.Node, error) {
+func (u *NodeUsecaseImpl) GetAllNodes(ctx context.Context) ([]web.Node, error) {
 	nodes, err := u.dbInterface.GetAllNode(ctx)
 	if err != nil {
-		return []db_service.Node{}, err
+		return []web.Node{}, err
 	}
 
 	return nodes, nil
@@ -91,7 +92,7 @@ func (u *NodeUsecaseImpl) GetAllNodes(ctx context.Context) ([]db_service.Node, e
 // }
 
 func (u *NodeUsecaseImpl) RegisterNode(ctx context.Context, nodeModel *web.RegisterNodeRequest) error {
-	dbNode := db_service.Node{
+	dbNode := web.Node{
 		UUID:     uuid.New().String(),
 		NodeIP:   nodeModel.NodeIP,
 		GrpcPort: nodeModel.GrpcPort,
@@ -139,18 +140,10 @@ func (u *NodeUsecaseImpl) startMaster(
 	ctx context.Context,
 	createClusterRequest *web.CreateClusterRequest,
 ) (string, error) {
-	// TODO: handle random node
-	// for now, using only one node (this pc)
-	// masterNode, err := utils.GetRandomNode(localStorage)
-	// if err != nil {
-	// 	return new(proto_model.NodeStatus), err
-	// }
-	allNodes, err := u.dbInterface.GetAllNode(ctx)
+	masterNode, err := u.pickNode(ctx)
 	if err != nil {
 		return "", err
 	}
-
-	masterNode := allNodes[0]
 
 	masterNodeGrpcClient, err := config.NewNodeClient(masterNode.NodeIP, masterNode.GrpcPort)
 	if err != nil {
@@ -208,18 +201,10 @@ func (u *NodeUsecaseImpl) startWorker(
 	masterIpAddress string,
 	createClusterRequest *web.CreateClusterRequest,
 ) error {
-	// TODO: handle random node
-	// for now, using only one node (this pc)
-	// workerNode, err := utils.GetRandomNode(localStorage)
-	// if err != nil {
-	// 	return new(proto_model.NodeStatus), err
-	// }
-	allNodes, err := u.dbInterface.GetAllNode(ctx)
+	workerNode, err := u.pickNode(ctx)
 	if err != nil {
 		return err
 	}
-
-	workerNode := allNodes[0]
 
 	workerNodeGrpcClient, err := config.NewNodeClient(workerNode.NodeIP, workerNode.GrpcPort)
 	if err != nil {
@@ -270,12 +255,30 @@ func (u *NodeUsecaseImpl) startWorker(
 	return nil
 }
 
-func (u *NodeUsecaseImpl) pickNode(ctx context.Context) (db_service.Node, error) {
-	return db_service.Node{}, nil
+func (u *NodeUsecaseImpl) AccessCluster(ctx context.Context, token string) (web.Dashboard, error) {
+	uiModel := web.Dashboard{
+		UUID: token,
+	}
+
+	ui, err := u.dbInterface.GetDashboard(ctx, uiModel)
+	if err != nil {
+		return ui, err
+	}
+
+	return ui, nil
 }
 
-func (u *NodeUsecaseImpl) AccessCluster(ctx context.Context, token string) error {
-	masterNodeIP := u.dbInterface.DeleteUI()
+// TODO: deprecated
+// only use for testing purpose
+func (u *NodeUsecaseImpl) pickNode(ctx context.Context) (web.Node, error) {
+	allNodes, err := u.dbInterface.GetAllNode(ctx)
+	if err != nil {
+		return web.Node{}, err
+	}
 
-	return nil
+	if len(allNodes) == 0 {
+		return web.Node{}, errors.New("No nodes available")
+	}
+
+	return allNodes[0], nil
 }

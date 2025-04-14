@@ -35,19 +35,6 @@ message CreateWorkerRequest {
 
 message CreateWorkerResponse {}
 
-// register node
-message RegisterNodeRequest {
-  string hostname = 1;
-  string ip_address = 2;
-
-  // TODO: port, in case of port forwarding
-  // but I still don't know if I really need to use
-  // port forwarding
-  string port = 3;
-}
-
-message RegisterNodeResponse {}
-
 // message Temp {
 //   string status = 1;
 // }
@@ -69,12 +56,11 @@ message RegisterNodeResponse {}
 
 service NodeService {
   // TODO: COMPLETE THIS FIRST
-  rpc RegisterNode(RegisterNodeRequest) returns (RegisterNodeResponse) {}
   rpc CreateMaster(CreateMasterRequest) returns (CreateMasterResponse) {}
   rpc CreateWorker(CreateWorkerRequest) returns (CreateWorkerResponse) {}
 
   // do this later...
-  // rpc CreateNode(NodeRequirements) returns (Empty) {}
+  // rpc RegisterNode(RegisterNodeRequest) returns (RegisterNodeResponse) {}
   // rpc ThisNodeStatus(Empty) returns (Temp) {}
   // rpc Status(Empty) returns (NodeStatus) {}
   // rpc StopNode(Empty) returns (Empty) {}
