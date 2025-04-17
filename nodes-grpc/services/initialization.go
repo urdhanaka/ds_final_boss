@@ -3,6 +3,7 @@ package services
 import (
 	"log/slog"
 	"nodes-grpc/services/virtualization"
+	incus_virtualization "nodes-grpc/services/virtualization/incus-virtualization"
 	"nodes-grpc/utils"
 
 	"github.com/vishvananda/netlink"
@@ -17,7 +18,7 @@ func NewConnection() *Connection {
 	incusConnection := virtualization.InitIncusConnection()
 
 	// services
-	incusService := virtualization.NewIncusVirtualization(incusConnection)
+	incusService := incus_virtualization.NewIncusVirtualization(incusConnection)
 
 	return &Connection{
 		VirtualizationService: incusService,
@@ -78,6 +79,8 @@ func CreateBridge() error {
 
 		return err
 	}
+
+	// setup bridge dhcp request
 
 	return nil
 }

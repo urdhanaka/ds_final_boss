@@ -1,10 +1,12 @@
-package virtualization
+package incus_virtualization
 
 import (
 	"context"
 	"fmt"
 	"log/slog"
 	virtualization_model "nodes-grpc/common/model/virtualization"
+	"nodes-grpc/services/virtualization"
+	"nodes-grpc/services/virtualization/embedded"
 	virtualization_utils "nodes-grpc/services/virtualization/utils"
 	"os"
 	"strings"
@@ -26,7 +28,7 @@ type IncusVirtualization struct {
 
 func NewIncusVirtualization(
 	incusConnection incus.InstanceServer,
-) VirtualizationInterface {
+) virtualization.VirtualizationInterface {
 	return &IncusVirtualization{
 		incusConnection: incusConnection,
 	}
@@ -195,15 +197,7 @@ func (c *IncusVirtualization) SpawnMaster(
 		return "", err
 	}
 
-    // get content
-
-	err = c.incusConnection.CreateInstanceFile(instanceName, "/root/setup-master.sh", incus.InstanceFileArgs{
-		UID:       0,
-		GID:       0,
-		Mode:      755,
-		Type:      "file",
-		WriteMode: "append",
-	})
+	slog.Info(fmt.Sprintf("%s: Spawn(): installing k3s...", ctx.Value("contextId")))
 
 	// installing k3s
 	k3sExecReq := api.InstanceExecPost{
@@ -220,14 +214,21 @@ func (c *IncusVirtualization) SpawnMaster(
 		Stdout: os.Stdout,
 	})
 	if err != nil {
+		slog.Error(fmt.Sprintf("%s: Spawn(): could not install k3s", ctx.Value("contextId")),
+			"error", err.Error(),
+		)
 		return "", err
 	}
 	err = k3sExecOp.WaitContext(ctx)
 	if err != nil {
+		slog.Error(fmt.Sprintf("%s: Spawn(): could not install k3s", ctx.Value("contextId")),
+			"error", err.Error(),
+		)
 		return "", err
 	}
 
 	// installing helm
+	slog.Info(fmt.Sprintf("%s: Spawn(): installing helm for dashboard...", ctx.Value("contextId")))
 	helmExecReq := api.InstanceExecPost{
 		Command: []string{
 			"bash", "-c", "curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash",
@@ -238,14 +239,21 @@ func (c *IncusVirtualization) SpawnMaster(
 		Stdout: os.Stdout,
 	})
 	if err != nil {
+		slog.Error(fmt.Sprintf("%s: Spawn(): could not install helm", ctx.Value("contextId")),
+			"error", err.Error(),
+		)
 		return "", err
 	}
 	err = helmExecOp.WaitContext(ctx)
 	if err != nil {
+		slog.Error(fmt.Sprintf("%s: Spawn(): could not install helm", ctx.Value("contextId")),
+			"error", err.Error(),
+		)
 		return "", err
 	}
 
 	// setting env var for helm
+	slog.Info(fmt.Sprintf("%s: Spawn(): setting up env var for helm...", ctx.Value("contextId")))
 	envExecReq := api.InstanceExecPost{
 		Command: []string{
 			"bash", "-c", "echo \"export KUBECONFIG=/etc/rancher/k3s/k3s.yaml\" >> ~/.bashrc",
@@ -254,16 +262,52 @@ func (c *IncusVirtualization) SpawnMaster(
 	}
 	envExecOp, err := c.incusConnection.ExecInstance(instanceName, envExecReq, nil)
 	if err != nil {
+		slog.Error(fmt.Sprintf("%s: Spawn(): could not set up env var", ctx.Value("contextId")),
+			"error", err.Error(),
+		)
 		return "", err
 	}
 	err = envExecOp.WaitContext(ctx)
 	if err != nil {
+		slog.Error(fmt.Sprintf("%s: Spawn(): could not set up env var", ctx.Value("contextId")),
+			"error", err.Error(),
+		)
+		return "", err
+	}
+
+	// setting up kubernetes dashboard admin-user
+	slog.Info(fmt.Sprintf("%s: Spawn(): setting up kubernetes dashboard...", ctx.Value("contextId")))
+
+	embeddedFolder := embedded.ReturnEmbedded()
+	kubectlYaml, _ := embeddedFolder.ReadFile("create-admin-user.yaml")
+
+	kubectlExecReq := api.InstanceExecPost{
+		Command: []string{
+			"bash", "-c", fmt.Sprintf("echo \"%s\" | k3s kubectl apply -f -", string(kubectlYaml)),
+		},
+		WaitForWS: true,
+	}
+	kubectlExecOp, err := c.incusConnection.ExecInstance(instanceName, kubectlExecReq, nil)
+	if err != nil {
+		slog.Error(fmt.Sprintf("%s: Spawn(): could not set up kubernetes dashboard", ctx.Value("contextId")),
+			"error", err.Error(),
+		)
+		return "", err
+	}
+	err = kubectlExecOp.WaitContext(ctx)
+	if err != nil {
+		slog.Error(fmt.Sprintf("%s: Spawn(): could not set up kubernetes dashboard", ctx.Value("contextId")),
+			"error", err.Error(),
+		)
 		return "", err
 	}
 
 	// get instance ip address
 	networkAllocations, err := c.incusConnection.GetNetworkAllocations(false)
 	if err != nil {
+		slog.Error(fmt.Sprintf("%s: Spawn(): could not get instance network", ctx.Value("contextId")),
+			"error", err.Error(),
+		)
 		return "", err
 	}
 	for _, allocation := range networkAllocations {
@@ -322,6 +366,13 @@ func (c *IncusVirtualization) SpawnWorker(
 
 	slog.Info(fmt.Sprintf("%s: Spawn(): spawning incus worker vm successful", ctx.Value("contextId")))
 
+	return nil
+}
+
+func (c *IncusVirtualization) StopNode(
+	ctx context.Context,
+	instance virtualization_model.InstanceIdentification,
+) error {
 	return nil
 }
 
