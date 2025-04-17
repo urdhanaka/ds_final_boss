@@ -1,4 +1,4 @@
-vms
-references
-tmp
+vms/
+references/
+tmp/
 node.db
