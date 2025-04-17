@@ -29,11 +29,7 @@ cluster
 - Wednesday, 20 November 2024
   - Using minikube again, learn about vcluster to create virtual cluster
 
-## How-to implement multi-tenancy
-1. [Namespace-per-tenant](/namespace-per-tenant/NAMESPACE_PER_TENANT.md)
-2. Cluster-per-tenant
-
-<!-- ## Multi-tenancy scenario -->
-<!-- 1.  -->
-<!-- 2.  -->
-<!-- 3.  -->
+# UPDATES
+What is called multi-tenancy here is the nodes that join the cluster
+will run in vm/container. Each computer may have more than one node (vm)
+and each one may be part of different cluster
