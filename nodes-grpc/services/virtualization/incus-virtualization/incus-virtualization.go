@@ -34,117 +34,6 @@ func NewIncusVirtualization(
 	}
 }
 
-// func (c *IncusVirtualization) Spawn(
-// 	ctx context.Context,
-// 	virtRequest virtualization_model.InstanceCreateRequest,
-// ) error {
-// 	slog.Info(fmt.Sprintf(
-// 		"ID: %s, Spawn(): creating incus vm instance...", ctx.Value("contextId")),
-// 	)
-//
-// 	profileFile, err := os.ReadFile("./common/templates/cloud-init-templates/user-cloud-init.yaml")
-// 	if err != nil {
-// 		log.Fatal(err.Error())
-// 	}
-//
-// 	newUuid := uuid.New().String()
-// 	req := api.InstancesPost{
-// 		InstancePut: api.InstancePut{
-// 			Architecture: "amd64",
-// 			Config: map[string]string{
-// 				"security.secureboot":  "false",
-// 				"cloud-init.user-data": string(profileFile),
-// 				"limits.cpu":           "2",
-// 				"limits.memory":        "2GiB",
-// 			},
-// 			Ephemeral: true,
-// 			Profiles: []string{
-// 				"default",
-// 			},
-// 		},
-// 		Name: newUuid,
-// 		Type: api.InstanceTypeVM,
-// 		Source: api.InstanceSource{
-// 			Type:  "image",
-// 			Alias: "debian/bookworm/cloud",
-// 			// Alias: "alpine/edge/cloud",
-// 			// Properties: map[string]string{
-// 			// 	"os":      "Debian",
-// 			// 	"release": "bookworm",
-// 			// 	"variant": "cloud",
-// 			// },
-// 			Server:   "https://images.linuxcontainers.org",
-// 			Protocol: "simplestreams",
-// 		},
-// 		Start: true,
-// 	}
-//
-// 	instanceOp, err := c.incusConnection.CreateInstance(req)
-// 	if err != nil {
-// 		return err
-// 	}
-//
-// 	err = instanceOp.WaitContext(ctx)
-// 	if err != nil {
-// 		return err
-// 	}
-//
-// 	// wait until cloud-init process is complete
-// 	cloudExecReq := api.InstanceExecPost{
-// 		Command: []string{
-// 			"cloud-init", "status", "--wait",
-// 		},
-// 		WaitForWS: true,
-// 	}
-// 	cloudExecOp, err := c.incusConnection.ExecInstance(req.Name, cloudExecReq, nil)
-// 	if err != nil {
-// 		return err
-// 	}
-// 	err = cloudExecOp.WaitContext(ctx)
-// 	if err != nil {
-// 		slog.Error("cloudExec()",
-// 			"error", err.Error(),
-// 		)
-//
-// 		return err
-// 	}
-//
-// 	execReq := api.InstanceExecPost{
-// 		Command: []string{
-// 			"bash", "-c", "curl -sfL https://get.k3s.io | sh -s -",
-// 		},
-// 		WaitForWS: true,
-// 		Environment: map[string]string{
-// 			"K3S_TOKEN": virtRequest.Token,
-// 		},
-// 		Cwd: "/root",
-// 	}
-// 	if virtRequest.IsMaster {
-// 		execReq.Environment["INSTALL_K3S_EXEC"] = "server"
-// 	} else {
-// 		execReq.Environment["INSTALL_K3S_EXEC"] = "agent"
-// 	}
-// 	execOp, err := c.incusConnection.ExecInstance(req.Name, execReq, &incus.InstanceExecArgs{
-// 		Stdout: os.Stdout,
-// 	})
-// 	if err != nil {
-// 		return err
-// 	}
-//
-// 	err = execOp.WaitContext(ctx)
-// 	if err != nil {
-// 		slog.Error("exec()",
-// 			"error", err.Error(),
-// 		)
-//
-// 		return err
-// 	}
-//
-// 	slog.Info("Spawn(): spawning incus vm instance successful")
-//
-// 	return nil
-// }
-
 // stop the instance
 //
 // because the instance is set as ephemeral, we can just poweroff it
@@ -153,9 +42,8 @@ func (c *IncusVirtualization) Stop(
 	ctx context.Context,
 	instanceIdentification virtualization_model.InstanceIdentification,
 ) error {
-	slog.Info(fmt.Sprintf(
-		"ID: %s, Stop(): stopping instance(s)...", ctx.Value("contextId")),
-	)
+	incusSlogFunction(nil, fmt.Sprintf(
+		"ID: %s, Stop(): stopping instance(s)...", ctx.Value("contextId")))
 
 	instanceName := instanceIdentification.InstanceID.String()
 
@@ -381,7 +269,9 @@ func (c *IncusVirtualization) spawnBase(
 	instanceName string,
 	virtRequest virtualization_model.InstanceCreateRequest,
 ) error {
-	profileFile, err := os.ReadFile("./common/templates/cloud-init-templates/user-cloud-init.yaml")
+	embedded := embedded.ReturnEmbedded()
+
+	profileFile, err := embedded.ReadFile("user-cloud-init.yaml")
 	if err != nil {
 		return err
 	}
@@ -419,10 +309,16 @@ func (c *IncusVirtualization) spawnBase(
 
 	instanceOp, err := c.incusConnection.CreateInstance(req)
 	if err != nil {
+		slog.Error("here",
+			"err", err.Error(),
+		)
 		return err
 	}
 	err = instanceOp.WaitContext(ctx)
 	if err != nil {
+		slog.Error("here",
+			"err", err.Error(),
+		)
 		return err
 	}
 
