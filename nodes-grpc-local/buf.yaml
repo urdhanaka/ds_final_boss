@@ -1,0 +1,6 @@
+version: v2
+modules:
+  - path: services/model/proto-model/
+lint:
+  except:
+    - PACKAGE_DEFINED
