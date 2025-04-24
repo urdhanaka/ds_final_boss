@@ -1,0 +1,8 @@
+#cloud-config
+hostname: ayayaya
+users:
+- default
+- name: test
+  plain_text_passwd: test
+  lock_passwd: false
+  shell: /bin/bash
