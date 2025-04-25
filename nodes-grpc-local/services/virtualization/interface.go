@@ -1,3 +1,6 @@
 package virtualization
 
-type VirtualizationInterface interface{}
+type VirtualizationInterface interface {
+	CreateMaster() error
+	CreateWorker() error
+}

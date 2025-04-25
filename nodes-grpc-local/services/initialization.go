@@ -1,16 +1,19 @@
 package services
 
-import "nodes-grpc-local/services/virtualization"
+import (
+	"nodes-grpc-local/services/virtualization"
+	libvirt_virtualization "nodes-grpc-local/services/virtualization/libvirt-virtualization"
+)
 
 type Connection struct {
 	VirtualizationService virtualization.VirtualizationInterface
 }
 
 func NewConnection() *Connection {
-	// incusConnection := virtualization.InitIncusConnection()
-	libvirtConnection := virtualization.InitLibvirtConnection()
+	libvirtConnection := libvirt_virtualization.InitLibvirtConnection()
+	libvirtService := libvirt_virtualization.NewLibvirtVirtualization(libvirtConnection)
 
 	return &Connection{
-		VirtualizationService: libvirtConnection,
+		VirtualizationService: libvirtService,
 	}
 }

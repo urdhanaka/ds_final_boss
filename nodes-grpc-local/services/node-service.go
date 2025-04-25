@@ -13,6 +13,7 @@ import (
 )
 
 const (
+	// port to listen
 	GRPC_PORT = ":50051"
 )
 
@@ -26,7 +27,7 @@ type NodeServer struct {
 
 func NewNodeServer(
 	virtualizationService virtualization.VirtualizationInterface,
-) *NodeServer {
+) NodeServerInterface {
 	return &NodeServer{
 		virtualizationService: virtualizationService,
 	}
@@ -36,13 +37,23 @@ func (s *NodeServer) CreateMaster(
 	ctx context.Context,
 	createMasterRequest *proto_model.CreateMasterRequest,
 ) (*proto_model.CreateMasterResponse, error) {
+	err := s.virtualizationService.CreateMaster()
+	if err != nil {
+		return new(proto_model.CreateMasterResponse), err
+	}
+
 	return new(proto_model.CreateMasterResponse), nil
 }
 
-func (n *NodeServer) CreateWorker(
+func (s *NodeServer) CreateWorker(
 	c context.Context,
 	workerRequest *proto_model.CreateWorkerRequest,
 ) (*proto_model.CreateWorkerResponse, error) {
+	err := s.virtualizationService.CreateWorker()
+	if err != nil {
+		return new(proto_model.CreateWorkerResponse), err
+	}
+
 	return new(proto_model.CreateWorkerResponse), nil
 }
 
@@ -52,15 +63,15 @@ func StartGrpcServer(connection *Connection) {
 		slog.Error("could not start grpc server",
 			"error", err.Error(),
 		)
+		os.Exit(1)
 	}
 
 	s := grpc.NewServer()
 	proto_model.RegisterNodeServiceServer(s, &NodeServer{
-		// NOTE: CHANGE VIRTUALIZATION METHOD HERE
 		virtualizationService: connection.VirtualizationService,
 	})
 
-	slog.Info(fmt.Sprintf("starting server at %s", GRPC_PORT))
+	slog.Info(fmt.Sprintf("starting grpc server at %s", GRPC_PORT))
 
 	if err := s.Serve(lis); err != nil {
 		slog.Error("StartGrpcServer(): failed to serve",
