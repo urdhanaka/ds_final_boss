@@ -11,7 +11,8 @@ import (
 	"github.com/digitalocean/go-libvirt"
 )
 
-var mut sync.Mutex
+var cloudInitMut sync.Mutex
+var networkMut sync.Mutex
 
 func init() {
 	slog.Info("checking libvirt requirements")

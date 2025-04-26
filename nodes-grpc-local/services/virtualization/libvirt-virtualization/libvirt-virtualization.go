@@ -7,7 +7,6 @@ import (
 	"os/exec"
 
 	"github.com/digitalocean/go-libvirt"
-	"github.com/google/uuid"
 	"libvirt.org/go/libvirtxml"
 )
 
@@ -26,12 +25,17 @@ func NewLibvirtVirtualization(
 func (c *LibvirtVirtualization) CreateMaster() error {
 	thisInstanceName := generateRandom(10)
 
-	err := createCloudInit(thisInstanceName)
+	err := createNetworkMaster()
 	if err != nil {
 		return err
 	}
 
-	err = copyBaseImage(thisInstanceName)
+	err = createCloudInitMaster(thisInstanceName)
+	if err != nil {
+		return err
+	}
+
+	err = copyImage(thisInstanceName)
 	if err != nil {
 		return err
 	}
@@ -50,22 +54,32 @@ func (c *LibvirtVirtualization) CreateMaster() error {
 }
 
 func (c *LibvirtVirtualization) CreateWorker() error {
-	thisInstanceName := uuid.New().String()
+	thisInstanceName := generateRandom(10)
 
-	err := createCloudInit(thisInstanceName)
+	err := createNetworkWorker()
 	if err != nil {
 		return err
 	}
 
-	// domainXmlConfig, err := createBase(thisInstanceName)
-	// if err != nil {
-	// 	return err
-	// }
-	//
-	// _, err = c.libvirtConnection.DomainCreateXML(domainXmlConfig, libvirt.DomainNone)
-	// if err != nil {
-	// 	return err
-	// }
+	err = createCloudInitWorker(thisInstanceName)
+	if err != nil {
+		return err
+	}
+
+	err = copyImage(thisInstanceName)
+	if err != nil {
+		return err
+	}
+
+	domainXmlConfig, err := createBase(thisInstanceName)
+	if err != nil {
+		return err
+	}
+
+	_, err = c.libvirtConnection.DomainCreateXML(domainXmlConfig, libvirt.DomainNone)
+	if err != nil {
+		return err
+	}
 
 	return nil
 }
@@ -174,7 +188,7 @@ func createBase(instanceName string) (string, error) {
 	return xmlConfig, nil
 }
 
-func copyBaseImage(instanceName string) error {
+func copyImage(instanceName string) error {
 	baseImage := BASE_POOL_DIR + "/" + BASE_IMAGE_NAME
 	destinationPath := POOL_DIR + "/" + instanceName + ".qcow2"
 
@@ -201,8 +215,8 @@ func copyBaseImage(instanceName string) error {
 }
 
 func createCloudInit(instanceName string) error {
-	mut.Lock()
-	defer mut.Unlock()
+	cloudInitMut.Lock()
+	defer cloudInitMut.Unlock()
 
 	filePath := BASE_POOL_DIR + "/" + "user-data"
 	userDataContent := fmt.Sprintf(`#cloud-config
@@ -214,14 +228,30 @@ users:
   plain_text_passwd: user
   lock_passwd: false
   shell: /bin/sh
+
 package_update: true
+package_upgrade: true
 packages:
 - sudo
 - findutils
+- iptables
 - curl
 - util-linux
 - dbus
 - iproute2
+
+runcmd:
+- |
+  echo "running command"
+  echo "configuring cgroup..."
+  touch /boot/cmdline.txt
+  echo "cgroup_memory=1 cgroup_enable=memory" >> /boot/cmdline.txt
+
+  echo "installing k3s"
+  curl -sfL https://get.k3s.io | sh -
+
+  echo "done"
+  reboot
 `, instanceName)
 
 	err := os.WriteFile(filePath, []byte(userDataContent), 0644)
@@ -234,6 +264,196 @@ packages:
 	cmd.Stderr = os.Stderr
 	cmd.Stdout = os.Stdout
 	err = cmd.Run()
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func createCloudInitMaster(instanceName string) error {
+	cloudInitMut.Lock()
+	defer cloudInitMut.Unlock()
+
+	filePath := BASE_POOL_DIR + "/" + "user-data"
+	networkPath := BASE_POOL_DIR + "/" + "network-config"
+	userDataContent := fmt.Sprintf(`#cloud-config
+hostname: %s
+locale: en_US
+timezone: Asia/Jakarta
+users:
+- default
+- doas: [permit nopass user]
+  name: user
+  plain_text_passwd: user
+  lock_passwd: false
+  shell: /bin/sh
+
+runcmd:
+- |
+  echo "running command"
+  echo "configuring cgroup..."
+  touch /boot/cmdline.txt
+  echo "cgroup_memory=1 cgroup_enable=memory" >> /boot/cmdline.txt
+  
+  echo "configuring /etc/resolv.conf"
+  echo "nameserver 192.168.122.1" >> /etc/resolv.conf
+
+  echo "updating apk and upgrade"
+  apk update && apk upgrade
+  
+  echo "installing necessary packages"
+  apk add sudo findutils iptables curl util-linux dbus iproute2
+
+  echo "installing k3s"
+  curl -sfL https://get.k3s.io | INSTALL_K3S_EXEC="server --token 12345" sh -s -
+
+  echo "installing helm for kubernetes"
+  echo "export KUBECONFIG=/etc/rancher/k3s/k3s.yaml" >> /etc/profile
+  source /etc/profile
+  
+
+  echo "done"
+  reboot
+`, instanceName)
+
+	err := os.WriteFile(filePath, []byte(userDataContent), 0644)
+	if err != nil {
+		return err
+	}
+
+	// create the iso
+	cmd := exec.Command("cloud-localds", "-N", networkPath, POOL_DIR+"/"+instanceName+".iso", filePath)
+	cmd.Stderr = os.Stderr
+	cmd.Stdout = os.Stdout
+	err = cmd.Run()
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func createCloudInitWorker(instanceName string) error {
+	cloudInitMut.Lock()
+	defer cloudInitMut.Unlock()
+
+	filePath := BASE_POOL_DIR + "/" + "user-data"
+	networkPath := BASE_POOL_DIR + "/" + "network-config"
+	userDataContent := fmt.Sprintf(`#cloud-config
+hostname: %s
+locale: en_US
+timezone: Asia/Jakarta
+users:
+- default
+- doas: [permit nopass user]
+  name: user
+  plain_text_passwd: user
+  lock_passwd: false
+  shell: /bin/sh
+
+runcmd:
+- |
+  echo "running command"
+  echo "configuring cgroup..."
+  touch /boot/cmdline.txt
+  echo "cgroup_memory=1 cgroup_enable=memory" >> /boot/cmdline.txt
+  
+  echo "configuring /etc/resolv.conf"
+  echo "nameserver 192.168.122.1" >> /etc/resolv.conf
+
+  echo "updating apk and upgrade"
+  apk update && apk upgrade
+  
+  echo "installing necessary packages"
+  apk add sudo findutils iptables curl util-linux dbus iproute2
+
+  echo "installing k3s"
+    curl -sfL https://get.k3s.io | INSTALL_K3S_EXEC="agent --server https://192.168.122.49:6443 --token 12345" sh -s -
+
+  echo "done"
+  reboot
+`, instanceName)
+
+	err := os.WriteFile(filePath, []byte(userDataContent), 0644)
+	if err != nil {
+		return err
+	}
+
+	// create the iso
+	cmd := exec.Command("cloud-localds", "-N", networkPath, POOL_DIR+"/"+instanceName+".iso", filePath)
+	cmd.Stderr = os.Stderr
+	cmd.Stdout = os.Stdout
+	err = cmd.Run()
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func createNetworkMaster() error {
+	networkMut.Lock()
+	defer networkMut.Unlock()
+
+	filePath := BASE_POOL_DIR + "/" + "network-config"
+	// NOTE: static address
+	userDataContent := `version: 2
+ethernets:
+  eth0:
+    addresses:
+      - 192.168.122.49/24
+    nameservers:
+      addresses: [192.168.122.1]
+    routes:
+      - to: 0.0.0.0/0
+        via: 192.168.122.1
+        metric: 100
+`
+
+	// NOTE: dynamic address
+	//     userDataContent := fmt.Sprintf(`version: 2
+	// ethernets:
+	//   eth0:
+	//     dhcp4: true
+	// `)
+
+	err := os.WriteFile(filePath, []byte(userDataContent), 0644)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func createNetworkWorker() error {
+	networkMut.Lock()
+	defer networkMut.Unlock()
+
+	filePath := BASE_POOL_DIR + "/" + "network-config"
+	// NOTE: static address
+	userDataContent := fmt.Sprintf(`version: 2
+ethernets:
+  eth0:
+    addresses:
+      - 192.168.122.50/24
+    nameservers:
+      search: [if.its.ac.id]
+      addresses: [202.46.129.3]
+    routes:
+      - to: 0.0.0.0/0
+        via: 192.168.122.1
+        metric: 100
+`)
+
+	// NOTE: dynamic address
+	//     userDataContent := fmt.Sprintf(`version: 2
+	// ethernets:
+	//   eth0:
+	//     dhcp4: true
+	// `)
+
+	err := os.WriteFile(filePath, []byte(userDataContent), 0644)
 	if err != nil {
 		return err
 	}
