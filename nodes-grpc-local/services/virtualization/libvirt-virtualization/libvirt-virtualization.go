@@ -285,6 +285,7 @@ users:
 - default
 - doas: [permit nopass user]
   name: user
+  groups: wheel
   plain_text_passwd: user
   lock_passwd: false
   shell: /bin/sh
@@ -292,18 +293,18 @@ users:
 runcmd:
 - |
   echo "running command"
-  echo "configuring cgroup..."
-  touch /boot/cmdline.txt
-  echo "cgroup_memory=1 cgroup_enable=memory" >> /boot/cmdline.txt
+        # echo "configuring cgroup..."
+        # touch /boot/cmdline.txt
+        # echo "cgroup_memory=1 cgroup_enable=memory" >> /boot/cmdline.txt
   
-  echo "configuring /etc/resolv.conf"
-  echo "nameserver 192.168.122.1" >> /etc/resolv.conf
+        # echo "configuring /etc/resolv.conf"
+  # echo "nameserver 192.168.122.1" >> /etc/resolv.conf
 
   echo "updating apk and upgrade"
   apk update && apk upgrade
   
-  echo "installing necessary packages"
-  apk add sudo findutils iptables curl util-linux dbus iproute2
+  # echo "installing necessary packages"
+  # apk add sudo findutils iptables curl util-linux dbus iproute2 bash openssl git
 
   echo "installing k3s"
   curl -sfL https://get.k3s.io | INSTALL_K3S_EXEC="server --token 12345" sh -s -
@@ -311,10 +312,15 @@ runcmd:
   echo "installing helm for kubernetes"
   echo "export KUBECONFIG=/etc/rancher/k3s/k3s.yaml" >> /etc/profile
   source /etc/profile
-  
+  curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+
+  echo "creating kubernetes dashboard"
+  export KUBECONFIG=/etc/rancher/k3s/k3s.yaml
+  helm repo add kubernetes-dashboard https://kubernetes.github.io/dashboard/
+  helm upgrade --install kubernetes-dashboard kubernetes-dashboard/kubernetes-dashboard --create-namespace --namespace kubernetes-dashboard
 
   echo "done"
-  reboot
+        # reboot
 `, instanceName)
 
 	err := os.WriteFile(filePath, []byte(userDataContent), 0644)
@@ -355,21 +361,21 @@ users:
 runcmd:
 - |
   echo "running command"
-  echo "configuring cgroup..."
-  touch /boot/cmdline.txt
-  echo "cgroup_memory=1 cgroup_enable=memory" >> /boot/cmdline.txt
+        #echo "configuring cgroup..."
+        #touch /boot/cmdline.txt
+        #echo "cgroup_memory=1 cgroup_enable=memory" >> /boot/cmdline.txt
   
-  echo "configuring /etc/resolv.conf"
-  echo "nameserver 192.168.122.1" >> /etc/resolv.conf
+        #echo "configuring /etc/resolv.conf"
+        #echo "nameserver 192.168.122.1" >> /etc/resolv.conf
 
   echo "updating apk and upgrade"
   apk update && apk upgrade
   
-  echo "installing necessary packages"
-  apk add sudo findutils iptables curl util-linux dbus iproute2
+        #echo "installing necessary packages"
+        #apk add sudo findutils iptables curl util-linux dbus iproute2 bash git
 
   echo "installing k3s"
-    curl -sfL https://get.k3s.io | INSTALL_K3S_EXEC="agent --server https://192.168.122.49:6443 --token 12345" sh -s -
+  curl -sfL https://get.k3s.io | INSTALL_K3S_EXEC="agent --server https://192.168.122.49:6443 --token 12345" sh -s -
 
   echo "done"
   reboot
