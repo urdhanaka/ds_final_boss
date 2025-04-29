@@ -223,11 +223,6 @@ func createCloudInit(instanceName string) error {
 hostname: %s
 users:
 - default
-- doas: [permit nopass user]
-  name: user
-  plain_text_passwd: user
-  lock_passwd: false
-  shell: /bin/sh
 
 package_update: true
 package_upgrade: true
@@ -288,39 +283,33 @@ users:
   groups: wheel
   plain_text_passwd: user
   lock_passwd: false
-  shell: /bin/sh
+  shell: /bin/bash
 
 runcmd:
 - |
   echo "running command"
-        # echo "configuring cgroup..."
-        # touch /boot/cmdline.txt
-        # echo "cgroup_memory=1 cgroup_enable=memory" >> /boot/cmdline.txt
-  
-        # echo "configuring /etc/resolv.conf"
-  # echo "nameserver 192.168.122.1" >> /etc/resolv.conf
-
   echo "updating apk and upgrade"
   apk update && apk upgrade
   
   # echo "installing necessary packages"
-  # apk add sudo findutils iptables curl util-linux dbus iproute2 bash openssl git
+  # apk add sudo findutils iptables curl util-linux dbus iproute2 bash openssl git mount
 
   echo "installing k3s"
   curl -sfL https://get.k3s.io | INSTALL_K3S_EXEC="server --token 12345" sh -s -
 
-  echo "installing helm for kubernetes"
+  while [ ! -f /etc/rancher/k3s/k3s.yaml ]; do sleep 1; done
+
+  export KUBECONFIG=/etc/rancher/k3s/k3s.yaml
   echo "export KUBECONFIG=/etc/rancher/k3s/k3s.yaml" >> /etc/profile
-  source /etc/profile
+
+  echo "installing helm for kubernetes"
   curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
 
   echo "creating kubernetes dashboard"
-  export KUBECONFIG=/etc/rancher/k3s/k3s.yaml
   helm repo add kubernetes-dashboard https://kubernetes.github.io/dashboard/
   helm upgrade --install kubernetes-dashboard kubernetes-dashboard/kubernetes-dashboard --create-namespace --namespace kubernetes-dashboard
 
   echo "done"
-        # reboot
 `, instanceName)
 
 	err := os.WriteFile(filePath, []byte(userDataContent), 0644)
@@ -354,26 +343,17 @@ users:
 - default
 - doas: [permit nopass user]
   name: user
+  groups: wheel
   plain_text_passwd: user
   lock_passwd: false
-  shell: /bin/sh
+  shell: /bin/bash
 
 runcmd:
 - |
   echo "running command"
-        #echo "configuring cgroup..."
-        #touch /boot/cmdline.txt
-        #echo "cgroup_memory=1 cgroup_enable=memory" >> /boot/cmdline.txt
-  
-        #echo "configuring /etc/resolv.conf"
-        #echo "nameserver 192.168.122.1" >> /etc/resolv.conf
-
   echo "updating apk and upgrade"
   apk update && apk upgrade
   
-        #echo "installing necessary packages"
-        #apk add sudo findutils iptables curl util-linux dbus iproute2 bash git
-
   echo "installing k3s"
   curl -sfL https://get.k3s.io | INSTALL_K3S_EXEC="agent --server https://192.168.122.49:6443 --token 12345" sh -s -
 
