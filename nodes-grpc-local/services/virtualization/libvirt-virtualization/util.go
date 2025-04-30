@@ -7,7 +7,7 @@ import (
 
 func generateRandom(stringLength int) string {
 	random := rand.New(rand.NewSource(time.Now().UnixNano()))
-	letters := []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
+	letters := []rune("abcdefghijklmnopqrstuvwxyz")
 
 	b := make([]rune, stringLength)
 	for i := range b {
