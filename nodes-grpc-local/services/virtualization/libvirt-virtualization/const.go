@@ -3,6 +3,8 @@ package libvirt_virtualization
 const (
 	BASE_POOL_DIR   = "/var/lib/libvirt/images"
 	POOL_DIR        = "/var/lib/libvirt/k3s-virt"
-	// BASE_IMAGE_NAME = "nocloud_alpine-3.21.2-x86_64-bios-cloudinit-r0.qcow2"
-	BASE_IMAGE_NAME = "ta-template.qcow2"
+	NVRAM_DIR       = "/var/lib/libvirt/qemu/nvram"
+	NVRAM_TEMPLATE  = "/usr/share/edk2/ovmf/OVMF_VARS.fd"
+	BASE_IMAGE_NAME = "ta-template-new.qcow2"
+	BRIDGE_NAME     = "k3s-br0"
 )

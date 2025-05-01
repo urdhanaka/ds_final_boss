@@ -1,7 +1,9 @@
 package libvirt_virtualization
 
 import (
+	"context"
 	"fmt"
+	virtualization_model "nodes-grpc-local/services/model/virtualization-model"
 	"nodes-grpc-local/services/virtualization"
 	"os"
 	"os/exec"
@@ -22,7 +24,10 @@ func NewLibvirtVirtualization(
 	}
 }
 
-func (c *LibvirtVirtualization) CreateMaster() error {
+func (c *LibvirtVirtualization) CreateMaster(
+	ctx context.Context,
+	virtRequest virtualization_model.CreateInstanceRequest,
+) error {
 	thisInstanceName := generateRandom(10)
 
 	err := createNetworkMaster()
@@ -35,12 +40,17 @@ func (c *LibvirtVirtualization) CreateMaster() error {
 		return err
 	}
 
-	err = copyImage(thisInstanceName)
+	err = copyImage(thisInstanceName, virtRequest)
 	if err != nil {
 		return err
 	}
 
-	domainXmlConfig, err := createBase(thisInstanceName)
+    err = copyEfi(thisInstanceName)
+    if err != nil {
+        return err
+    }
+
+	domainXmlConfig, err := createBase(thisInstanceName, virtRequest)
 	if err != nil {
 		return err
 	}
@@ -53,7 +63,10 @@ func (c *LibvirtVirtualization) CreateMaster() error {
 	return nil
 }
 
-func (c *LibvirtVirtualization) CreateWorker() error {
+func (c *LibvirtVirtualization) CreateWorker(
+	ctx context.Context,
+	virtRequest virtualization_model.CreateInstanceRequest,
+) error {
 	thisInstanceName := generateRandom(10)
 
 	err := createNetworkWorker()
@@ -66,12 +79,17 @@ func (c *LibvirtVirtualization) CreateWorker() error {
 		return err
 	}
 
-	err = copyImage(thisInstanceName)
+	err = copyImage(thisInstanceName, virtRequest)
 	if err != nil {
 		return err
 	}
 
-	domainXmlConfig, err := createBase(thisInstanceName)
+    err = copyEfi(thisInstanceName)
+    if err != nil {
+        return err
+    }
+
+	domainXmlConfig, err := createBase(thisInstanceName, virtRequest)
 	if err != nil {
 		return err
 	}
@@ -84,7 +102,7 @@ func (c *LibvirtVirtualization) CreateWorker() error {
 	return nil
 }
 
-func createBase(instanceName string) (string, error) {
+func createBase(instanceName string, instanceConfig virtualization_model.CreateInstanceRequest) (string, error) {
 	instanceStorage := POOL_DIR + "/" + instanceName + ".qcow2"
 	seedFile := POOL_DIR + "/" + instanceName + ".iso"
 
@@ -97,16 +115,42 @@ func createBase(instanceName string) (string, error) {
                   </libosinfo:libosinfo>`,
 		},
 		Memory: &libvirtxml.DomainMemory{
-			Value: 2097152, // WARN: hardcoded
+			Value: 2097152, // WARN: hadrcoded
+			// Unit:  "GB",
 		},
 		VCPU: &libvirtxml.DomainVCPU{
 			Value: 4, // WARN: hardcoded
 		},
 		OS: &libvirtxml.DomainOS{
+			Firmware: "efi",
 			Type: &libvirtxml.DomainOSType{
 				Arch:    "x86_64",
-				Machine: "q35",
+				Machine: "pc-q35-9.2",
 				Type:    "hvm",
+			},
+			FirmwareInfo: &libvirtxml.DomainOSFirmwareInfo{
+				Features: []libvirtxml.DomainOSFirmwareFeature{
+					{
+						Enabled: "no",
+						Name:    "enrolled-keys",
+					},
+					{
+						Enabled: "no",
+						Name:    "secure-boot",
+					},
+				},
+			},
+			Loader: &libvirtxml.DomainLoader{
+				Readonly: "yes",
+				Type:     "pflash",
+				Format:   "raw",
+				Path:     "/usr/share/edk2/ovmf/OVMF_CODE.fd",
+			},
+			NVRam: &libvirtxml.DomainNVRam{
+				NVRam:          fmt.Sprintf("/var/lib/libvirt/qemu/nvram/_VARS.fd", instanceName), // TODO:
+				Template:       "/usr/share/edk2/ovmf/OVMF_VARS.fd",
+				TemplateFormat: "raw",
+				Format:         "raw",
 			},
 			BootDevices: []libvirtxml.DomainBootDevice{
 				{
@@ -200,7 +244,10 @@ func createBase(instanceName string) (string, error) {
 	return xmlConfig, nil
 }
 
-func copyImage(instanceName string) error {
+func copyImage(instanceName string, virtRequest virtualization_model.CreateInstanceRequest) error {
+    imageMut.Lock()
+    defer imageMut.Unlock()
+
 	baseImage := BASE_POOL_DIR + "/" + BASE_IMAGE_NAME
 	destinationPath := POOL_DIR + "/" + instanceName + ".qcow2"
 
@@ -215,6 +262,7 @@ func copyImage(instanceName string) error {
 	}
 
 	// resize the qcow2
+	// resizeCmd := exec.Command("qemu-img", "resize", destinationPath, fmt.Sprintf("+%dG", virtRequest.Storage))
 	resizeCmd := exec.Command("qemu-img", "resize", destinationPath, "+10G")
 	resizeCmd.Stderr = os.Stderr
 	resizeCmd.Stdout = os.Stdout
@@ -224,6 +272,31 @@ func copyImage(instanceName string) error {
 	}
 
 	return nil
+}
+
+func copyEfi(instanceName string) error {
+    efiMut.Lock()
+    defer efiMut.Unlock()
+
+	destinationPath := NVRAM_DIR + "/" + instanceName + "_VARS.fd"
+
+	data, err := os.ReadFile(NVRAM_TEMPLATE)
+	if err != nil {
+		return err
+	}
+
+	err = os.WriteFile(destinationPath, data, 0644)
+	if err != nil {
+		return err
+	}
+
+    cmd := exec.Command("chown", "qemu:qemu", destinationPath)
+    err = cmd.Run()
+    if err != nil {
+        return err
+    }
+
+    return nil
 }
 
 func createCloudInit(instanceName string) error {

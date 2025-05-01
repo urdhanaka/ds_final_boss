@@ -5,7 +5,6 @@ import (
 	"fmt"
 	virtualization_model "nodes-grpc-local/services/model/virtualization-model"
 	"nodes-grpc-local/services/virtualization"
-	"nodes-grpc-local/services/virtualization/embedded"
 
 	incus "github.com/lxc/incus/client"
 	"github.com/lxc/incus/shared/api"
@@ -23,11 +22,11 @@ func NewIncusVirtualization(
 	}
 }
 
-func (c *IncusVirtualization) CreateMaster() error {
+func (c *IncusVirtualization) CreateMaster(ctx context.Context, virtModel virtualization_model.CreateInstanceRequest) error {
 	return nil
 }
 
-func (c *IncusVirtualization) CreateWorker() error {
+func (c *IncusVirtualization) CreateWorker(ctx context.Context, virtModel virtualization_model.CreateInstanceRequest) error {
 	return nil
 }
 
@@ -36,20 +35,12 @@ func (c *IncusVirtualization) createBase(
 	instanceName string,
 	instanceRequest virtualization_model.CreateInstanceRequest,
 ) error {
-	embedded := embedded.ReturnEmbedded()
-	profileFile, err := embedded.ReadFile("files/user-cloud-init.yaml")
-	if err != nil {
-		virtualization.SlogFunction(instanceName, "error reading cloud-init file", err)
-
-		return err
-	}
-
 	req := api.InstancesPost{
 		InstancePut: api.InstancePut{
 			Architecture: "amd64",
 			Config: map[string]string{
 				"security.secureboot":  "false",
-				"cloud-init.user-data": string(profileFile),
+				// "cloud-init.user-data": string(profileFile),
 				"limits.cpu":           fmt.Sprintf("%d", instanceRequest.Cpu),
 				"limits.memory":        fmt.Sprintf("%dGiB", instanceRequest.Memory),
 			},

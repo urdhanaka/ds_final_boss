@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"net"
 	proto_model "nodes-grpc-local/services/model/proto-model"
+	virtualization_model "nodes-grpc-local/services/model/virtualization-model"
 	"nodes-grpc-local/services/virtualization"
 	"os"
 
@@ -37,7 +38,14 @@ func (s *NodeServer) CreateMaster(
 	ctx context.Context,
 	createMasterRequest *proto_model.CreateMasterRequest,
 ) (*proto_model.CreateMasterResponse, error) {
-	err := s.virtualizationService.CreateMaster()
+	err := s.virtualizationService.CreateMaster(ctx, virtualization_model.CreateInstanceRequest{
+		IsMaster:        true,
+		Token:           createMasterRequest.Token,
+		MasterIpAddress: "",
+		Cpu:             createMasterRequest.Requirements.Cpu,
+		Memory:          createMasterRequest.Requirements.Memory,
+		Storage:         createMasterRequest.Requirements.Storage,
+	})
 	if err != nil {
 		return new(proto_model.CreateMasterResponse), err
 	}
@@ -46,10 +54,17 @@ func (s *NodeServer) CreateMaster(
 }
 
 func (s *NodeServer) CreateWorker(
-	c context.Context,
+	ctx context.Context,
 	workerRequest *proto_model.CreateWorkerRequest,
 ) (*proto_model.CreateWorkerResponse, error) {
-	err := s.virtualizationService.CreateWorker()
+	err := s.virtualizationService.CreateWorker(ctx, virtualization_model.CreateInstanceRequest{
+		IsMaster:        false,
+		Token:           workerRequest.Token,
+		MasterIpAddress: "",
+		Cpu:             workerRequest.Requirements.Cpu,
+		Memory:          workerRequest.Requirements.Memory,
+		Storage:         workerRequest.Requirements.Storage,
+	})
 	if err != nil {
 		return new(proto_model.CreateWorkerResponse), err
 	}
