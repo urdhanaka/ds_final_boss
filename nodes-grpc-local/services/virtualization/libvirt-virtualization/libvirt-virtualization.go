@@ -178,6 +178,18 @@ func createBase(instanceName string) (string, error) {
 					TTY: "pty",
 				},
 			},
+			Channels: []libvirtxml.DomainChannel{
+				{
+					Protocol: &libvirtxml.DomainChardevProtocol{
+						Type: "unix",
+					},
+					Target: &libvirtxml.DomainChannelTarget{
+						VirtIO: &libvirtxml.DomainChannelTargetVirtIO{
+							Name: "org.qemu.guest_agent.0",
+						},
+					},
+				},
+			},
 		},
 	}
 	xmlConfig, err := domConfig.Marshal()
@@ -285,6 +297,19 @@ users:
   lock_passwd: false
   shell: /bin/bash
 
+write_files:
+- path: /etc/init.d/kube-dashboard-proxy
+  permissions: '0755'
+  owner: root:root
+  content: |
+  #!/sbin/openrc-run
+  description="Kubernetes dashboard proxy"
+
+  command="/usr/local/bin/k3s"
+  command_args="kubectl proxy --port=8001 --address=0.0.0.0 --accept-hosts=\(.*?\))
+  pidfile="/run/kubectl-proxy.pid"
+  command_background="yes"
+
 runcmd:
 - |
   echo "running command"
@@ -298,6 +323,9 @@ runcmd:
   curl -sfL https://get.k3s.io | INSTALL_K3S_EXEC="server --token 12345" sh -s -
 
   while [ ! -f /etc/rancher/k3s/k3s.yaml ]; do sleep 1; done
+  mkdir /home/user/.kube
+  cp /etc/rancher/k3s/k3s.yaml /home/user/.kube/config
+  chown user:user /home/user/.kube/config
 
   export KUBECONFIG=/etc/rancher/k3s/k3s.yaml
   echo "export KUBECONFIG=/etc/rancher/k3s/k3s.yaml" >> /etc/profile
@@ -308,6 +336,32 @@ runcmd:
   echo "creating kubernetes dashboard"
   helm repo add kubernetes-dashboard https://kubernetes.github.io/dashboard/
   helm upgrade --install kubernetes-dashboard kubernetes-dashboard/kubernetes-dashboard --create-namespace --namespace kubernetes-dashboard
+
+  echo "setting up user for kubernetes dashboard"
+  cat <<EOF | k3s kubectl apply -f -
+    apiVersion: v1
+    kind: ServiceAccount
+    metadata:
+      name: admin-user
+      namespace: kubernetes-dashboard
+    ---
+    apiVersion: rbac.authorization.k8s.io/v1
+    kind: ClusterRoleBinding
+    metadata:
+      name: admin-user
+    roleRef:
+      apiGroup: rbac.authorization.k8s.io
+      kind: ClusterRole
+      name: cluster-admin
+    subjects:
+      - kind: ServiceAccount
+      name: admin-user
+      namespace: kubernetes-dashboard
+  EOF
+
+  echo "writing token and starting the dashboard..."
+  rc-service kube-dashboard-proxy restart
+  kubectl -n kubernetes-dashboard create token admin-user >> /home/user/.token
 
   echo "done"
 `, instanceName)
@@ -446,12 +500,3 @@ ethernets:
 
 	return nil
 }
-
-// func createCloudInit(instanceName string) error {
-// 	metadataContent := fmt.Sprintf(
-// 		"instance-id: %s\nlocal-hostname: %s",
-// 		instanceName, instanceName,
-// 	)
-//
-// 	return nil
-// }
