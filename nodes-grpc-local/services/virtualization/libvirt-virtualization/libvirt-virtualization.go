@@ -30,33 +30,47 @@ func (c *LibvirtVirtualization) CreateMaster(
 ) error {
 	thisInstanceName := generateRandom(10)
 
+    slogFunction(thisInstanceName, "creating master instance", nil)
+
 	err := createNetworkMaster()
 	if err != nil {
+        slogFunction(thisInstanceName, "could not create master instance", err)
+
 		return err
 	}
 
 	err = createCloudInitMaster(thisInstanceName)
 	if err != nil {
+        slogFunction(thisInstanceName, "could not create master instance", err)
+
 		return err
 	}
 
 	err = copyImage(thisInstanceName, virtRequest)
 	if err != nil {
+        slogFunction(thisInstanceName, "could not create master instance", err)
+
 		return err
 	}
 
 	err = copyEfi(thisInstanceName)
 	if err != nil {
+        slogFunction(thisInstanceName, "could not create master instance", err)
+
 		return err
 	}
 
 	domainXmlConfig, err := createBase(thisInstanceName, virtRequest)
 	if err != nil {
+        slogFunction(thisInstanceName, "could not create master instance", err)
+
 		return err
 	}
 
 	_, err = c.libvirtConnection.DomainCreateXML(domainXmlConfig, libvirt.DomainNone)
 	if err != nil {
+        slogFunction(thisInstanceName, "could not create master instance", err)
+
 		return err
 	}
 
@@ -69,33 +83,47 @@ func (c *LibvirtVirtualization) CreateWorker(
 ) error {
 	thisInstanceName := generateRandom(10)
 
+    slogFunction(thisInstanceName, "creating worker instance", nil)
+
 	err := createNetworkWorker()
 	if err != nil {
+        slogFunction(thisInstanceName, "could not create worker instance", err)
+
 		return err
 	}
 
 	err = createCloudInitWorker(thisInstanceName)
 	if err != nil {
+        slogFunction(thisInstanceName, "could not create worker instance", err)
+
 		return err
 	}
 
 	err = copyImage(thisInstanceName, virtRequest)
 	if err != nil {
+        slogFunction(thisInstanceName, "could not create worker instance", err)
+
 		return err
 	}
 
 	err = copyEfi(thisInstanceName)
 	if err != nil {
+        slogFunction(thisInstanceName, "could not create worker instance", err)
+
 		return err
 	}
 
 	domainXmlConfig, err := createBase(thisInstanceName, virtRequest)
 	if err != nil {
+        slogFunction(thisInstanceName, "could not create worker instance", err)
+
 		return err
 	}
 
 	_, err = c.libvirtConnection.DomainCreateXML(domainXmlConfig, libvirt.DomainNone)
 	if err != nil {
+        slogFunction(thisInstanceName, "could not create worker instance", err)
+
 		return err
 	}
 
