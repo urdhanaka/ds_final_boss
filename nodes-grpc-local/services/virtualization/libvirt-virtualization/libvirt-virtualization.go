@@ -45,10 +45,10 @@ func (c *LibvirtVirtualization) CreateMaster(
 		return err
 	}
 
-    err = copyEfi(thisInstanceName)
-    if err != nil {
-        return err
-    }
+	err = copyEfi(thisInstanceName)
+	if err != nil {
+		return err
+	}
 
 	domainXmlConfig, err := createBase(thisInstanceName, virtRequest)
 	if err != nil {
@@ -84,10 +84,10 @@ func (c *LibvirtVirtualization) CreateWorker(
 		return err
 	}
 
-    err = copyEfi(thisInstanceName)
-    if err != nil {
-        return err
-    }
+	err = copyEfi(thisInstanceName)
+	if err != nil {
+		return err
+	}
 
 	domainXmlConfig, err := createBase(thisInstanceName, virtRequest)
 	if err != nil {
@@ -102,7 +102,33 @@ func (c *LibvirtVirtualization) CreateWorker(
 	return nil
 }
 
-func createBase(instanceName string, instanceConfig virtualization_model.CreateInstanceRequest) (string, error) {
+func (c *LibvirtVirtualization) StopInstance(
+	ctx context.Context,
+	instance virtualization_model.Instance,
+) error {
+	slogFunction(instance.Name, "shutting down instance...", nil)
+
+	dom, err := c.libvirtConnection.DomainLookupByName(instance.Name)
+	if err != nil {
+		slogFunction(instance.Name, "could not shut down domain", err)
+
+		return err
+	}
+
+	err = c.libvirtConnection.DomainShutdown(dom)
+	if err != nil {
+		slogFunction(instance.Name, "could not shut down domain", err)
+
+		return err
+	}
+
+	return nil
+}
+
+func createBase(
+	instanceName string,
+	instanceConfig virtualization_model.CreateInstanceRequest,
+) (string, error) {
 	instanceStorage := POOL_DIR + "/" + instanceName + ".qcow2"
 	seedFile := POOL_DIR + "/" + instanceName + ".iso"
 
@@ -147,7 +173,7 @@ func createBase(instanceName string, instanceConfig virtualization_model.CreateI
 				Path:     "/usr/share/edk2/ovmf/OVMF_CODE.fd",
 			},
 			NVRam: &libvirtxml.DomainNVRam{
-				NVRam:          fmt.Sprintf("/var/lib/libvirt/qemu/nvram/_VARS.fd", instanceName), // TODO:
+				NVRam:          fmt.Sprintf("/var/lib/libvirt/qemu/nvram/%s_VARS.fd", instanceName),
 				Template:       "/usr/share/edk2/ovmf/OVMF_VARS.fd",
 				TemplateFormat: "raw",
 				Format:         "raw",
@@ -245,8 +271,8 @@ func createBase(instanceName string, instanceConfig virtualization_model.CreateI
 }
 
 func copyImage(instanceName string, virtRequest virtualization_model.CreateInstanceRequest) error {
-    imageMut.Lock()
-    defer imageMut.Unlock()
+	imageMut.Lock()
+	defer imageMut.Unlock()
 
 	baseImage := BASE_POOL_DIR + "/" + BASE_IMAGE_NAME
 	destinationPath := POOL_DIR + "/" + instanceName + ".qcow2"
@@ -275,8 +301,8 @@ func copyImage(instanceName string, virtRequest virtualization_model.CreateInsta
 }
 
 func copyEfi(instanceName string) error {
-    efiMut.Lock()
-    defer efiMut.Unlock()
+	efiMut.Lock()
+	defer efiMut.Unlock()
 
 	destinationPath := NVRAM_DIR + "/" + instanceName + "_VARS.fd"
 
@@ -290,13 +316,13 @@ func copyEfi(instanceName string) error {
 		return err
 	}
 
-    cmd := exec.Command("chown", "qemu:qemu", destinationPath)
-    err = cmd.Run()
-    if err != nil {
-        return err
-    }
+	cmd := exec.Command("chown", "qemu:qemu", destinationPath)
+	err = cmd.Run()
+	if err != nil {
+		return err
+	}
 
-    return nil
+	return nil
 }
 
 func createCloudInit(instanceName string) error {

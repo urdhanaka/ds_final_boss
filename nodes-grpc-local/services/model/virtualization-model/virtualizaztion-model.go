@@ -16,3 +16,8 @@ type CreateInstanceRequest struct {
 	Memory  int64
 	Storage int64
 }
+
+type Instance struct {
+	Name   string
+	Status bool
+}

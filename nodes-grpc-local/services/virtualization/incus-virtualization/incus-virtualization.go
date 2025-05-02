@@ -30,6 +30,10 @@ func (c *IncusVirtualization) CreateWorker(ctx context.Context, virtModel virtua
 	return nil
 }
 
+func (c *IncusVirtualization) StopInstance(ctx context.Context) error {
+	return nil
+}
+
 func (c *IncusVirtualization) createBase(
 	ctx context.Context,
 	instanceName string,

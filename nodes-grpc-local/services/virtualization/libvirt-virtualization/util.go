@@ -1,6 +1,8 @@
 package libvirt_virtualization
 
 import (
+	"fmt"
+	"log/slog"
 	"math/rand"
 	"time"
 )
@@ -15,4 +17,16 @@ func generateRandom(stringLength int) string {
 	}
 
 	return string(b)
+}
+
+func slogFunction(instanceName string, message string, err error) {
+	fullMessage := fmt.Sprintf("%s | %s", instanceName, message)
+
+	if err != nil {
+		slog.Error(fullMessage,
+			"err", err.Error(),
+		)
+	} else {
+		slog.Info(fullMessage)
+	}
 }
