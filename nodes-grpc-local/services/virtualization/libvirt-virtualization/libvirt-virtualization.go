@@ -425,17 +425,39 @@ users:
   shell: /bin/bash
 
 write_files:
-- path: /etc/init.d/kube-dashboard-proxy
-  permissions: '0755'
+- path: /etc/init.d/kube-dashboard-port-forward
+  permissions: 0o755
   owner: root:root
   content: |
-  #!/sbin/openrc-run
-  description="Kubernetes dashboard proxy"
-
-  command="/usr/local/bin/k3s"
-  command_args="kubectl proxy --port=8001 --address=0.0.0.0 --accept-hosts=\(.*?\))
-  pidfile="/run/kubectl-proxy.pid"
-  command_background="yes"
+    #!/sbin/openrc-run
+    description="Kubernetes dashboard port-forward"
+    command="/usr/local/bin/k3s"
+    command_args="kubectl -n kubernetes-dashboard port-forward svc/kubernetes-dashboard-kong-proxy 8443:443 --address 0.0.0.0"
+    pidfile="/run/kubectl-port-forward.pid"
+    output_log=/var/log/kube-dashboard.log
+    error_log=/var/log/kube-dashboard.log
+    command_background="yes"
+- path: /root/service-account.yaml
+  content: |
+    apiVersion: v1
+    kind: ServiceAccount
+    metadata:
+      name: admin-user
+      namespace: kubernetes-dashboard
+- path: /root/role-binding.yaml
+  content: |
+    apiVersion: rbac.authorization.k8s.io/v1
+    kind: ClusterRoleBinding
+    metadata:
+      name: admin-user
+    roleRef:
+      apiGroup: rbac.authorization.k8s.io
+      kind: ClusterRole
+      name: cluster-admin
+    subjects:
+    - kind: ServiceAccount
+      name: admin-user
+      namespace: kubernetes-dashboard
 
 runcmd:
 - |
@@ -443,16 +465,12 @@ runcmd:
   echo "updating apk and upgrade"
   apk update && apk upgrade
   
-  # echo "installing necessary packages"
-  # apk add sudo findutils iptables curl util-linux dbus iproute2 bash openssl git mount
+  echo "installing necessary packages"
+        # apk add git
 
   echo "installing k3s"
   curl -sfL https://get.k3s.io | INSTALL_K3S_EXEC="server --token 12345" sh -s -
-
   while [ ! -f /etc/rancher/k3s/k3s.yaml ]; do sleep 1; done
-  mkdir /home/user/.kube
-  cp /etc/rancher/k3s/k3s.yaml /home/user/.kube/config
-  chown user:user /home/user/.kube/config
 
   export KUBECONFIG=/etc/rancher/k3s/k3s.yaml
   echo "export KUBECONFIG=/etc/rancher/k3s/k3s.yaml" >> /etc/profile
@@ -465,30 +483,12 @@ runcmd:
   helm upgrade --install kubernetes-dashboard kubernetes-dashboard/kubernetes-dashboard --create-namespace --namespace kubernetes-dashboard
 
   echo "setting up user for kubernetes dashboard"
-  cat <<EOF | k3s kubectl apply -f -
-    apiVersion: v1
-    kind: ServiceAccount
-    metadata:
-      name: admin-user
-      namespace: kubernetes-dashboard
-    ---
-    apiVersion: rbac.authorization.k8s.io/v1
-    kind: ClusterRoleBinding
-    metadata:
-      name: admin-user
-    roleRef:
-      apiGroup: rbac.authorization.k8s.io
-      kind: ClusterRole
-      name: cluster-admin
-    subjects:
-      - kind: ServiceAccount
-      name: admin-user
-      namespace: kubernetes-dashboard
-  EOF
+  k3s kubectl apply -f /root/service-account.yaml -f /root/role-binding.yaml
 
   echo "writing token and starting the dashboard..."
-  rc-service kube-dashboard-proxy restart
-  kubectl -n kubernetes-dashboard create token admin-user >> /home/user/.token
+  echo "waiting until all pods in the kubernetes-dashboard namespaces is running"
+  k3s kubectl wait pod --all --for=condition=Ready --namespace=kubernetes-dashboard --timeout=120s
+  rc-service kube-dashboard-port-forward restart
 
   echo "done"
 `, instanceName)
@@ -534,12 +534,13 @@ runcmd:
   echo "running command"
   echo "updating apk and upgrade"
   apk update && apk upgrade
+        # apk add bash
   
   echo "installing k3s"
   curl -sfL https://get.k3s.io | INSTALL_K3S_EXEC="agent --server https://192.168.122.49:6443 --token 12345" sh -s -
 
   echo "done"
-  reboot
+        # reboot
 `, instanceName)
 
 	err := os.WriteFile(filePath, []byte(userDataContent), 0644)
