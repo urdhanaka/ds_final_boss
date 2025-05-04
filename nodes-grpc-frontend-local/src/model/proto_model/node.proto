@@ -1,0 +1,67 @@
+syntax = "proto3";
+
+option go_package = "./services/model/proto-model";
+
+enum Status {
+  STATUS_UNSPECIFIED = 0;
+  STATUS_AVAILABLE = 1;
+  STATUS_UNAVAILABLE = 2;
+}
+
+message Empty {}
+
+message CreateNodeRequirements {
+  int64 cpu = 1;
+  int64 memory = 2;
+  int64 storage = 3;
+}
+
+// create master
+message CreateMasterRequest {
+  string token = 1;
+  CreateNodeRequirements requirements = 2;
+}
+
+message CreateMasterResponse {
+  string ip_address = 1;
+}
+
+// create worker
+message CreateWorkerRequest {
+  string token = 1;
+  string ip_address = 2;
+  CreateNodeRequirements requirements = 3;
+}
+
+message CreateWorkerResponse {}
+
+// message Temp {
+//   string status = 1;
+// }
+
+// message NodeStatus {
+//   string hostname = 1;
+//   string ip_address = 2;
+//   string grpc_port = 3;
+//   Status status = 4;
+// }
+
+// message ServerToken {
+//   string token = 1;
+// }
+
+// message NodeList {
+//   repeated NodeStatus nodes = 1;
+// }
+
+service NodeService {
+  // TODO: COMPLETE THIS FIRST
+  rpc CreateMaster(CreateMasterRequest) returns (CreateMasterResponse) {}
+  rpc CreateWorker(CreateWorkerRequest) returns (CreateWorkerResponse) {}
+
+  // do this later...
+  // rpc RegisterNode(RegisterNodeRequest) returns (RegisterNodeResponse) {}
+  // rpc ThisNodeStatus(Empty) returns (Temp) {}
+  // rpc Status(Empty) returns (NodeStatus) {}
+  // rpc StopNode(Empty) returns (Empty) {}
+}
