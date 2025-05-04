@@ -12,6 +12,11 @@ import (
 	"libvirt.org/go/libvirtxml"
 )
 
+const (
+    MASTER_NODE_IP = "192.168.122.49"
+    WORKER_NODE_IP = "192.168.122.50"
+)
+
 type LibvirtVirtualization struct {
 	libvirtConnection *libvirt.Libvirt
 }
@@ -30,46 +35,48 @@ func (c *LibvirtVirtualization) CreateMaster(
 ) error {
 	thisInstanceName := generateRandom(10)
 
-    slogFunction(thisInstanceName, "creating master instance", nil)
+	slogFunction(thisInstanceName, "creating master instance", nil)
+
+    fmt.Println(virtRequest)
 
 	err := createNetworkMaster()
 	if err != nil {
-        slogFunction(thisInstanceName, "could not create master instance", err)
+		slogFunction(thisInstanceName, "could not create master instance", err)
 
 		return err
 	}
 
 	err = createCloudInitMaster(thisInstanceName)
 	if err != nil {
-        slogFunction(thisInstanceName, "could not create master instance", err)
+		slogFunction(thisInstanceName, "could not create master instance", err)
 
 		return err
 	}
 
 	err = copyImage(thisInstanceName, virtRequest)
 	if err != nil {
-        slogFunction(thisInstanceName, "could not create master instance", err)
+		slogFunction(thisInstanceName, "could not create master instance", err)
 
 		return err
 	}
 
 	err = copyEfi(thisInstanceName)
 	if err != nil {
-        slogFunction(thisInstanceName, "could not create master instance", err)
+		slogFunction(thisInstanceName, "could not create master instance", err)
 
 		return err
 	}
 
 	domainXmlConfig, err := createBase(thisInstanceName, virtRequest)
 	if err != nil {
-        slogFunction(thisInstanceName, "could not create master instance", err)
+		slogFunction(thisInstanceName, "could not create master instance", err)
 
 		return err
 	}
 
 	_, err = c.libvirtConnection.DomainCreateXML(domainXmlConfig, libvirt.DomainNone)
 	if err != nil {
-        slogFunction(thisInstanceName, "could not create master instance", err)
+		slogFunction(thisInstanceName, "could not create master instance", err)
 
 		return err
 	}
@@ -83,46 +90,46 @@ func (c *LibvirtVirtualization) CreateWorker(
 ) error {
 	thisInstanceName := generateRandom(10)
 
-    slogFunction(thisInstanceName, "creating worker instance", nil)
+	slogFunction(thisInstanceName, "creating worker instance", nil)
 
 	err := createNetworkWorker()
 	if err != nil {
-        slogFunction(thisInstanceName, "could not create worker instance", err)
+		slogFunction(thisInstanceName, "could not create worker instance", err)
 
 		return err
 	}
 
 	err = createCloudInitWorker(thisInstanceName)
 	if err != nil {
-        slogFunction(thisInstanceName, "could not create worker instance", err)
+		slogFunction(thisInstanceName, "could not create worker instance", err)
 
 		return err
 	}
 
 	err = copyImage(thisInstanceName, virtRequest)
 	if err != nil {
-        slogFunction(thisInstanceName, "could not create worker instance", err)
+		slogFunction(thisInstanceName, "could not create worker instance", err)
 
 		return err
 	}
 
 	err = copyEfi(thisInstanceName)
 	if err != nil {
-        slogFunction(thisInstanceName, "could not create worker instance", err)
+		slogFunction(thisInstanceName, "could not create worker instance", err)
 
 		return err
 	}
 
 	domainXmlConfig, err := createBase(thisInstanceName, virtRequest)
 	if err != nil {
-        slogFunction(thisInstanceName, "could not create worker instance", err)
+		slogFunction(thisInstanceName, "could not create worker instance", err)
 
 		return err
 	}
 
 	_, err = c.libvirtConnection.DomainCreateXML(domainXmlConfig, libvirt.DomainNone)
 	if err != nil {
-        slogFunction(thisInstanceName, "could not create worker instance", err)
+		slogFunction(thisInstanceName, "could not create worker instance", err)
 
 		return err
 	}
@@ -169,18 +176,18 @@ func createBase(
                   </libosinfo:libosinfo>`,
 		},
 		Memory: &libvirtxml.DomainMemory{
-			Value: 2097152, // WARN: hadrcoded
-			// Unit:  "GB",
+			Value: uint(instanceConfig.Memory), // WARN: hadrcoded
+			Unit:  "GB",
 		},
 		VCPU: &libvirtxml.DomainVCPU{
-			Value: 4, // WARN: hardcoded
+			Value: uint(instanceConfig.Cpu), // WARN: hardcoded
 		},
 		OS: &libvirtxml.DomainOS{
 			Firmware: "efi",
 			Type: &libvirtxml.DomainOSType{
-				Arch:    "x86_64",
-				Machine: "pc-q35-9.2",
-				Type:    "hvm",
+                Arch:    "x86_64",
+                Machine: "pc-q35-9.2",
+                Type:    "hvm",
 			},
 			FirmwareInfo: &libvirtxml.DomainOSFirmwareInfo{
 				Features: []libvirtxml.DomainOSFirmwareFeature{
@@ -298,7 +305,10 @@ func createBase(
 	return xmlConfig, nil
 }
 
-func copyImage(instanceName string, virtRequest virtualization_model.CreateInstanceRequest) error {
+func copyImage(
+    instanceName string,
+    virtRequest virtualization_model.CreateInstanceRequest,
+) error {
 	imageMut.Lock()
 	defer imageMut.Unlock()
 
@@ -316,8 +326,8 @@ func copyImage(instanceName string, virtRequest virtualization_model.CreateInsta
 	}
 
 	// resize the qcow2
-	// resizeCmd := exec.Command("qemu-img", "resize", destinationPath, fmt.Sprintf("+%dG", virtRequest.Storage))
-	resizeCmd := exec.Command("qemu-img", "resize", destinationPath, "+10G")
+	resizeCmd := exec.Command("qemu-img", "resize", destinationPath, fmt.Sprintf("+%dG", virtRequest.Storage))
+	// resizeCmd := exec.Command("qemu-img", "resize", destinationPath, "+10G")
 	resizeCmd.Stderr = os.Stderr
 	resizeCmd.Stdout = os.Stdout
 	err = resizeCmd.Run()
@@ -470,7 +480,7 @@ runcmd:
 
   echo "installing k3s"
   curl -sfL https://get.k3s.io | INSTALL_K3S_EXEC="server --token 12345" sh -s -
-  while [ ! -f /etc/rancher/k3s/k3s.yaml ]; do sleep 1; done
+        # while [ ! -f /etc/rancher/k3s/k3s.yaml ]; do sleep 1; done
 
   export KUBECONFIG=/etc/rancher/k3s/k3s.yaml
   echo "export KUBECONFIG=/etc/rancher/k3s/k3s.yaml" >> /etc/profile
@@ -537,11 +547,11 @@ runcmd:
         # apk add bash
   
   echo "installing k3s"
-  curl -sfL https://get.k3s.io | INSTALL_K3S_EXEC="agent --server https://192.168.122.49:6443 --token 12345" sh -s -
+  curl -sfL https://get.k3s.io | INSTALL_K3S_EXEC="agent --server https://%s:6443 --token 12345" sh -s -
 
   echo "done"
         # reboot
-`, instanceName)
+`, instanceName, MASTER_NODE_IP)
 
 	err := os.WriteFile(filePath, []byte(userDataContent), 0644)
 	if err != nil {
@@ -566,18 +576,18 @@ func createNetworkMaster() error {
 
 	filePath := BASE_POOL_DIR + "/" + "network-config"
 	// NOTE: static address
-	userDataContent := `version: 2
+	userDataContent := fmt.Sprintf(`version: 2
 ethernets:
   eth0:
     addresses:
-      - 192.168.122.49/24
+      - %s/24
     nameservers:
       addresses: [192.168.122.1]
     routes:
       - to: 0.0.0.0/0
         via: 192.168.122.1
         metric: 100
-`
+`, MASTER_NODE_IP)
 
 	// NOTE: dynamic address
 	//     userDataContent := fmt.Sprintf(`version: 2
@@ -604,15 +614,14 @@ func createNetworkWorker() error {
 ethernets:
   eth0:
     addresses:
-      - 192.168.122.50/24
+      - %s/24
     nameservers:
-      search: [if.its.ac.id]
-      addresses: [202.46.129.3]
+      addresses: [192.168.122.1]
     routes:
       - to: 0.0.0.0/0
         via: 192.168.122.1
         metric: 100
-`)
+`, WORKER_NODE_IP)
 
 	// NOTE: dynamic address
 	//     userDataContent := fmt.Sprintf(`version: 2
