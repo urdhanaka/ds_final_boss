@@ -6,10 +6,12 @@ import (
 
 	"github.com/gofiber/fiber/v3"
 	"github.com/gofiber/fiber/v3/middleware/static"
+	"github.com/jackc/pgx/v5"
 )
 
-func SetRouters(fiberApp *fiber.App) {
-	nodeService := services.NewNodeService()
+func SetRouters(fiberApp *fiber.App, pgxConn *pgx.Conn) {
+	dbService := services.NewDatabaseService(pgxConn)
+	nodeService := services.NewNodeService(dbService)
 
 	nodeHandler := handlers.NewNodeHandler(nodeService)
 
@@ -24,6 +26,6 @@ func SetRouters(fiberApp *fiber.App) {
 	// POST, create the cluster
 	fiberApp.Post("/create_cluster", nodeHandler.CreateCluster)
 
-    // GET, access the cluster
-    fiberApp.Get("/dashboard/:id", nodeHandler.AccessCluster)
+	// GET, access the cluster
+	fiberApp.Get("/dashboard/:id", nodeHandler.AccessCluster)
 }

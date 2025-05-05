@@ -17,9 +17,13 @@ templ Page() {
 				<form>
 					<div class="flex gap-4 py-1">
 						<div>
+							<label for="name">Name:</label>
+							<input type="text" id="name" name="name"/>
+						</div>
+						<div>
 							<label for="vcpu">CPU:</label>
 							<select name="vcpu" id="vcpu">
-								<option value="1">1 vCPUs</option>
+								<option value="1">1 vCPU</option>
 								<option value="2">2 vCPUs</option>
 								<option value="3">3 vCPUs</option>
 								<option value="4">4 vCPUs</option>

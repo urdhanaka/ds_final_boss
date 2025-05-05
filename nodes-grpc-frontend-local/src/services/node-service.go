@@ -13,10 +13,14 @@ const (
 	WORKER_IP_ADDRESS = "192.168.122.50"
 )
 
-type NodeService struct{}
+type NodeService struct {
+	databaseService *DatabaseService
+}
 
-func NewNodeService() *NodeService {
-	return &NodeService{}
+func NewNodeService(databaseService *DatabaseService) *NodeService {
+	return &NodeService{
+		databaseService: databaseService,
+	}
 }
 
 func (n *NodeService) CreateCluster(
