@@ -11,7 +11,7 @@ install_latest_version() {
 if ! command -v k3s 2>&1; then
   install_latest_version 
 else
-  LOCAL_K3S_VERSION=$(k3s -v | head --lines=1 | awk '{print $2}')
+  LOCAL_K3S_VERSION=$(k3s -v | head --lines=1 | awk '{print $3}')
   if [[ ${LOCAL_K3S_VERSION} != ${LATEST_VERSION} ]]; then
     install_latest_version 
   fi
