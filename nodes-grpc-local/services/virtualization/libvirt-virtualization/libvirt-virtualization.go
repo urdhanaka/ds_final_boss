@@ -13,8 +13,8 @@ import (
 )
 
 const (
-    MASTER_NODE_IP = "192.168.122.49"
-    WORKER_NODE_IP = "192.168.122.50"
+	MASTER_NODE_IP = "192.168.122.49"
+	WORKER_NODE_IP = "192.168.122.50"
 )
 
 type LibvirtVirtualization struct {
@@ -36,8 +36,6 @@ func (c *LibvirtVirtualization) CreateMaster(
 	thisInstanceName := generateRandom(10)
 
 	slogFunction(thisInstanceName, "creating master instance", nil)
-
-    fmt.Println(virtRequest)
 
 	err := createNetworkMaster()
 	if err != nil {
@@ -172,7 +170,7 @@ func createBase(
 		Name: instanceName,
 		Metadata: &libvirtxml.DomainMetadata{
 			XML: `<libosinfo:libosinfo xmlns:libosinfo="http://libosinfo.org/xmlns/libvirt/domain/1.0">
-                    <libosinfo:os id="http://alpinelinux.org/alpinelinux/3.21"/>
+                    <libosinfo:os id="http://ubuntu.com/ubuntu/24.10"/>
                   </libosinfo:libosinfo>`,
 		},
 		Memory: &libvirtxml.DomainMemory{
@@ -185,9 +183,9 @@ func createBase(
 		OS: &libvirtxml.DomainOS{
 			Firmware: "efi",
 			Type: &libvirtxml.DomainOSType{
-                Arch:    "x86_64",
-                Machine: "pc-q35-9.2",
-                Type:    "hvm",
+				Arch:    "x86_64",
+				Machine: "pc-q35-9.2",
+				Type:    "hvm",
 			},
 			FirmwareInfo: &libvirtxml.DomainOSFirmwareInfo{
 				Features: []libvirtxml.DomainOSFirmwareFeature{
@@ -222,6 +220,9 @@ func createBase(
 		Features: &libvirtxml.DomainFeatureList{
 			ACPI: &libvirtxml.DomainFeature{},
 			APIC: &libvirtxml.DomainFeatureAPIC{},
+			VMPort: &libvirtxml.DomainFeatureState{
+				State: "off",
+			},
 		},
 		CPU: &libvirtxml.DomainCPU{
 			Mode: "host-passthrough",
@@ -306,8 +307,8 @@ func createBase(
 }
 
 func copyImage(
-    instanceName string,
-    virtRequest virtualization_model.CreateInstanceRequest,
+	instanceName string,
+	virtRequest virtualization_model.CreateInstanceRequest,
 ) error {
 	imageMut.Lock()
 	defer imageMut.Unlock()
@@ -326,8 +327,8 @@ func copyImage(
 	}
 
 	// resize the qcow2
-	resizeCmd := exec.Command("qemu-img", "resize", destinationPath, fmt.Sprintf("+%dG", virtRequest.Storage))
-	// resizeCmd := exec.Command("qemu-img", "resize", destinationPath, "+10G")
+	// resizeCmd := exec.Command("qemu-img", "resize", destinationPath, fmt.Sprintf("+%dG", virtRequest.Storage))
+	resizeCmd := exec.Command("qemu-img", "resize", destinationPath, "+10G")
 	resizeCmd.Stderr = os.Stderr
 	resizeCmd.Stdout = os.Stdout
 	err = resizeCmd.Run()
@@ -363,58 +364,6 @@ func copyEfi(instanceName string) error {
 	return nil
 }
 
-func createCloudInit(instanceName string) error {
-	cloudInitMut.Lock()
-	defer cloudInitMut.Unlock()
-
-	filePath := BASE_POOL_DIR + "/" + "user-data"
-	userDataContent := fmt.Sprintf(`#cloud-config
-hostname: %s
-users:
-- default
-
-package_update: true
-package_upgrade: true
-packages:
-- sudo
-- findutils
-- iptables
-- curl
-- util-linux
-- dbus
-- iproute2
-
-runcmd:
-- |
-  echo "running command"
-  echo "configuring cgroup..."
-  touch /boot/cmdline.txt
-  echo "cgroup_memory=1 cgroup_enable=memory" >> /boot/cmdline.txt
-
-  echo "installing k3s"
-  curl -sfL https://get.k3s.io | sh -
-
-  echo "done"
-  reboot
-`, instanceName)
-
-	err := os.WriteFile(filePath, []byte(userDataContent), 0644)
-	if err != nil {
-		return err
-	}
-
-	// create the iso
-	cmd := exec.Command("cloud-localds", POOL_DIR+"/"+instanceName+".iso", filePath)
-	cmd.Stderr = os.Stderr
-	cmd.Stdout = os.Stdout
-	err = cmd.Run()
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
 func createCloudInitMaster(instanceName string) error {
 	cloudInitMut.Lock()
 	defer cloudInitMut.Unlock()
@@ -423,30 +372,31 @@ func createCloudInitMaster(instanceName string) error {
 	networkPath := BASE_POOL_DIR + "/" + "network-config"
 	userDataContent := fmt.Sprintf(`#cloud-config
 hostname: %s
-locale: en_US
+locale: en_US.UTF-8
 timezone: Asia/Jakarta
 users:
 - default
-- doas: [permit nopass user]
-  name: user
-  groups: wheel
+- name: user
+  groups: sudo
+  sudo: ALL=(ALL:ALL) ALL
   plain_text_passwd: user
   lock_passwd: false
   shell: /bin/bash
 
+network:
+  version: 2
+  ethernets:
+    enp1s0:
+      addresses:
+        - %s/24
+      nameservers:
+        addresses: [192.168.122.1]
+      routes:
+        - to: 0.0.0.0/0
+          via: 192.168.122.1
+          metric: 100
+
 write_files:
-- path: /etc/init.d/kube-dashboard-port-forward
-  permissions: 0o755
-  owner: root:root
-  content: |
-    #!/sbin/openrc-run
-    description="Kubernetes dashboard port-forward"
-    command="/usr/local/bin/k3s"
-    command_args="kubectl -n kubernetes-dashboard port-forward svc/kubernetes-dashboard-kong-proxy 8443:443 --address 0.0.0.0"
-    pidfile="/run/kubectl-port-forward.pid"
-    output_log=/var/log/kube-dashboard.log
-    error_log=/var/log/kube-dashboard.log
-    command_background="yes"
 - path: /root/service-account.yaml
   content: |
     apiVersion: v1
@@ -472,15 +422,15 @@ write_files:
 runcmd:
 - |
   echo "running command"
-  echo "updating apk and upgrade"
-  apk update && apk upgrade
+  echo "updating and upgrading packages"
+        # apt-get update && apt-get upgrade
   
   echo "installing necessary packages"
         # apk add git
 
   echo "installing k3s"
   curl -sfL https://get.k3s.io | INSTALL_K3S_EXEC="server --token 12345" sh -s -
-        # while [ ! -f /etc/rancher/k3s/k3s.yaml ]; do sleep 1; done
+  while [ ! -f /etc/rancher/k3s/k3s.yaml ]; do sleep 1; done
 
   export KUBECONFIG=/etc/rancher/k3s/k3s.yaml
   echo "export KUBECONFIG=/etc/rancher/k3s/k3s.yaml" >> /etc/profile
@@ -497,11 +447,11 @@ runcmd:
 
   echo "writing token and starting the dashboard..."
   echo "waiting until all pods in the kubernetes-dashboard namespaces is running"
-  k3s kubectl wait pod --all --for=condition=Ready --namespace=kubernetes-dashboard --timeout=120s
-  rc-service kube-dashboard-port-forward restart
+        #k3s kubectl wait pod --all --for=condition=Ready --namespace=kubernetes-dashboard --timeout=120s
+        #rc-service kube-dashboard-port-forward restart
 
   echo "done"
-`, instanceName)
+`, instanceName, MASTER_NODE_IP)
 
 	err := os.WriteFile(filePath, []byte(userDataContent), 0644)
 	if err != nil {
@@ -528,22 +478,35 @@ func createCloudInitWorker(instanceName string) error {
 	networkPath := BASE_POOL_DIR + "/" + "network-config"
 	userDataContent := fmt.Sprintf(`#cloud-config
 hostname: %s
-locale: en_US
+locale: en_US.UTF-8
 timezone: Asia/Jakarta
 users:
 - default
-- doas: [permit nopass user]
-  name: user
-  groups: wheel
+- name: user
+  groups: sudo
+  sudo: ALL=(ALL:ALL) ALL
   plain_text_passwd: user
   lock_passwd: false
   shell: /bin/bash
+
+network:
+  version: 2
+  ethernets:
+    enp1s0:
+      addresses:
+        - %s/24
+      nameservers:
+        addresses: [192.168.122.1]
+      routes:
+        - to: 0.0.0.0/0
+          via: 192.168.122.1
+          metric: 100
 
 runcmd:
 - |
   echo "running command"
   echo "updating apk and upgrade"
-  apk update && apk upgrade
+        # apk update && apk upgrade
         # apk add bash
   
   echo "installing k3s"
@@ -551,7 +514,7 @@ runcmd:
 
   echo "done"
         # reboot
-`, instanceName, MASTER_NODE_IP)
+`, instanceName, WORKER_NODE_IP, MASTER_NODE_IP)
 
 	err := os.WriteFile(filePath, []byte(userDataContent), 0644)
 	if err != nil {
@@ -576,17 +539,18 @@ func createNetworkMaster() error {
 
 	filePath := BASE_POOL_DIR + "/" + "network-config"
 	// NOTE: static address
-	userDataContent := fmt.Sprintf(`version: 2
-ethernets:
-  eth0:
-    addresses:
-      - %s/24
-    nameservers:
-      addresses: [192.168.122.1]
-    routes:
-      - to: 0.0.0.0/0
-        via: 192.168.122.1
-        metric: 100
+	userDataContent := fmt.Sprintf(`network:
+  version: 2
+  ethernets:
+    enp1s0:
+      addresses:
+        - %s/24
+      nameservers:
+        addresses: [192.168.122.1]
+      routes:
+        - to: 0.0.0.0/0
+          via: 192.168.122.1
+          metric: 100
 `, MASTER_NODE_IP)
 
 	// NOTE: dynamic address
@@ -610,17 +574,18 @@ func createNetworkWorker() error {
 
 	filePath := BASE_POOL_DIR + "/" + "network-config"
 	// NOTE: static address
-	userDataContent := fmt.Sprintf(`version: 2
-ethernets:
-  eth0:
-    addresses:
-      - %s/24
-    nameservers:
-      addresses: [192.168.122.1]
-    routes:
-      - to: 0.0.0.0/0
-        via: 192.168.122.1
-        metric: 100
+	userDataContent := fmt.Sprintf(`network:
+  version: 2
+  ethernets:
+    enp1s0:
+      addresses:
+        - %s/24
+      nameservers:
+        addresses: [192.168.122.1]
+      routes:
+        - to: 0.0.0.0/0
+          via: 192.168.122.1
+          metric: 100
 `, WORKER_NODE_IP)
 
 	// NOTE: dynamic address
