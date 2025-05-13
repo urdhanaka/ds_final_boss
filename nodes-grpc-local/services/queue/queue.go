@@ -1,11 +1,10 @@
 package queue
 
-import "sync"
-
 const (
 	// maximum size of the queue line
-	// if the queue currently have MAX_QUEUE_SIZE,
-	// will return error
+	//
+	// if the queue currently have MAX_QUEUE_SIZE and
+	// tried to be inserted, return error
 	MAX_QUEUE_SIZE int = 20
 
 	// maximum worker that can handle the queue
@@ -13,13 +12,12 @@ const (
 )
 
 type Queue struct {
-	jobs    chan Job
-	localWg sync.WaitGroup
+	jobs chan *Job
 }
 
-func NewQueueService() Queue {
-	return Queue{
-		jobs: make(chan Job, MAX_QUEUE_SIZE),
+func NewQueue() *Queue {
+	return &Queue{
+		jobs: make(chan *Job, MAX_QUEUE_SIZE),
 	}
 }
 
@@ -27,7 +25,7 @@ func NewQueueService() Queue {
 //
 // return true if job is successfully added,
 // return false otherwise
-func (s *Queue) TryAdd(job Job) bool {
+func (s *Queue) TryAdd(job *Job) bool {
 	select {
 	case s.jobs <- job:
 		return true
