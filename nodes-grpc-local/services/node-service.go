@@ -38,6 +38,9 @@ func (s *NodeServer) CreateMaster(
 	ctx context.Context,
 	createMasterRequest *proto_model.CreateMasterRequest,
 ) (*proto_model.CreateMasterResponse, error) {
+	provisionCtx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
 	instanceRequest := virtualization_model.CreateInstanceRequest{
 		IsMaster:        true,
 		Token:           createMasterRequest.Token,
@@ -47,7 +50,7 @@ func (s *NodeServer) CreateMaster(
 		Storage:         createMasterRequest.Requirements.Storage,
 	}
 
-	err := s.dispatcher.AddJob(ctx, instanceRequest)
+	err := s.dispatcher.AddJob(provisionCtx, instanceRequest)
 	if err != nil {
 		return new(proto_model.CreateMasterResponse), err
 	}
@@ -59,6 +62,9 @@ func (s *NodeServer) CreateWorker(
 	ctx context.Context,
 	createWorkerRequest *proto_model.CreateWorkerRequest,
 ) (*proto_model.CreateWorkerResponse, error) {
+	provisionCtx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
 	instanceRequest := virtualization_model.CreateInstanceRequest{
 		IsMaster:        false,
 		Token:           createWorkerRequest.Token,
@@ -68,7 +74,7 @@ func (s *NodeServer) CreateWorker(
 		Storage:         createWorkerRequest.Requirements.Storage,
 	}
 
-	err := s.dispatcher.AddJob(ctx, instanceRequest)
+	err := s.dispatcher.AddJob(provisionCtx, instanceRequest)
 	if err != nil {
 		return new(proto_model.CreateWorkerResponse), err
 	}

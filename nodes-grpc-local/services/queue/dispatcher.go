@@ -46,7 +46,12 @@ func (d *Dispatcher) Wait(ctx context.Context) {
 	d.dispatcherWg.Wait()
 }
 
-func (d *Dispatcher) Start(ctx context.Context) {
+func (d *Dispatcher) Start() {
+	defer d.dispatcherWg.Done()
+	d.dispatcherWg.Add(1)
+
+	thisContext := context.Background()
+
 	for {
 		select {
 		case job, ok := <-d.jobQueue.jobs:
@@ -57,7 +62,6 @@ func (d *Dispatcher) Start(ctx context.Context) {
 
 			slog.Info("received job, working...")
 
-			d.dispatcherWg.Add(1)
 			d.worker <- struct{}{}
 
 			go func(j *Job) {
@@ -65,7 +69,7 @@ func (d *Dispatcher) Start(ctx context.Context) {
 				defer func() { <-d.worker }()
 
 				for retry := 1; retry <= j.Retries; retry++ {
-					err := d.virtService.CreateInstance(ctx, job.Request)
+					err := d.virtService.CreateInstance(thisContext, job.Request)
 					if err == nil {
 						slog.Info("provisioning done")
 						return
@@ -76,7 +80,7 @@ func (d *Dispatcher) Start(ctx context.Context) {
 				}
 			}(job)
 
-		case <-ctx.Done():
+		case <-thisContext.Done():
 			slog.Info("cancelled")
 		}
 	}
