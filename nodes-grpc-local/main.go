@@ -5,7 +5,7 @@ import (
 )
 
 func main() {
-	serviceStruct := services.NewConnection()
+	serviceStruct := services.NewInitStruct()
 
 	services.StartGrpcServer(serviceStruct)
 }

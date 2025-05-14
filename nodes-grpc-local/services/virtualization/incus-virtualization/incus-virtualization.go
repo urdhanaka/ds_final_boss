@@ -22,6 +22,10 @@ func NewIncusVirtualization(
 	}
 }
 
+func (c *IncusVirtualization) CreateInstance(ctx context.Context, virtModel virtualization_model.CreateInstanceRequest) error {
+	return nil
+}
+
 func (c *IncusVirtualization) CreateMaster(ctx context.Context, virtModel virtualization_model.CreateInstanceRequest) error {
 	return nil
 }
@@ -30,7 +34,7 @@ func (c *IncusVirtualization) CreateWorker(ctx context.Context, virtModel virtua
 	return nil
 }
 
-func (c *IncusVirtualization) StopInstance(ctx context.Context) error {
+func (c *IncusVirtualization) StopInstance(ctx context.Context, instanceName virtualization_model.Instance) error {
 	return nil
 }
 
@@ -43,10 +47,10 @@ func (c *IncusVirtualization) createBase(
 		InstancePut: api.InstancePut{
 			Architecture: "amd64",
 			Config: map[string]string{
-				"security.secureboot":  "false",
+				"security.secureboot": "false",
 				// "cloud-init.user-data": string(profileFile),
-				"limits.cpu":           fmt.Sprintf("%d", instanceRequest.Cpu),
-				"limits.memory":        fmt.Sprintf("%dGiB", instanceRequest.Memory),
+				"limits.cpu":    fmt.Sprintf("%d", instanceRequest.Cpu),
+				"limits.memory": fmt.Sprintf("%dGiB", instanceRequest.Memory),
 			},
 			Ephemeral: true, // delete the instance when poweroff
 		},

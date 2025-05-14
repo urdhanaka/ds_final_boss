@@ -27,8 +27,8 @@ type Job struct {
 	Backoff time.Duration
 }
 
-func NewJob(request virtualization_model.CreateInstanceRequest) Job {
-	return Job{
+func NewJob(request virtualization_model.CreateInstanceRequest) *Job {
+	return &Job{
 		Request: request,
 		Retries: DEFAULT_JOB_RETRIES,
 		Timeout: DEFAULT_JOB_TIMEOUT,

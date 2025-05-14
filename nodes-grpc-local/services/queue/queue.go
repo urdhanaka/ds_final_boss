@@ -1,5 +1,7 @@
 package queue
 
+import "context"
+
 const (
 	// maximum size of the queue line
 	//
@@ -8,7 +10,7 @@ const (
 	MAX_QUEUE_SIZE int = 20
 
 	// maximum worker that can handle the queue
-	MAX_WORKER_SIZE int = 2
+	MAX_WORKER_SIZE int = 3
 )
 
 type Queue struct {
@@ -25,7 +27,7 @@ func NewQueue() *Queue {
 //
 // return true if job is successfully added,
 // return false otherwise
-func (s *Queue) TryAdd(job *Job) bool {
+func (s *Queue) TryAdd(ctx context.Context, job *Job) bool {
 	select {
 	case s.jobs <- job:
 		return true

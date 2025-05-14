@@ -5,7 +5,6 @@ go 1.24.2
 require (
 	github.com/digitalocean/go-libvirt v0.0.0-20240308204700-df736b2945cf
 	github.com/lxc/incus v0.7.0
-	github.com/vishvananda/netlink v1.2.1-beta.2
 	google.golang.org/grpc v1.72.0
 	google.golang.org/protobuf v1.36.6
 	libvirt.org/go/libvirtxml v1.11001.0
@@ -24,7 +23,6 @@ require (
 	github.com/rogpeppe/go-internal v1.13.1 // indirect
 	github.com/sirupsen/logrus v1.9.3 // indirect
 	github.com/stretchr/testify v1.10.0 // indirect
-	github.com/vishvananda/netns v0.0.4 // indirect
 	github.com/zitadel/oidc/v2 v2.12.0 // indirect
 	go.opentelemetry.io/otel v1.35.0 // indirect
 	go.opentelemetry.io/otel/sdk/metric v1.35.0 // indirect

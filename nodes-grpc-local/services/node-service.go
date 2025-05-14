@@ -7,7 +7,7 @@ import (
 	"net"
 	proto_model "nodes-grpc-local/services/model/proto-model"
 	virtualization_model "nodes-grpc-local/services/model/virtualization-model"
-	"nodes-grpc-local/services/virtualization"
+	"nodes-grpc-local/services/queue"
 	"os"
 
 	"google.golang.org/grpc"
@@ -23,14 +23,14 @@ type NodeServer struct {
 	proto_model.UnimplementedNodeServiceServer
 
 	// virtualization service
-	virtualizationService virtualization.VirtualizationInterface
+	dispatcher *queue.Dispatcher
 }
 
 func NewNodeServer(
-	virtualizationService virtualization.VirtualizationInterface,
+	dispatcher *queue.Dispatcher,
 ) NodeServerInterface {
 	return &NodeServer{
-		virtualizationService: virtualizationService,
+		dispatcher: dispatcher,
 	}
 }
 
@@ -38,14 +38,16 @@ func (s *NodeServer) CreateMaster(
 	ctx context.Context,
 	createMasterRequest *proto_model.CreateMasterRequest,
 ) (*proto_model.CreateMasterResponse, error) {
-	err := s.virtualizationService.CreateMaster(ctx, virtualization_model.CreateInstanceRequest{
+	instanceRequest := virtualization_model.CreateInstanceRequest{
 		IsMaster:        true,
 		Token:           createMasterRequest.Token,
 		MasterIpAddress: "",
 		Cpu:             createMasterRequest.Requirements.Cpu,
 		Memory:          createMasterRequest.Requirements.Memory,
 		Storage:         createMasterRequest.Requirements.Storage,
-	})
+	}
+
+	err := s.dispatcher.AddJob(ctx, instanceRequest)
 	if err != nil {
 		return new(proto_model.CreateMasterResponse), err
 	}
@@ -55,16 +57,18 @@ func (s *NodeServer) CreateMaster(
 
 func (s *NodeServer) CreateWorker(
 	ctx context.Context,
-	workerRequest *proto_model.CreateWorkerRequest,
+	createWorkerRequest *proto_model.CreateWorkerRequest,
 ) (*proto_model.CreateWorkerResponse, error) {
-	err := s.virtualizationService.CreateWorker(ctx, virtualization_model.CreateInstanceRequest{
+	instanceRequest := virtualization_model.CreateInstanceRequest{
 		IsMaster:        false,
-		Token:           workerRequest.Token,
-		MasterIpAddress: "",
-		Cpu:             workerRequest.Requirements.Cpu,
-		Memory:          workerRequest.Requirements.Memory,
-		Storage:         workerRequest.Requirements.Storage,
-	})
+		Token:           createWorkerRequest.Token,
+		MasterIpAddress: createWorkerRequest.IpAddress,
+		Cpu:             createWorkerRequest.Requirements.Cpu,
+		Memory:          createWorkerRequest.Requirements.Memory,
+		Storage:         createWorkerRequest.Requirements.Storage,
+	}
+
+	err := s.dispatcher.AddJob(ctx, instanceRequest)
 	if err != nil {
 		return new(proto_model.CreateWorkerResponse), err
 	}
@@ -72,7 +76,7 @@ func (s *NodeServer) CreateWorker(
 	return new(proto_model.CreateWorkerResponse), nil
 }
 
-func StartGrpcServer(connection *Connection) {
+func StartGrpcServer(connection *InitStruct) {
 	lis, err := net.Listen("tcp", GRPC_PORT)
 	if err != nil {
 		slog.Error("could not start grpc server",
@@ -83,7 +87,7 @@ func StartGrpcServer(connection *Connection) {
 
 	s := grpc.NewServer()
 	proto_model.RegisterNodeServiceServer(s, &NodeServer{
-		virtualizationService: connection.VirtualizationService,
+		dispatcher: connection.DispatcherService,
 	})
 
 	slog.Info(fmt.Sprintf("starting grpc server at %s", GRPC_PORT))

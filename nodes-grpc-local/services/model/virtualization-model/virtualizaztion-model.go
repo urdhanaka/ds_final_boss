@@ -1,9 +1,6 @@
 package virtualization_model
 
 type CreateInstanceRequest struct {
-	// is the instance the master?
-	IsMaster bool
-
 	// token for k3s
 	Token string
 
@@ -15,6 +12,9 @@ type CreateInstanceRequest struct {
 	Cpu     int64
 	Memory  int64
 	Storage int64
+
+	// is the instance the master?
+	IsMaster bool
 }
 
 type Instance struct {

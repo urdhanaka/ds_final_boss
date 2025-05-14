@@ -3,6 +3,7 @@ package libvirt_virtualization
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	virtualization_model "nodes-grpc-local/services/model/virtualization-model"
 	"nodes-grpc-local/services/virtualization"
 	"os"
@@ -29,52 +30,72 @@ func NewLibvirtVirtualization(
 	}
 }
 
-func (c *LibvirtVirtualization) CreateMaster(
+// wrapper for create master and create worker
+// this function will be used in queue
+func (c *LibvirtVirtualization) CreateInstance(
+	ctx context.Context,
+	virtRequest virtualization_model.CreateInstanceRequest,
+) error {
+	if virtRequest.IsMaster {
+		return c.createMaster(ctx, virtRequest)
+	} else {
+		return c.createWorker(ctx, virtRequest)
+	}
+}
+
+func (c *LibvirtVirtualization) createMaster(
 	ctx context.Context,
 	virtRequest virtualization_model.CreateInstanceRequest,
 ) error {
 	thisInstanceName := generateRandom(10)
 
+	slog.Info(fmt.Sprintf("master node name is %s", thisInstanceName))
 	slogFunction(thisInstanceName, "creating master instance", nil)
 
+	slogFunction(thisInstanceName, "creating node network", nil)
 	err := createNetworkMaster()
 	if err != nil {
-		slogFunction(thisInstanceName, "could not create master instance", err)
+		slogFunction(thisInstanceName, "could not create node network", err)
 
 		return err
 	}
 
+	slogFunction(thisInstanceName, "creating node cloud-init configuration", nil)
 	err = createCloudInitMaster(thisInstanceName)
 	if err != nil {
-		slogFunction(thisInstanceName, "could not create master instance", err)
+		slogFunction(thisInstanceName, "could not create node cloud-init configuration", err)
 
 		return err
 	}
 
+	slogFunction(thisInstanceName, "creating node image", nil)
 	err = copyImage(thisInstanceName, virtRequest)
 	if err != nil {
-		slogFunction(thisInstanceName, "could not create master instance", err)
+		slogFunction(thisInstanceName, "could not create node image", err)
 
 		return err
 	}
 
+	slogFunction(thisInstanceName, "creating node EFI", nil)
 	err = copyEfi(thisInstanceName)
 	if err != nil {
-		slogFunction(thisInstanceName, "could not create master instance", err)
+		slogFunction(thisInstanceName, "could not create node EFI", err)
 
 		return err
 	}
 
+	slogFunction(thisInstanceName, "creating node base xml", nil)
 	domainXmlConfig, err := createBase(thisInstanceName, virtRequest)
 	if err != nil {
-		slogFunction(thisInstanceName, "could not create master instance", err)
+		slogFunction(thisInstanceName, "could not create node base xml", err)
 
 		return err
 	}
 
+	slogFunction(thisInstanceName, "spawning node", nil)
 	_, err = c.libvirtConnection.DomainCreateXML(domainXmlConfig, libvirt.DomainNone)
 	if err != nil {
-		slogFunction(thisInstanceName, "could not create master instance", err)
+		slogFunction(thisInstanceName, "could not spawn node", err)
 
 		return err
 	}
@@ -82,52 +103,59 @@ func (c *LibvirtVirtualization) CreateMaster(
 	return nil
 }
 
-func (c *LibvirtVirtualization) CreateWorker(
+func (c *LibvirtVirtualization) createWorker(
 	ctx context.Context,
 	virtRequest virtualization_model.CreateInstanceRequest,
 ) error {
 	thisInstanceName := generateRandom(10)
 
+	slog.Info(fmt.Sprintf("worker node name is %s", thisInstanceName))
 	slogFunction(thisInstanceName, "creating worker instance", nil)
 
+	slogFunction(thisInstanceName, "creating node network", nil)
 	err := createNetworkWorker()
 	if err != nil {
-		slogFunction(thisInstanceName, "could not create worker instance", err)
+		slogFunction(thisInstanceName, "could not create node network", err)
 
 		return err
 	}
 
+	slogFunction(thisInstanceName, "creating node cloud-init configuration", nil)
 	err = createCloudInitWorker(thisInstanceName)
 	if err != nil {
-		slogFunction(thisInstanceName, "could not create worker instance", err)
+		slogFunction(thisInstanceName, "could not create node cloud-init configuration", err)
 
 		return err
 	}
 
+	slogFunction(thisInstanceName, "creating node image", nil)
 	err = copyImage(thisInstanceName, virtRequest)
 	if err != nil {
-		slogFunction(thisInstanceName, "could not create worker instance", err)
+		slogFunction(thisInstanceName, "could not create node image", err)
 
 		return err
 	}
 
+	slogFunction(thisInstanceName, "creating node EFI", nil)
 	err = copyEfi(thisInstanceName)
 	if err != nil {
-		slogFunction(thisInstanceName, "could not create worker instance", err)
+		slogFunction(thisInstanceName, "could not create node EFI", err)
 
 		return err
 	}
 
+	slogFunction(thisInstanceName, "creating node base xml", nil)
 	domainXmlConfig, err := createBase(thisInstanceName, virtRequest)
 	if err != nil {
-		slogFunction(thisInstanceName, "could not create worker instance", err)
+		slogFunction(thisInstanceName, "could not create node base xml", err)
 
 		return err
 	}
 
+	slogFunction(thisInstanceName, "spawning node", nil)
 	_, err = c.libvirtConnection.DomainCreateXML(domainXmlConfig, libvirt.DomainNone)
 	if err != nil {
-		slogFunction(thisInstanceName, "could not create worker instance", err)
+		slogFunction(thisInstanceName, "could not spawn node", err)
 
 		return err
 	}
@@ -174,11 +202,11 @@ func createBase(
                   </libosinfo:libosinfo>`,
 		},
 		Memory: &libvirtxml.DomainMemory{
-			Value: uint(instanceConfig.Memory), // WARN: hadrcoded
+			Value: uint(instanceConfig.Memory),
 			Unit:  "GB",
 		},
 		VCPU: &libvirtxml.DomainVCPU{
-			Value: uint(instanceConfig.Cpu), // WARN: hardcoded
+			Value: uint(instanceConfig.Cpu),
 		},
 		OS: &libvirtxml.DomainOS{
 			Firmware: "efi",
@@ -327,8 +355,7 @@ func copyImage(
 	}
 
 	// resize the qcow2
-	// resizeCmd := exec.Command("qemu-img", "resize", destinationPath, fmt.Sprintf("+%dG", virtRequest.Storage))
-	resizeCmd := exec.Command("qemu-img", "resize", destinationPath, "+10G")
+	resizeCmd := exec.Command("qemu-img", "resize", destinationPath, fmt.Sprintf("+%dG", virtRequest.Storage))
 	resizeCmd.Stderr = os.Stderr
 	resizeCmd.Stdout = os.Stdout
 	err = resizeCmd.Run()
