@@ -18,7 +18,7 @@ func NewInitStruct() *InitStruct {
 	queueStruct := queue.NewQueue()
 	dispatcherService := queue.NewDispatcher(queueStruct, libvirtService)
 
-    go dispatcherService.Start()
+	go dispatcherService.Start()
 
 	return &InitStruct{
 		VirtualizationService: libvirtService,
