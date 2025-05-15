@@ -12,9 +12,9 @@ import (
 
 type Dispatcher struct {
 	dispatcherWg sync.WaitGroup
+	virtService  virtualization.VirtualizationInterface
 	worker       chan struct{}
 	jobQueue     *Queue
-	virtService  virtualization.VirtualizationInterface
 }
 
 func NewDispatcher(
@@ -22,9 +22,9 @@ func NewDispatcher(
 	virtService virtualization.VirtualizationInterface,
 ) *Dispatcher {
 	return &Dispatcher{
+		virtService: virtService,
 		worker:      make(chan struct{}, MAX_WORKER_SIZE),
 		jobQueue:    jobQueue,
-		virtService: virtService,
 	}
 }
 
@@ -42,7 +42,7 @@ func (d *Dispatcher) AddJob(
 	return nil
 }
 
-func (d *Dispatcher) Wait(ctx context.Context) {
+func (d *Dispatcher) Wait() {
 	d.dispatcherWg.Wait()
 }
 
@@ -60,16 +60,17 @@ func (d *Dispatcher) Start() {
 				return
 			}
 
-			slog.Info("received job, working...")
-
 			d.worker <- struct{}{}
 
 			go func(j *Job) {
-				defer d.dispatcherWg.Done()
 				defer func() { <-d.worker }()
 
+				var err error
+
+				slog.Info("received job, working...")
+
 				for retry := 1; retry <= j.Retries; retry++ {
-					err := d.virtService.CreateInstance(thisContext, job.Request)
+					err = d.virtService.CreateInstance(thisContext, job.Request)
 					if err == nil {
 						slog.Info("provisioning done")
 						return
@@ -78,6 +79,10 @@ func (d *Dispatcher) Start() {
 						time.Sleep(time.Second * j.Backoff)
 					}
 				}
+
+				slog.Error("provisioning error after trying",
+					"error", err,
+				)
 			}(job)
 
 		case <-thisContext.Done():
