@@ -47,7 +47,7 @@ func (c *LibvirtVirtualization) createMaster(
 	ctx context.Context,
 	virtRequest virtualization_model.CreateInstanceRequest,
 ) error {
-	thisInstanceName := generateRandom(10)
+	thisInstanceName := virtRequest.Name
 
 	slog.Info(fmt.Sprintf("master node name is %s", thisInstanceName))
 	slogFunction(thisInstanceName, "creating master instance", nil)
@@ -107,7 +107,7 @@ func (c *LibvirtVirtualization) createWorker(
 	ctx context.Context,
 	virtRequest virtualization_model.CreateInstanceRequest,
 ) error {
-	thisInstanceName := generateRandom(10)
+	thisInstanceName := virtRequest.Name
 
 	slog.Info(fmt.Sprintf("worker node name is %s", thisInstanceName))
 	slogFunction(thisInstanceName, "creating worker instance", nil)
@@ -231,11 +231,13 @@ func createBase(
 				Readonly: "yes",
 				Type:     "pflash",
 				Format:   "raw",
-				Path:     "/usr/share/edk2/ovmf/OVMF_CODE.fd",
+				Path:     LOADER_LOCAL, // NOTE
+				// Path:     "/usr/share/OVMF/OVMF_CODE_4M.fd",
 			},
 			NVRam: &libvirtxml.DomainNVRam{
-				NVRam:          fmt.Sprintf("/var/lib/libvirt/qemu/nvram/%s_VARS.fd", instanceName),
-				Template:       "/usr/share/edk2/ovmf/OVMF_VARS.fd",
+				NVRam:    fmt.Sprintf("/var/lib/libvirt/qemu/nvram/%s_VARS.fd", instanceName),
+				Template: NVRAM_TEMPLATE_LOCAL, // NOTE: only works in local
+				// Template:       NVRAM_TEMPLATE_LOCAL, // NOTE: directory according to ubuntu 24.04
 				TemplateFormat: "raw",
 				Format:         "raw",
 			},
@@ -298,8 +300,8 @@ func createBase(
 				{
 					Source: &libvirtxml.DomainInterfaceSource{
 						Network: &libvirtxml.DomainInterfaceSourceNetwork{
-							Network: "default",
-							Bridge:  "virbr0",
+							Network: BRIDGE_NAME,
+							Bridge:  BRIDGE_NAME,
 						},
 					},
 					Model: &libvirtxml.DomainInterfaceModel{
@@ -372,7 +374,7 @@ func copyEfi(instanceName string) error {
 
 	destinationPath := NVRAM_DIR + "/" + instanceName + "_VARS.fd"
 
-	data, err := os.ReadFile(NVRAM_TEMPLATE)
+	data, err := os.ReadFile(NVRAM_TEMPLATE_LOCAL)
 	if err != nil {
 		return err
 	}
@@ -411,6 +413,7 @@ users:
   shell: /bin/bash
 
 network:
+  config: disabled
   version: 2
   ethernets:
     enp1s0:
@@ -487,8 +490,6 @@ runcmd:
 
 	// create the iso
 	cmd := exec.Command("cloud-localds", "-N", networkPath, POOL_DIR+"/"+instanceName+".iso", filePath)
-	cmd.Stderr = os.Stderr
-	cmd.Stdout = os.Stdout
 	err = cmd.Run()
 	if err != nil {
 		return err
@@ -560,6 +561,9 @@ runcmd:
 	return nil
 }
 
+// NOTE: this function might not needed
+// it's needed if we want to configure the network
+// whether to be set to static or changing the nameservers, etc.
 func createNetworkMaster() error {
 	networkMut.Lock()
 	defer networkMut.Unlock()
@@ -595,6 +599,9 @@ func createNetworkMaster() error {
 	return nil
 }
 
+// NOTE: this function might not needed
+// it's needed if we want to configure the network
+// whether to be set to static or changing the nameservers, etc.
 func createNetworkWorker() error {
 	networkMut.Lock()
 	defer networkMut.Unlock()

@@ -8,7 +8,7 @@ import (
 const (
 	DEFAULT_JOB_TIMEOUT = 10
 	DEFAULT_JOB_RETRIES = 3
-	DEFAULT_JOB_BACKOFF = 5
+	DEFAULT_JOB_BACKOFF = 20
 )
 
 type Job struct {

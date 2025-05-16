@@ -33,6 +33,8 @@ func (d *Dispatcher) AddJob(
 	virtualizationRequest virtualization_model.CreateInstanceRequest,
 ) error {
 	newJob := NewJob(virtualizationRequest)
+        
+    slog.Info("adding job to queue")
 
 	isSuccess := d.jobQueue.TryAdd(ctx, newJob)
 	if !isSuccess {
@@ -62,17 +64,21 @@ func (d *Dispatcher) Start() {
 
 			d.worker <- struct{}{}
 
+			slog.Info("A worker is available, working on a job...")
+
 			go func(j *Job) {
 				defer func() { <-d.worker }()
 
 				var err error
 
-				slog.Info("received job, working...")
-
 				for retry := 1; retry <= j.Retries; retry++ {
 					err = d.virtService.CreateInstance(thisContext, job.Request)
 					if err == nil {
 						slog.Info("provisioning done")
+
+						// testing the queue
+						time.Sleep(time.Second * j.Backoff)
+
 						return
 					} else {
 						slog.Error("provisioning error, trying in several seconds...")

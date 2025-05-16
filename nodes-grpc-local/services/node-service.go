@@ -41,7 +41,10 @@ func (s *NodeServer) CreateMaster(
 	provisionCtx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
+	instanceName := generateRandom(16)
+
 	instanceRequest := virtualization_model.CreateInstanceRequest{
+		Name:            instanceName,
 		IsMaster:        true,
 		Token:           createMasterRequest.Token,
 		MasterIpAddress: "",
@@ -65,7 +68,10 @@ func (s *NodeServer) CreateWorker(
 	provisionCtx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
+	instanceName := generateRandom(16)
+
 	instanceRequest := virtualization_model.CreateInstanceRequest{
+		Name:            instanceName,
 		IsMaster:        false,
 		Token:           createWorkerRequest.Token,
 		MasterIpAddress: createWorkerRequest.IpAddress,
@@ -91,6 +97,9 @@ func StartGrpcServer(connection *InitStruct) {
 		os.Exit(1)
 	}
 
+	// start queue
+	go connection.DispatcherService.Start()
+
 	s := grpc.NewServer()
 	proto_model.RegisterNodeServiceServer(s, &NodeServer{
 		dispatcher: connection.DispatcherService,
@@ -104,4 +113,7 @@ func StartGrpcServer(connection *InitStruct) {
 		)
 		os.Exit(1)
 	}
+
+	// wait for the dispatcher service to be done
+	connection.DispatcherService.Wait()
 }

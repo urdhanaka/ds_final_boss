@@ -1,6 +1,9 @@
 package virtualization_model
 
 type CreateInstanceRequest struct {
+	// instance name
+	Name string
+
 	// token for k3s
 	Token string
 
