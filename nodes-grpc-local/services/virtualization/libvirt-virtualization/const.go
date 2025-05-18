@@ -1,17 +1,27 @@
 package libvirt_virtualization
 
+// development and production
 const (
-	BASE_POOL_DIR        = "/var/lib/libvirt/images"
-	POOL_DIR             = "/var/lib/libvirt/k3s-virt"
-	NVRAM_DIR            = "/var/lib/libvirt/qemu/nvram"
+	// bridge interface name
+	BRIDGE_NAME = "k3s-br0"
+
+	// libvirt related
+	BASE_POOL_DIR = "/var/lib/libvirt/images"
+	POOL_DIR      = "/var/lib/libvirt/k3s-virt"
+	NVRAM_DIR     = "/var/lib/libvirt/qemu/nvram"
+
+	// image that will be used for VM
+	BASE_IMAGE_NAME = "oracular-server-cloudimg-amd64.img"
+)
+
+// production
+const (
+	LOADER         = "/usr/share/OVMF/OVMF_CODE_4M.fd"
+	NVRAM_TEMPLATE = "/usr/share/OVMF/OVMF_VARS_4M.fd"
+)
+
+// development
+const (
 	LOADER_LOCAL         = "/usr/share/edk2/ovmf/OVMF_CODE.fd"
 	NVRAM_TEMPLATE_LOCAL = "/usr/share/edk2/ovmf/OVMF_VARS.fd"
-	NVRAM_TEMPLATE       = "/usr/share/OVMF/OVMF_VARS_4M.fd"
-	BASE_IMAGE_NAME      = "oracular-server-cloudimg-amd64.img"
-	// BASE_IMAGE_NAME = "ubuntu-24.10-minimal-cloudimg-amd64.img"
-	// BASE_IMAGE_NAME = "debian-12-nocloud-amd64-20250428-2096.qcow2"
-	// BASE_IMAGE_NAME = "debian-12-generic-amd64-20250428-2096.qcow2"
-
-	BRIDGE_NAME = "k3s-br0"
-	// BASE_IMAGE_NAME        = "k3s-virt.qcow2"
 )

@@ -1,6 +1,6 @@
 version: v2
 modules:
-  - path: common/model/proto
+  - path: services/model/proto-model/
 lint:
   except:
     - PACKAGE_DEFINED

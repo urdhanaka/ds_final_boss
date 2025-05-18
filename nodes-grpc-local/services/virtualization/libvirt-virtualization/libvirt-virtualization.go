@@ -8,22 +8,25 @@ import (
 	"nodes-grpc-local/services/virtualization"
 	"os"
 	"os/exec"
+	"strings"
+	"time"
 
-	"github.com/digitalocean/go-libvirt"
+	"libvirt.org/go/libvirt"
 	"libvirt.org/go/libvirtxml"
 )
 
 const (
-	MASTER_NODE_IP = "192.168.122.49"
-	WORKER_NODE_IP = "192.168.122.50"
+	MASTER_NODE_IP     = "192.168.122.49"
+	WORKER_NODE_IP     = "192.168.122.50"
+	CLOUD_INIT_TIMEOUT = 60
 )
 
 type LibvirtVirtualization struct {
-	libvirtConnection *libvirt.Libvirt
+	libvirtConnection *libvirt.Connect
 }
 
 func NewLibvirtVirtualization(
-	libvirtConnection *libvirt.Libvirt,
+	libvirtConnection *libvirt.Connect,
 ) virtualization.VirtualizationInterface {
 	return &LibvirtVirtualization{
 		libvirtConnection: libvirtConnection,
@@ -52,6 +55,7 @@ func (c *LibvirtVirtualization) createMaster(
 	slog.Info(fmt.Sprintf("master node name is %s", thisInstanceName))
 	slogFunction(thisInstanceName, "creating master instance", nil)
 
+	// create network
 	slogFunction(thisInstanceName, "creating node network", nil)
 	err := createNetworkMaster()
 	if err != nil {
@@ -60,6 +64,7 @@ func (c *LibvirtVirtualization) createMaster(
 		return err
 	}
 
+	// create cloudinit configuration
 	slogFunction(thisInstanceName, "creating node cloud-init configuration", nil)
 	err = createCloudInitMaster(thisInstanceName)
 	if err != nil {
@@ -68,6 +73,7 @@ func (c *LibvirtVirtualization) createMaster(
 		return err
 	}
 
+	// creating the image
 	slogFunction(thisInstanceName, "creating node image", nil)
 	err = copyImage(thisInstanceName, virtRequest)
 	if err != nil {
@@ -76,6 +82,7 @@ func (c *LibvirtVirtualization) createMaster(
 		return err
 	}
 
+	// configure the EFI
 	slogFunction(thisInstanceName, "creating node EFI", nil)
 	err = copyEfi(thisInstanceName)
 	if err != nil {
@@ -84,6 +91,7 @@ func (c *LibvirtVirtualization) createMaster(
 		return err
 	}
 
+	// base xml for the vm
 	slogFunction(thisInstanceName, "creating node base xml", nil)
 	domainXmlConfig, err := createBase(thisInstanceName, virtRequest)
 	if err != nil {
@@ -92,13 +100,25 @@ func (c *LibvirtVirtualization) createMaster(
 		return err
 	}
 
+	// spawning
 	slogFunction(thisInstanceName, "spawning node", nil)
-	_, err = c.libvirtConnection.DomainCreateXML(domainXmlConfig, libvirt.DomainNone)
+	dom, err := c.libvirtConnection.DomainCreateXML(domainXmlConfig, libvirt.DomainCreateFlags(0))
 	if err != nil {
 		slogFunction(thisInstanceName, "could not spawn node", err)
 
 		return err
 	}
+	slogFunction(thisInstanceName, "waiting until the vm is ready..", nil)
+    time.Sleep(10 * time.Second)
+	waitCloudInitCmd := `{"execute":"guest-exec","arguments":{"path":"/bin/bash","arg":["-c", "cloud-init status --wait"],"capture-output":true}}`
+	result, err := dom.QemuAgentCommand(waitCloudInitCmd, libvirt.DOMAIN_QEMU_AGENT_COMMAND_BLOCK, 0)
+	if err != nil {
+		slogFunction(thisInstanceName, "could not spawn node", err)
+
+		return err
+	}
+
+	fmt.Println(result)
 
 	return nil
 }
@@ -153,7 +173,7 @@ func (c *LibvirtVirtualization) createWorker(
 	}
 
 	slogFunction(thisInstanceName, "spawning node", nil)
-	_, err = c.libvirtConnection.DomainCreateXML(domainXmlConfig, libvirt.DomainNone)
+	_, err = c.libvirtConnection.DomainCreateXML(domainXmlConfig, libvirt.DOMAIN_NONE)
 	if err != nil {
 		slogFunction(thisInstanceName, "could not spawn node", err)
 
@@ -169,14 +189,14 @@ func (c *LibvirtVirtualization) StopInstance(
 ) error {
 	slogFunction(instance.Name, "shutting down instance...", nil)
 
-	dom, err := c.libvirtConnection.DomainLookupByName(instance.Name)
+	dom, err := c.libvirtConnection.LookupDomainByName(instance.Name)
 	if err != nil {
 		slogFunction(instance.Name, "could not shut down domain", err)
 
 		return err
 	}
 
-	err = c.libvirtConnection.DomainShutdown(dom)
+	err = dom.Shutdown()
 	if err != nil {
 		slogFunction(instance.Name, "could not shut down domain", err)
 
@@ -197,9 +217,10 @@ func createBase(
 		Type: "kvm",
 		Name: instanceName,
 		Metadata: &libvirtxml.DomainMetadata{
-			XML: `<libosinfo:libosinfo xmlns:libosinfo="http://libosinfo.org/xmlns/libvirt/domain/1.0">
-                    <libosinfo:os id="http://ubuntu.com/ubuntu/24.10"/>
-                  </libosinfo:libosinfo>`,
+			XML: `
+<libosinfo:libosinfo xmlns:libosinfo="http://libosinfo.org/xmlns/libvirt/domain/1.0">
+  <libosinfo:os id="http://ubuntu.com/ubuntu/24.10"/>
+</libosinfo:libosinfo>`,
 		},
 		Memory: &libvirtxml.DomainMemory{
 			Value: uint(instanceConfig.Memory),
@@ -316,9 +337,6 @@ func createBase(
 			},
 			Channels: []libvirtxml.DomainChannel{
 				{
-					Protocol: &libvirtxml.DomainChardevProtocol{
-						Type: "unix",
-					},
 					Target: &libvirtxml.DomainChannelTarget{
 						VirtIO: &libvirtxml.DomainChannelTargetVirtIO{
 							Name: "org.qemu.guest_agent.0",
@@ -333,7 +351,11 @@ func createBase(
 		return "", err
 	}
 
-	return xmlConfig, nil
+    // hacky way to handle <channel>
+    // why, libvirtxml, why?
+    res := strings.Replace(xmlConfig, "<channel>", `<channel type="unix">`, 1)
+
+	return res, nil
 }
 
 func copyImage(
@@ -357,7 +379,8 @@ func copyImage(
 	}
 
 	// resize the qcow2
-	resizeCmd := exec.Command("qemu-img", "resize", destinationPath, fmt.Sprintf("+%dG", virtRequest.Storage))
+	resizeCmd := exec.Command("qemu-img", "resize", destinationPath, "+10G")
+	// resizeCmd := exec.Command("qemu-img", "resize", destinationPath, fmt.Sprintf("+%dG", virtRequest.Storage))
 	resizeCmd.Stderr = os.Stderr
 	resizeCmd.Stdout = os.Stdout
 	err = resizeCmd.Run()

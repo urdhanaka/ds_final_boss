@@ -4,11 +4,10 @@ import (
 	"errors"
 	"io/fs"
 	"log/slog"
-	"net/url"
 	"os"
 	"sync"
 
-	"github.com/digitalocean/go-libvirt"
+	"libvirt.org/go/libvirt"
 )
 
 var (
@@ -93,9 +92,8 @@ func init() {
 	slog.Info("checking libvirt requirements completed")
 }
 
-func InitLibvirtConnection() *libvirt.Libvirt {
-	uri, _ := url.Parse(string(libvirt.QEMUSystem))
-	c, err := libvirt.ConnectToURI(uri)
+func InitLibvirtConnection() *libvirt.Connect {
+	c, err := libvirt.NewConnect("qemu:///system")
 	if err != nil {
 		slog.Error("error connecting to QEMU system",
 			"err", err.Error(),

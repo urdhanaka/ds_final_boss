@@ -3,11 +3,11 @@ module nodes-grpc-local
 go 1.24.2
 
 require (
-	github.com/digitalocean/go-libvirt v0.0.0-20240308204700-df736b2945cf
 	github.com/lxc/incus v0.7.0
 	google.golang.org/grpc v1.72.0
 	google.golang.org/protobuf v1.36.6
-	libvirt.org/go/libvirtxml v1.11001.0
+	libvirt.org/go/libvirt v1.11002.0
+	libvirt.org/go/libvirtxml v1.11002.0
 )
 
 require (
