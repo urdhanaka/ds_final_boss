@@ -109,7 +109,7 @@ func (c *LibvirtVirtualization) createMaster(
 		return err
 	}
 	slogFunction(thisInstanceName, "waiting until the vm is ready..", nil)
-    time.Sleep(10 * time.Second)
+    time.Sleep(15 * time.Second)
 	waitCloudInitCmd := `{"execute":"guest-exec","arguments":{"path":"/bin/bash","arg":["-c", "cloud-init status --wait"],"capture-output":true}}`
 	result, err := dom.QemuAgentCommand(waitCloudInitCmd, libvirt.DOMAIN_QEMU_AGENT_COMMAND_BLOCK, 0)
 	if err != nil {
@@ -436,7 +436,6 @@ users:
   shell: /bin/bash
 
 network:
-  config: disabled
   version: 2
   ethernets:
     enp1s0:

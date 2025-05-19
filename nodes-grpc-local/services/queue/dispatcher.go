@@ -33,8 +33,8 @@ func (d *Dispatcher) AddJob(
 	virtualizationRequest virtualization_model.CreateInstanceRequest,
 ) error {
 	newJob := NewJob(virtualizationRequest)
-        
-    slog.Info("adding job to queue")
+
+	slog.Info("adding job to queue")
 
 	isSuccess := d.jobQueue.TryAdd(ctx, newJob)
 	if !isSuccess {
