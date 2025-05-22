@@ -28,6 +28,13 @@ func NewDispatcher(
 	}
 }
 
+func (d *Dispatcher) AddValkeyJob(
+	ctx context.Context,
+	instanceRequest virtualization_model.CreateInstanceRequest,
+) error {
+	return d.jobQueue.AddToQueue(ctx, instanceRequest)
+}
+
 func (d *Dispatcher) AddJob(
 	ctx context.Context,
 	virtualizationRequest virtualization_model.CreateInstanceRequest,

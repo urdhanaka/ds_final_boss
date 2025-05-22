@@ -35,9 +35,40 @@ message CreateWorkerRequest {
 
 message CreateWorkerResponse {}
 
+// create instance
+message CreateInstanceRequest {
+  // top-level name of the cluster
+  //
+  string name = 1;
+
+  // true if spawning master instance
+  // false otherwise
+  bool is_master = 2;
+
+  // token for creating k3s cluster
+  // only needed when spawning worker
+  // token will created when spawning master
+  string token = 3;
+
+  // ip address of the master instance
+  // only needed when spawning worker
+  string ip_address = 4;
+
+  // instance hardware requirements
+  int64 cpu = 5;
+  int64 memory = 6;
+  int64 storage = 7;
+}
+
+message CreateInstanceResponse {
+  // returns ip address of master instance
+  string ip_address = 1;
+}
+
 service NodeService {
   rpc CreateMaster(CreateMasterRequest) returns (CreateMasterResponse) {}
   rpc CreateWorker(CreateWorkerRequest) returns (CreateWorkerResponse) {}
+  rpc CreateInstance(CreateInstanceRequest) returns (CreateInstanceResponse) {}
   // rpc RegisterNode(RegisterNodeRequest) returns (RegisterNodeResponse) {}
   // rpc ThisNodeStatus(Empty) returns (Temp) {}
   // rpc Status(Empty) returns (NodeStatus) {}

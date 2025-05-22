@@ -22,15 +22,15 @@ type NodeServer struct {
 	// proto rpc
 	proto_model.UnimplementedNodeServiceServer
 
-	// virtualization service
-	dispatcher *queue.Dispatcher
+	// queue
+	queue *queue.Queue
 }
 
 func NewNodeServer(
-	dispatcher *queue.Dispatcher,
+	queue *queue.Queue,
 ) NodeServerInterface {
 	return &NodeServer{
-		dispatcher: dispatcher,
+		queue: queue,
 	}
 }
 
@@ -53,7 +53,7 @@ func (s *NodeServer) CreateMaster(
 		Storage:         createMasterRequest.Requirements.Storage,
 	}
 
-	err := s.dispatcher.AddJob(provisionCtx, instanceRequest)
+	err := s.queue.AddToQueue(provisionCtx, instanceRequest)
 	if err != nil {
 		return new(proto_model.CreateMasterResponse), err
 	}
@@ -80,12 +80,39 @@ func (s *NodeServer) CreateWorker(
 		Storage:         createWorkerRequest.Requirements.Storage,
 	}
 
-	err := s.dispatcher.AddJob(provisionCtx, instanceRequest)
+	err := s.queue.AddToQueue(provisionCtx, instanceRequest)
 	if err != nil {
 		return new(proto_model.CreateWorkerResponse), err
 	}
 
 	return new(proto_model.CreateWorkerResponse), nil
+}
+
+func (s *NodeServer) CreateInstance(
+	ctx context.Context,
+	createInstanceRequest *proto_model.CreateInstanceRequest,
+) (*proto_model.CreateInstanceResponse, error) {
+	provisionCtx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
+	instanceName := generateRandom(16)
+
+	virtSpecs := virtualization_model.CreateInstanceRequest{
+		Name:            instanceName,
+		IsMaster:        createInstanceRequest.IsMaster,
+		Token:           createInstanceRequest.Token,
+		MasterIpAddress: createInstanceRequest.IpAddress,
+		Cpu:             createInstanceRequest.Cpu,
+		Memory:          createInstanceRequest.Memory,
+		Storage:         createInstanceRequest.Storage,
+	}
+
+	err := s.queue.AddToQueue(provisionCtx, virtSpecs)
+	if err != nil {
+		return new(proto_model.CreateInstanceResponse), err
+	}
+
+	return &proto_model.CreateInstanceResponse{}, nil
 }
 
 func StartGrpcServer(connection *InitStruct) {
@@ -98,11 +125,20 @@ func StartGrpcServer(connection *InitStruct) {
 	}
 
 	// start queue
-	go connection.DispatcherService.Start()
+	for i := 1; i <= queue.MAX_WORKER_SIZE; i++ {
+		go func() {
+			valkeyClient := queue.InitValkeyConnection()
+			worker := queue.NewWorker(valkeyClient, connection.VirtualizationService)
+			worker.DoWork(context.Background())
+		}()
+	}
+
+    // start the websocket
+    go connection.WebsocketService.Start()
 
 	s := grpc.NewServer()
 	proto_model.RegisterNodeServiceServer(s, &NodeServer{
-		dispatcher: connection.DispatcherService,
+		queue: connection.QueueService,
 	})
 
 	slog.Info(fmt.Sprintf("starting grpc server at %s", GRPC_PORT))
@@ -113,7 +149,4 @@ func StartGrpcServer(connection *InitStruct) {
 		)
 		os.Exit(1)
 	}
-
-	// wait for the dispatcher service to be done
-	connection.DispatcherService.Wait()
 }

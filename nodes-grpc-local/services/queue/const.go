@@ -1,12 +1,15 @@
 package queue
 
 const (
-	// maximum size of the queue line
-	//
-	// if the queue currently have MAX_QUEUE_SIZE and
-	// tried to be inserted, return error
-	MAX_QUEUE_SIZE int = 20
+	// valkey hostname
+	VALKEY_HOST = "localhost"
+	// valkey port
+	VALKEY_PORT = 6379
+	// valkey main queue
+	VALKEY_MAIN_QUEUE = "spawn-queue"
+	// valkey processing queue
+	VALKEY_PROCESSING_QUEUE = "spawn-queue-backup"
 
 	// maximum worker that can handle the queue
-	MAX_WORKER_SIZE int = 1
+	MAX_WORKER_SIZE int = 3
 )

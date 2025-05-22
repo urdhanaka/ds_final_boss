@@ -96,7 +96,7 @@ func InitLibvirtConnection() *libvirt.Connect {
 	c, err := libvirt.NewConnect("qemu:///system")
 	if err != nil {
 		slog.Error("error connecting to QEMU system",
-			"err", err.Error(),
+			"error", err.Error(),
 		)
 		os.Exit(1)
 	}

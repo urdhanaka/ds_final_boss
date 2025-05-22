@@ -7,9 +7,5 @@ import (
 
 type VirtualizationInterface interface {
 	CreateInstance(ctx context.Context, virtRequest virtualization_model.CreateInstanceRequest) error
-
-	// CreateMaster(ctx context.Context, virtRequest virtualization_model.CreateInstanceRequest) error
-	// CreateWorker(ctx context.Context, virtRequest virtualization_model.CreateInstanceRequest) error
-
 	StopInstance(ctx context.Context, instance virtualization_model.Instance) error
 }

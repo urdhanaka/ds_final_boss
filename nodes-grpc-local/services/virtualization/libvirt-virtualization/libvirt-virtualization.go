@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	virtualization_model "nodes-grpc-local/services/model/virtualization-model"
 	"nodes-grpc-local/services/virtualization"
+	"nodes-grpc-local/services/websocket"
 	"os"
 	"os/exec"
 	"strings"
@@ -22,14 +23,17 @@ const (
 )
 
 type LibvirtVirtualization struct {
-	libvirtConnection *libvirt.Connect
+	libvirtConnection   *libvirt.Connect
+	websocketConnection *websocket.Websocket
 }
 
 func NewLibvirtVirtualization(
 	libvirtConnection *libvirt.Connect,
+	websocketConnection *websocket.Websocket,
 ) virtualization.VirtualizationInterface {
 	return &LibvirtVirtualization{
-		libvirtConnection: libvirtConnection,
+		libvirtConnection:   libvirtConnection,
+		websocketConnection: websocketConnection,
 	}
 }
 
@@ -52,10 +56,14 @@ func (c *LibvirtVirtualization) createMaster(
 ) error {
 	thisInstanceName := virtRequest.Name
 
+	c.websocketConnection.AddMap(thisInstanceName)
+
 	slog.Info(fmt.Sprintf("master node name is %s", thisInstanceName))
 	slogFunction(thisInstanceName, "creating master instance", nil)
+	c.websocketConnection.AddLogToMap(thisInstanceName, "creating master instance")
 
 	// create network
+	c.websocketConnection.AddLogToMap(thisInstanceName, "creating node network")
 	slogFunction(thisInstanceName, "creating node network", nil)
 	err := createNetworkMaster()
 	if err != nil {
@@ -65,6 +73,7 @@ func (c *LibvirtVirtualization) createMaster(
 	}
 
 	// create cloudinit configuration
+	c.websocketConnection.AddLogToMap(thisInstanceName, "creating cloud-init configuration")
 	slogFunction(thisInstanceName, "creating node cloud-init configuration", nil)
 	err = createCloudInitMaster(thisInstanceName)
 	if err != nil {
@@ -74,7 +83,8 @@ func (c *LibvirtVirtualization) createMaster(
 	}
 
 	// creating the image
-	slogFunction(thisInstanceName, "creating node image", nil)
+	c.websocketConnection.AddLogToMap(thisInstanceName, "creating base image for instance")
+	slogFunction(thisInstanceName, "creating base image for instance", nil)
 	err = copyImage(thisInstanceName, virtRequest)
 	if err != nil {
 		slogFunction(thisInstanceName, "could not create node image", err)
@@ -83,7 +93,8 @@ func (c *LibvirtVirtualization) createMaster(
 	}
 
 	// configure the EFI
-	slogFunction(thisInstanceName, "creating node EFI", nil)
+	c.websocketConnection.AddLogToMap(thisInstanceName, "creating instance EFI file")
+	slogFunction(thisInstanceName, "creating instance EFI file", nil)
 	err = copyEfi(thisInstanceName)
 	if err != nil {
 		slogFunction(thisInstanceName, "could not create node EFI", err)
@@ -92,7 +103,8 @@ func (c *LibvirtVirtualization) createMaster(
 	}
 
 	// base xml for the vm
-	slogFunction(thisInstanceName, "creating node base xml", nil)
+	c.websocketConnection.AddLogToMap(thisInstanceName, "creating instance base xml")
+	slogFunction(thisInstanceName, "creating instance base xml", nil)
 	domainXmlConfig, err := createBase(thisInstanceName, virtRequest)
 	if err != nil {
 		slogFunction(thisInstanceName, "could not create node base xml", err)
@@ -101,6 +113,7 @@ func (c *LibvirtVirtualization) createMaster(
 	}
 
 	// spawning
+	c.websocketConnection.AddLogToMap(thisInstanceName, "spawning node")
 	slogFunction(thisInstanceName, "spawning node", nil)
 	dom, err := c.libvirtConnection.DomainCreateXML(domainXmlConfig, libvirt.DomainCreateFlags(0))
 	if err != nil {
@@ -109,17 +122,16 @@ func (c *LibvirtVirtualization) createMaster(
 		return err
 	}
 	slogFunction(thisInstanceName, "waiting until the vm is ready..", nil)
-    time.Sleep(15 * time.Second)
+	time.Sleep(time.Duration(15) * time.Second)
 	waitCloudInitCmd := `{"execute":"guest-exec","arguments":{"path":"/bin/bash","arg":["-c", "cloud-init status --wait"],"capture-output":true}}`
-	result, err := dom.QemuAgentCommand(waitCloudInitCmd, libvirt.DOMAIN_QEMU_AGENT_COMMAND_BLOCK, 0)
+	_, err = dom.QemuAgentCommand(waitCloudInitCmd, libvirt.DOMAIN_QEMU_AGENT_COMMAND_BLOCK, 0)
 	if err != nil {
 		slogFunction(thisInstanceName, "could not spawn node", err)
 
 		return err
 	}
 
-	fmt.Println(result)
-
+	c.websocketConnection.AddLogToMap(thisInstanceName, "done")
 	return nil
 }
 
@@ -129,10 +141,15 @@ func (c *LibvirtVirtualization) createWorker(
 ) error {
 	thisInstanceName := virtRequest.Name
 
+	c.websocketConnection.AddMap(thisInstanceName)
+
 	slog.Info(fmt.Sprintf("worker node name is %s", thisInstanceName))
 	slogFunction(thisInstanceName, "creating worker instance", nil)
+	c.websocketConnection.AddLogToMap(thisInstanceName, "creating worker instance")
 
-	slogFunction(thisInstanceName, "creating node network", nil)
+	// create network
+	c.websocketConnection.AddLogToMap(thisInstanceName, "creating instance network")
+	slogFunction(thisInstanceName, "creating instance network", nil)
 	err := createNetworkWorker()
 	if err != nil {
 		slogFunction(thisInstanceName, "could not create node network", err)
@@ -140,6 +157,8 @@ func (c *LibvirtVirtualization) createWorker(
 		return err
 	}
 
+	// create cloudinit configuration
+	c.websocketConnection.AddLogToMap(thisInstanceName, "creating cloud-init configuration")
 	slogFunction(thisInstanceName, "creating node cloud-init configuration", nil)
 	err = createCloudInitWorker(thisInstanceName)
 	if err != nil {
@@ -148,6 +167,8 @@ func (c *LibvirtVirtualization) createWorker(
 		return err
 	}
 
+	// creating the image
+	c.websocketConnection.AddLogToMap(thisInstanceName, "creating base image for instance")
 	slogFunction(thisInstanceName, "creating node image", nil)
 	err = copyImage(thisInstanceName, virtRequest)
 	if err != nil {
@@ -156,6 +177,8 @@ func (c *LibvirtVirtualization) createWorker(
 		return err
 	}
 
+	// configure the EFI
+	c.websocketConnection.AddLogToMap(thisInstanceName, "creating instance EFI file")
 	slogFunction(thisInstanceName, "creating node EFI", nil)
 	err = copyEfi(thisInstanceName)
 	if err != nil {
@@ -164,6 +187,8 @@ func (c *LibvirtVirtualization) createWorker(
 		return err
 	}
 
+	// base xml for the vm
+	c.websocketConnection.AddLogToMap(thisInstanceName, "creating instance base xml")
 	slogFunction(thisInstanceName, "creating node base xml", nil)
 	domainXmlConfig, err := createBase(thisInstanceName, virtRequest)
 	if err != nil {
@@ -172,14 +197,26 @@ func (c *LibvirtVirtualization) createWorker(
 		return err
 	}
 
+	// spawning
+	c.websocketConnection.AddLogToMap(thisInstanceName, "spawning node")
 	slogFunction(thisInstanceName, "spawning node", nil)
-	_, err = c.libvirtConnection.DomainCreateXML(domainXmlConfig, libvirt.DOMAIN_NONE)
+	dom, err := c.libvirtConnection.DomainCreateXML(domainXmlConfig, libvirt.DOMAIN_NONE)
+	if err != nil {
+		slogFunction(thisInstanceName, "could not spawn node", err)
+
+		return err
+	}
+	slogFunction(thisInstanceName, "waiting until the vm is ready..", nil)
+	time.Sleep(15 * time.Second)
+	waitCloudInitCmd := `{"execute":"guest-exec","arguments":{"path":"/bin/bash","arg":["-c", "cloud-init status --wait"],"capture-output":true}}`
+	_, err = dom.QemuAgentCommand(waitCloudInitCmd, libvirt.DOMAIN_QEMU_AGENT_COMMAND_BLOCK, 0)
 	if err != nil {
 		slogFunction(thisInstanceName, "could not spawn node", err)
 
 		return err
 	}
 
+	c.websocketConnection.AddLogToMap(thisInstanceName, "done")
 	return nil
 }
 
@@ -252,13 +289,13 @@ func createBase(
 				Readonly: "yes",
 				Type:     "pflash",
 				Format:   "raw",
-				Path:     LOADER_LOCAL, // NOTE
-				// Path:     "/usr/share/OVMF/OVMF_CODE_4M.fd",
+				Path:     LOADER_LOCAL, // NOTE: works on local only
+				// Path: LOADER,
 			},
 			NVRam: &libvirtxml.DomainNVRam{
 				NVRam:    fmt.Sprintf("/var/lib/libvirt/qemu/nvram/%s_VARS.fd", instanceName),
 				Template: NVRAM_TEMPLATE_LOCAL, // NOTE: only works in local
-				// Template:       NVRAM_TEMPLATE_LOCAL, // NOTE: directory according to ubuntu 24.04
+				// Template:       NVRAM_TEMPLATE, // NOTE: directory according to ubuntu 24.04
 				TemplateFormat: "raw",
 				Format:         "raw",
 			},
@@ -351,9 +388,9 @@ func createBase(
 		return "", err
 	}
 
-    // hacky way to handle <channel>
-    // why, libvirtxml, why?
-    res := strings.Replace(xmlConfig, "<channel>", `<channel type="unix">`, 1)
+	// hacky way to handle <channel>
+	// why, libvirtxml, why?
+	res := strings.Replace(xmlConfig, "<channel>", `<channel type="unix">`, 1)
 
 	return res, nil
 }

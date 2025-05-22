@@ -3,7 +3,8 @@ package libvirt_virtualization
 // development and production
 const (
 	// bridge interface name
-	BRIDGE_NAME = "k3s-br0"
+	// BRIDGE_NAME = "k3s-br0"
+	BRIDGE_NAME = "default"
 
 	// libvirt related
 	BASE_POOL_DIR = "/var/lib/libvirt/images"
@@ -14,13 +15,15 @@ const (
 	BASE_IMAGE_NAME = "oracular-server-cloudimg-amd64.img"
 )
 
-// production
+// production environment
+// software engineering lab, ubuntu 24.04
 const (
 	LOADER         = "/usr/share/OVMF/OVMF_CODE_4M.fd"
 	NVRAM_TEMPLATE = "/usr/share/OVMF/OVMF_VARS_4M.fd"
 )
 
-// development
+// development environment
+// my own laptop, fedora 42 immutable
 const (
 	LOADER_LOCAL         = "/usr/share/edk2/ovmf/OVMF_CODE.fd"
 	NVRAM_TEMPLATE_LOCAL = "/usr/share/edk2/ovmf/OVMF_VARS.fd"

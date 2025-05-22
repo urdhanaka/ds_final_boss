@@ -2,22 +2,22 @@ package virtualization_model
 
 type CreateInstanceRequest struct {
 	// instance name
-	Name string
+	Name string `json:"name"`
 
 	// token for k3s
-	Token string
+	Token string `json:"token,omitempty"`
 
 	// if spawning worker
 	// need to know the master IP address
-	MasterIpAddress string
+	MasterIpAddress string `json:"master_ip_address,omitempty"`
 
 	// vm requirements
-	Cpu     int64
-	Memory  int64
-	Storage int64
+	Cpu     int64 `json:"cpu"`
+	Memory  int64 `json:"memory"`
+	Storage int64 `json:"storage"`
 
 	// is the instance the master?
-	IsMaster bool
+	IsMaster bool `json:"isMaster"`
 }
 
 type Instance struct {

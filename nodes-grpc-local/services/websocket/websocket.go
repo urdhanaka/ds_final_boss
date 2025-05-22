@@ -1,6 +1,8 @@
 package websocket
 
 import (
+	"fmt"
+	"log"
 	"log/slog"
 	"net/http"
 
@@ -10,17 +12,25 @@ import (
 
 var upgrader = websocket.Upgrader{}
 
-func (ws *Websocket) addOrUseMap(hostname string) {
-	if ws.HostnameChan[hostname] != nil {
+func (ws *Websocket) AddMap(hostname string) {
+	_, isPresent := ws.HostnameChan[hostname]
+	if isPresent {
+		return
+	}
+	if ws.HostnameChan == nil {
 		return
 	}
 
-	logChan := make(chan string)
+	logChan := make(chan string, WEBSOCKET_CHAN_MAX_SIZE)
 	ws.HostnameChan[hostname] = logChan
 }
 
-func (ws *Websocket) addLogToMap(hostname string, log string) {
-	if ws.HostnameChan[hostname] != nil {
+func (ws *Websocket) AddLogToMap(hostname string, log string) {
+	_, isPresent := ws.HostnameChan[hostname]
+	if isPresent {
+		return
+	}
+	if ws.HostnameChan == nil {
 		return
 	}
 
@@ -48,7 +58,7 @@ func (ws *Websocket) logHandler(w http.ResponseWriter, r *http.Request) {
 		select {
 		case log, ok := <-thisHostLogChan:
 			if !ok {
-				slog.Info("log channel down")
+				slog.Info("log channel is empty")
 				return
 			}
 
@@ -62,8 +72,12 @@ func (ws *Websocket) logHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (ws *Websocket) start() {
+func (ws *Websocket) Start() {
 	r := mux.NewRouter()
 	http.HandleFunc("/{hostname}/status", ws.logHandler)
 	http.Handle("/", r)
+
+    slog.Info(fmt.Sprintf("starting websocket service at %s", WEBSOCKET_ADDRESS))
+
+	log.Fatal(http.ListenAndServe(WEBSOCKET_ADDRESS, nil))
 }
