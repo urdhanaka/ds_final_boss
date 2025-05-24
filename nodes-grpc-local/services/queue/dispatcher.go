@@ -5,21 +5,21 @@ import (
 	"errors"
 	"log/slog"
 	virtualization_model "nodes-grpc-local/services/model/virtualization-model"
-	"nodes-grpc-local/services/virtualization"
+	libvirt_virtualization "nodes-grpc-local/services/virtualization/libvirt-virtualization"
 	"sync"
 	"time"
 )
 
 type Dispatcher struct {
 	dispatcherWg sync.WaitGroup
-	virtService  virtualization.VirtualizationInterface
+	virtService  *libvirt_virtualization.LibvirtVirtualization
 	worker       chan struct{}
 	jobQueue     *Queue
 }
 
 func NewDispatcher(
 	jobQueue *Queue,
-	virtService virtualization.VirtualizationInterface,
+	virtService *libvirt_virtualization.LibvirtVirtualization,
 ) *Dispatcher {
 	return &Dispatcher{
 		virtService: virtService,

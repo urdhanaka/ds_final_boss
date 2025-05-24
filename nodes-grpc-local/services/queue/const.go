@@ -11,5 +11,5 @@ const (
 	VALKEY_PROCESSING_QUEUE = "spawn-queue-backup"
 
 	// maximum worker that can handle the queue
-	MAX_WORKER_SIZE int = 3
+	MAX_WORKER_SIZE int = 1
 )

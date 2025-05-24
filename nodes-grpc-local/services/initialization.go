@@ -2,13 +2,12 @@ package services
 
 import (
 	"nodes-grpc-local/services/queue"
-	"nodes-grpc-local/services/virtualization"
 	libvirt_virtualization "nodes-grpc-local/services/virtualization/libvirt-virtualization"
 	"nodes-grpc-local/services/websocket"
 )
 
 type InitStruct struct {
-	VirtualizationService virtualization.VirtualizationInterface
+	VirtualizationService *libvirt_virtualization.LibvirtVirtualization
 	DispatcherService     *queue.Dispatcher
 	WebsocketService      *websocket.Websocket
 	QueueService          *queue.Queue

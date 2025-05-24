@@ -112,7 +112,7 @@ func (s *NodeServer) CreateInstance(
 		return new(proto_model.CreateInstanceResponse), err
 	}
 
-	return &proto_model.CreateInstanceResponse{}, nil
+	return new(proto_model.CreateInstanceResponse), nil
 }
 
 func StartGrpcServer(connection *InitStruct) {
@@ -128,13 +128,13 @@ func StartGrpcServer(connection *InitStruct) {
 	for i := 1; i <= queue.MAX_WORKER_SIZE; i++ {
 		go func() {
 			valkeyClient := queue.InitValkeyConnection()
-			worker := queue.NewWorker(valkeyClient, connection.VirtualizationService)
+			worker := queue.NewWorker(valkeyClient, connection.VirtualizationService, i)
 			worker.DoWork(context.Background())
 		}()
 	}
 
-    // start the websocket
-    go connection.WebsocketService.Start()
+	// start the websocket
+	go connection.WebsocketService.Start()
 
 	s := grpc.NewServer()
 	proto_model.RegisterNodeServiceServer(s, &NodeServer{

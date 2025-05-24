@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"log/slog"
 	virtualization_model "nodes-grpc-local/services/model/virtualization-model"
-	"nodes-grpc-local/services/virtualization"
 	"nodes-grpc-local/services/websocket"
 	"os"
 	"os/exec"
@@ -16,10 +15,17 @@ import (
 	"libvirt.org/go/libvirtxml"
 )
 
+// these hardcoded IP is for testing only
 const (
-	MASTER_NODE_IP     = "192.168.122.49"
-	WORKER_NODE_IP     = "192.168.122.50"
+	MASTER_NODE_IP = "192.168.122.49"
+	WORKER_NODE_IP = "192.168.122.50"
+)
+
+const (
+	// timeout in second when waiting the cloud init operations
 	CLOUD_INIT_TIMEOUT = 60
+
+	SHUTDOWN_RETRIES = 3
 )
 
 type LibvirtVirtualization struct {
@@ -30,7 +36,7 @@ type LibvirtVirtualization struct {
 func NewLibvirtVirtualization(
 	libvirtConnection *libvirt.Connect,
 	websocketConnection *websocket.Websocket,
-) virtualization.VirtualizationInterface {
+) *LibvirtVirtualization {
 	return &LibvirtVirtualization{
 		libvirtConnection:   libvirtConnection,
 		websocketConnection: websocketConnection,
@@ -68,6 +74,7 @@ func (c *LibvirtVirtualization) createMaster(
 	err := createNetworkMaster()
 	if err != nil {
 		slogFunction(thisInstanceName, "could not create node network", err)
+		c.deleteInstance(thisInstanceName)
 
 		return err
 	}
@@ -78,6 +85,7 @@ func (c *LibvirtVirtualization) createMaster(
 	err = createCloudInitMaster(thisInstanceName)
 	if err != nil {
 		slogFunction(thisInstanceName, "could not create node cloud-init configuration", err)
+		c.deleteInstance(thisInstanceName)
 
 		return err
 	}
@@ -88,6 +96,7 @@ func (c *LibvirtVirtualization) createMaster(
 	err = copyImage(thisInstanceName, virtRequest)
 	if err != nil {
 		slogFunction(thisInstanceName, "could not create node image", err)
+		c.deleteInstance(thisInstanceName)
 
 		return err
 	}
@@ -98,6 +107,7 @@ func (c *LibvirtVirtualization) createMaster(
 	err = copyEfi(thisInstanceName)
 	if err != nil {
 		slogFunction(thisInstanceName, "could not create node EFI", err)
+		c.deleteInstance(thisInstanceName)
 
 		return err
 	}
@@ -108,6 +118,7 @@ func (c *LibvirtVirtualization) createMaster(
 	domainXmlConfig, err := createBase(thisInstanceName, virtRequest)
 	if err != nil {
 		slogFunction(thisInstanceName, "could not create node base xml", err)
+		c.deleteInstance(thisInstanceName)
 
 		return err
 	}
@@ -118,6 +129,7 @@ func (c *LibvirtVirtualization) createMaster(
 	dom, err := c.libvirtConnection.DomainCreateXML(domainXmlConfig, libvirt.DomainCreateFlags(0))
 	if err != nil {
 		slogFunction(thisInstanceName, "could not spawn node", err)
+		c.deleteInstance(thisInstanceName)
 
 		return err
 	}
@@ -127,6 +139,7 @@ func (c *LibvirtVirtualization) createMaster(
 	_, err = dom.QemuAgentCommand(waitCloudInitCmd, libvirt.DOMAIN_QEMU_AGENT_COMMAND_BLOCK, 0)
 	if err != nil {
 		slogFunction(thisInstanceName, "could not spawn node", err)
+		c.deleteInstance(thisInstanceName)
 
 		return err
 	}
@@ -153,6 +166,7 @@ func (c *LibvirtVirtualization) createWorker(
 	err := createNetworkWorker()
 	if err != nil {
 		slogFunction(thisInstanceName, "could not create node network", err)
+        c.deleteInstance(thisInstanceName)
 
 		return err
 	}
@@ -163,6 +177,7 @@ func (c *LibvirtVirtualization) createWorker(
 	err = createCloudInitWorker(thisInstanceName)
 	if err != nil {
 		slogFunction(thisInstanceName, "could not create node cloud-init configuration", err)
+        c.deleteInstance(thisInstanceName)
 
 		return err
 	}
@@ -173,6 +188,7 @@ func (c *LibvirtVirtualization) createWorker(
 	err = copyImage(thisInstanceName, virtRequest)
 	if err != nil {
 		slogFunction(thisInstanceName, "could not create node image", err)
+        c.deleteInstance(thisInstanceName)
 
 		return err
 	}
@@ -183,6 +199,7 @@ func (c *LibvirtVirtualization) createWorker(
 	err = copyEfi(thisInstanceName)
 	if err != nil {
 		slogFunction(thisInstanceName, "could not create node EFI", err)
+        c.deleteInstance(thisInstanceName)
 
 		return err
 	}
@@ -193,6 +210,7 @@ func (c *LibvirtVirtualization) createWorker(
 	domainXmlConfig, err := createBase(thisInstanceName, virtRequest)
 	if err != nil {
 		slogFunction(thisInstanceName, "could not create node base xml", err)
+        c.deleteInstance(thisInstanceName)
 
 		return err
 	}
@@ -203,6 +221,7 @@ func (c *LibvirtVirtualization) createWorker(
 	dom, err := c.libvirtConnection.DomainCreateXML(domainXmlConfig, libvirt.DOMAIN_NONE)
 	if err != nil {
 		slogFunction(thisInstanceName, "could not spawn node", err)
+        c.deleteInstance(thisInstanceName)
 
 		return err
 	}
@@ -212,34 +231,12 @@ func (c *LibvirtVirtualization) createWorker(
 	_, err = dom.QemuAgentCommand(waitCloudInitCmd, libvirt.DOMAIN_QEMU_AGENT_COMMAND_BLOCK, 0)
 	if err != nil {
 		slogFunction(thisInstanceName, "could not spawn node", err)
+        c.deleteInstance(thisInstanceName)
 
 		return err
 	}
 
 	c.websocketConnection.AddLogToMap(thisInstanceName, "done")
-	return nil
-}
-
-func (c *LibvirtVirtualization) StopInstance(
-	ctx context.Context,
-	instance virtualization_model.Instance,
-) error {
-	slogFunction(instance.Name, "shutting down instance...", nil)
-
-	dom, err := c.libvirtConnection.LookupDomainByName(instance.Name)
-	if err != nil {
-		slogFunction(instance.Name, "could not shut down domain", err)
-
-		return err
-	}
-
-	err = dom.Shutdown()
-	if err != nil {
-		slogFunction(instance.Name, "could not shut down domain", err)
-
-		return err
-	}
-
 	return nil
 }
 
@@ -519,7 +516,7 @@ runcmd:
 
   echo "installing k3s"
   curl -sfL https://get.k3s.io | INSTALL_K3S_EXEC="server --token 12345" sh -s -
-  while [ ! -f /etc/rancher/k3s/k3s.yaml ]; do sleep 1; done
+        # while [ ! -f /etc/rancher/k3s/k3s.yaml ]; do sleep 1; done
 
   export KUBECONFIG=/etc/rancher/k3s/k3s.yaml
   echo "export KUBECONFIG=/etc/rancher/k3s/k3s.yaml" >> /etc/profile
@@ -536,7 +533,7 @@ runcmd:
 
   echo "writing token and starting the dashboard..."
   echo "waiting until all pods in the kubernetes-dashboard namespaces is running"
-        #k3s kubectl wait pod --all --for=condition=Ready --namespace=kubernetes-dashboard --timeout=120s
+  k3s kubectl wait pod --all --for=condition=Ready --namespace=kubernetes-dashboard --timeout=120s
         #rc-service kube-dashboard-port-forward restart
 
   echo "done"
@@ -610,8 +607,6 @@ runcmd:
 
 	// create the iso
 	cmd := exec.Command("cloud-localds", "-N", networkPath, POOL_DIR+"/"+instanceName+".iso", filePath)
-	cmd.Stderr = os.Stderr
-	cmd.Stdout = os.Stdout
 	err = cmd.Run()
 	if err != nil {
 		return err
@@ -694,4 +689,42 @@ func createNetworkWorker() error {
 	}
 
 	return nil
+}
+
+func (c *LibvirtVirtualization) deleteInstance(
+	domainName string,
+) {
+	domain, err := c.libvirtConnection.LookupDomainByName(domainName)
+	if err != nil {
+		slog.Error("error getting the domain",
+			"error", err,
+		)
+	}
+
+	// every domain is set to delete when shutdown
+	err = domain.Shutdown()
+	if err != nil {
+		slog.Error("could not shutdown the domain, retrying after this",
+			"error", err,
+		)
+
+		for i := 1; i <= SHUTDOWN_RETRIES; i++ {
+			err = domain.Shutdown()
+			if err != nil {
+				slog.Error("could not shutdown the domain, retrying after this",
+					"error", err,
+				)
+			}
+		}
+	}
+
+	// domain files cleanup
+	deleteFilesCommand := fmt.Sprintf("rm %s/%s.*", POOL_DIR, domainName)
+	cmd := exec.Command("/bin/bash", "-c", deleteFilesCommand)
+	err = cmd.Run()
+	if err != nil {
+		slog.Error("could not clean domain files",
+			"error", err,
+		)
+	}
 }

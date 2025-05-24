@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"log/slog"
 	virtualization_model "nodes-grpc-local/services/model/virtualization-model"
-	"nodes-grpc-local/services/virtualization"
+	libvirt_virtualization "nodes-grpc-local/services/virtualization/libvirt-virtualization"
 	"time"
 
 	"github.com/valkey-io/valkey-glide/go/api"
@@ -14,23 +14,25 @@ import (
 )
 
 type Worker struct {
-	valkeyClient          api.GlideClientCommands
-	virtualizationService virtualization.VirtualizationInterface
+	valkeyClient api.GlideClientCommands
+	virtService  *libvirt_virtualization.LibvirtVirtualization
+	id           int
 }
 
 func NewWorker(
 	valkeyClient api.GlideClientCommands,
-	virtualizationService virtualization.VirtualizationInterface,
+	virtService *libvirt_virtualization.LibvirtVirtualization,
+	id int,
 ) *Worker {
 	return &Worker{
 		valkeyClient,
-		virtualizationService,
+		virtService,
+		id,
 	}
 }
 
 func (w *Worker) DoWork(ctx context.Context) {
 	thisWorkerContext, cancel := context.WithCancel(ctx)
-	thisWorkerId := generateRandom(8)
 
 	for {
 		job, err := w.valkeyClient.BLMove(
@@ -56,9 +58,9 @@ func (w *Worker) DoWork(ctx context.Context) {
 			cancel()
 		}
 
-		slog.Info(fmt.Sprintf("worker %s working...", thisWorkerId))
+		slog.Info(fmt.Sprintf("worker-%d working...", w.id))
 
-		err = w.virtualizationService.CreateInstance(thisWorkerContext, instanceRequest)
+		err = w.virtService.CreateInstance(thisWorkerContext, instanceRequest)
 		if err != nil {
 			slog.Error("error creating instance",
 				"error", err,
