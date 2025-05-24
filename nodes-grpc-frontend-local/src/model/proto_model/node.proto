@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-option go_package = "./services/model/proto-model";
+option go_package = "./src/model/proto_model";
 
 enum Status {
   STATUS_UNSPECIFIED = 0;
@@ -35,31 +35,40 @@ message CreateWorkerRequest {
 
 message CreateWorkerResponse {}
 
-// message Temp {
-//   string status = 1;
-// }
+// create instance
+message CreateInstanceRequest {
+  // top-level name of the cluster
+  //
+  string name = 1;
 
-// message NodeStatus {
-//   string hostname = 1;
-//   string ip_address = 2;
-//   string grpc_port = 3;
-//   Status status = 4;
-// }
+  // true if spawning master instance
+  // false otherwise
+  bool is_master = 2;
 
-// message ServerToken {
-//   string token = 1;
-// }
+  // token for creating k3s cluster
+  // only needed when spawning worker
+  // token will created when spawning master
+  string token = 3;
 
-// message NodeList {
-//   repeated NodeStatus nodes = 1;
-// }
+  // ip address of the master instance
+  // only needed when spawning worker
+  string ip_address = 4;
+
+  // instance hardware requirements
+  int64 cpu = 5;
+  int64 memory = 6;
+  int64 storage = 7;
+}
+
+message CreateInstanceResponse {
+  // returns ip address of master instance
+  string ip_address = 1;
+}
 
 service NodeService {
-  // TODO: COMPLETE THIS FIRST
   rpc CreateMaster(CreateMasterRequest) returns (CreateMasterResponse) {}
   rpc CreateWorker(CreateWorkerRequest) returns (CreateWorkerResponse) {}
-
-  // do this later...
+  rpc CreateInstance(CreateInstanceRequest) returns (CreateInstanceResponse) {}
   // rpc RegisterNode(RegisterNodeRequest) returns (RegisterNodeResponse) {}
   // rpc ThisNodeStatus(Empty) returns (Temp) {}
   // rpc Status(Empty) returns (NodeStatus) {}

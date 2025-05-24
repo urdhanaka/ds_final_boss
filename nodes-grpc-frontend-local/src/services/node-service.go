@@ -14,12 +14,12 @@ const (
 )
 
 type NodeService struct {
-	databaseService *DatabaseService
+	// databaseService *DatabaseService
 }
 
-func NewNodeService(databaseService *DatabaseService) *NodeService {
+func NewNodeService() *NodeService {
 	return &NodeService{
-		databaseService: databaseService,
+		// databaseService: databaseService,
 	}
 }
 
@@ -31,23 +31,25 @@ func (n *NodeService) CreateCluster(
 	memory, _ := strconv.ParseInt(clusterRequest.Memory, 10, 64)
 	storage, _ := strconv.ParseInt(clusterRequest.Storage, 10, 64)
 
-	err := n.createMaster(ctx, &proto_model.CreateMasterRequest{
-		Requirements: &proto_model.CreateNodeRequirements{
-			Cpu:     cpu,
-			Memory:  memory,
-			Storage: storage,
-		},
+	err := n.createMaster(ctx, &proto_model.CreateInstanceRequest{
+		IsMaster:  true,
+		Token:     "12345",
+		IpAddress: "",
+		Cpu:       cpu,
+		Memory:    memory,
+		Storage:   storage,
 	})
 	if err != nil {
 		return err
 	}
 
-	err = n.createWorker(ctx, &proto_model.CreateWorkerRequest{
-		Requirements: &proto_model.CreateNodeRequirements{
-			Cpu:     cpu,
-			Memory:  memory,
-			Storage: storage,
-		},
+	err = n.createWorker(ctx, &proto_model.CreateInstanceRequest{
+		IsMaster:  false,
+		Token:     "12345",
+		IpAddress: "",
+		Cpu:       cpu,
+		Memory:    memory,
+		Storage:   storage,
 	})
 	if err != nil {
 		return err
@@ -58,14 +60,14 @@ func (n *NodeService) CreateCluster(
 
 func (n *NodeService) createMaster(
 	ctx context.Context,
-	masterRequest *proto_model.CreateMasterRequest,
+	instanceRequest *proto_model.CreateInstanceRequest,
 ) error {
 	grpcClient, err := config.NewNodeClient()
 	if err != nil {
 		return err
 	}
 
-	_, err = grpcClient.CreateMaster(ctx, masterRequest)
+	_, err = grpcClient.CreateInstance(ctx, instanceRequest)
 	if err != nil {
 		return err
 	}
@@ -75,14 +77,14 @@ func (n *NodeService) createMaster(
 
 func (n *NodeService) createWorker(
 	ctx context.Context,
-	workerRequest *proto_model.CreateWorkerRequest,
+	instanceRequest *proto_model.CreateInstanceRequest,
 ) error {
 	grpcClient, err := config.NewNodeClient()
 	if err != nil {
 		return err
 	}
 
-	_, err = grpcClient.CreateWorker(ctx, workerRequest)
+	_, err = grpcClient.CreateInstance(ctx, instanceRequest)
 	if err != nil {
 		return err
 	}

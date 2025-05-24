@@ -6,12 +6,13 @@ import (
 
 	"github.com/gofiber/fiber/v3"
 	"github.com/gofiber/fiber/v3/middleware/static"
-	"github.com/jackc/pgx/v5"
+	// "github.com/jackc/pgx/v5"
 )
 
-func SetRouters(fiberApp *fiber.App, pgxConn *pgx.Conn) {
-	dbService := services.NewDatabaseService(pgxConn)
-	nodeService := services.NewNodeService(dbService)
+// func SetRouters(fiberApp *fiber.App, pgxConn *pgx.Conn) {
+func SetRouters(fiberApp *fiber.App) {
+	// dbService := services.NewDatabaseService(pgxConn)
+	nodeService := services.NewNodeService()
 
 	nodeHandler := handlers.NewNodeHandler(nodeService)
 
