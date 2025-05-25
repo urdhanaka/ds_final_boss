@@ -166,7 +166,7 @@ func (c *LibvirtVirtualization) createWorker(
 	err := createNetworkWorker()
 	if err != nil {
 		slogFunction(thisInstanceName, "could not create node network", err)
-        c.deleteInstance(thisInstanceName)
+		c.deleteInstance(thisInstanceName)
 
 		return err
 	}
@@ -177,7 +177,7 @@ func (c *LibvirtVirtualization) createWorker(
 	err = createCloudInitWorker(thisInstanceName)
 	if err != nil {
 		slogFunction(thisInstanceName, "could not create node cloud-init configuration", err)
-        c.deleteInstance(thisInstanceName)
+		c.deleteInstance(thisInstanceName)
 
 		return err
 	}
@@ -188,7 +188,7 @@ func (c *LibvirtVirtualization) createWorker(
 	err = copyImage(thisInstanceName, virtRequest)
 	if err != nil {
 		slogFunction(thisInstanceName, "could not create node image", err)
-        c.deleteInstance(thisInstanceName)
+		c.deleteInstance(thisInstanceName)
 
 		return err
 	}
@@ -199,7 +199,7 @@ func (c *LibvirtVirtualization) createWorker(
 	err = copyEfi(thisInstanceName)
 	if err != nil {
 		slogFunction(thisInstanceName, "could not create node EFI", err)
-        c.deleteInstance(thisInstanceName)
+		c.deleteInstance(thisInstanceName)
 
 		return err
 	}
@@ -210,7 +210,7 @@ func (c *LibvirtVirtualization) createWorker(
 	domainXmlConfig, err := createBase(thisInstanceName, virtRequest)
 	if err != nil {
 		slogFunction(thisInstanceName, "could not create node base xml", err)
-        c.deleteInstance(thisInstanceName)
+		c.deleteInstance(thisInstanceName)
 
 		return err
 	}
@@ -221,7 +221,7 @@ func (c *LibvirtVirtualization) createWorker(
 	dom, err := c.libvirtConnection.DomainCreateXML(domainXmlConfig, libvirt.DOMAIN_NONE)
 	if err != nil {
 		slogFunction(thisInstanceName, "could not spawn node", err)
-        c.deleteInstance(thisInstanceName)
+		c.deleteInstance(thisInstanceName)
 
 		return err
 	}
@@ -231,7 +231,7 @@ func (c *LibvirtVirtualization) createWorker(
 	_, err = dom.QemuAgentCommand(waitCloudInitCmd, libvirt.DOMAIN_QEMU_AGENT_COMMAND_BLOCK, 0)
 	if err != nil {
 		slogFunction(thisInstanceName, "could not spawn node", err)
-        c.deleteInstance(thisInstanceName)
+		c.deleteInstance(thisInstanceName)
 
 		return err
 	}
@@ -246,6 +246,8 @@ func createBase(
 ) (string, error) {
 	instanceStorage := POOL_DIR + "/" + instanceName + ".qcow2"
 	seedFile := POOL_DIR + "/" + instanceName + ".iso"
+	serialSocket := SERIAL_DIR + "/" + instanceName + ".sock"
+	consoleSocket := CONSOLE_DIR + "/" + instanceName + ".sock"
 
 	domConfig := &libvirtxml.Domain{
 		Type: "kvm",
@@ -364,9 +366,46 @@ func createBase(
 					},
 				},
 			},
+			Serials: []libvirtxml.DomainSerial{
+				{
+					Protocol: &libvirtxml.DomainChardevProtocol{
+						Type: "unix",
+					},
+					Source: &libvirtxml.DomainChardevSource{
+						UNIX: &libvirtxml.DomainChardevSourceUNIX{
+							Mode: "bind",
+							Path: serialSocket,
+						},
+					},
+					Target: &libvirtxml.DomainSerialTarget{
+						Type: "isa-serial",
+						Model: &libvirtxml.DomainSerialTargetModel{
+							Name: "isa-serial",
+						},
+					},
+				},
+			},
 			Consoles: []libvirtxml.DomainConsole{
 				{
 					TTY: "pty",
+				},
+				{
+					Protocol: &libvirtxml.DomainChardevProtocol{
+						Type: "unix",
+					},
+					Source: &libvirtxml.DomainChardevSource{
+						UNIX: &libvirtxml.DomainChardevSourceUNIX{
+							Mode: "bind",
+							Path: consoleSocket,
+						},
+					},
+					Target: &libvirtxml.DomainConsoleTarget{
+						Type: "serial",
+						Port: func() *uint {
+							temp := uint(1)
+							return &temp
+						}(),
+					},
 				},
 			},
 			Channels: []libvirtxml.DomainChannel{
