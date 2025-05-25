@@ -369,8 +369,20 @@ func createBase(
 			Serials: []libvirtxml.DomainSerial{
 				{
 					Protocol: &libvirtxml.DomainChardevProtocol{
-						Type: "unix",
+						Type: "pty",
 					},
+					Target: &libvirtxml.DomainSerialTarget{
+						Type: "isa-serial",
+						Model: &libvirtxml.DomainSerialTargetModel{
+							Name: "isa-serial",
+						},
+						Port: func() *uint {
+							temp := uint(0)
+							return &temp
+						}(),
+					},
+				},
+				{
 					Source: &libvirtxml.DomainChardevSource{
 						UNIX: &libvirtxml.DomainChardevSourceUNIX{
 							Mode: "bind",
@@ -382,17 +394,27 @@ func createBase(
 						Model: &libvirtxml.DomainSerialTargetModel{
 							Name: "isa-serial",
 						},
+						Port: func() *uint {
+							temp := uint(1)
+							return &temp
+						}(),
 					},
 				},
 			},
 			Consoles: []libvirtxml.DomainConsole{
 				{
-					TTY: "pty",
+					Protocol: &libvirtxml.DomainChardevProtocol{
+						Type: "pty",
+					},
+					Target: &libvirtxml.DomainConsoleTarget{
+						Type: "serial",
+						Port: func() *uint {
+							temp := uint(0)
+							return &temp
+						}(),
+					},
 				},
 				{
-					Protocol: &libvirtxml.DomainChardevProtocol{
-						Type: "unix",
-					},
 					Source: &libvirtxml.DomainChardevSource{
 						UNIX: &libvirtxml.DomainChardevSourceUNIX{
 							Mode: "bind",
@@ -400,7 +422,7 @@ func createBase(
 						},
 					},
 					Target: &libvirtxml.DomainConsoleTarget{
-						Type: "serial",
+						Type: "virtio",
 						Port: func() *uint {
 							temp := uint(1)
 							return &temp
@@ -427,6 +449,9 @@ func createBase(
 	// hacky way to handle <channel>
 	// why, libvirtxml, why?
 	res := strings.Replace(xmlConfig, "<channel>", `<channel type="unix">`, 1)
+
+	// test the xmlConfig string value
+	fmt.Println(res)
 
 	return res, nil
 }
