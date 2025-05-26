@@ -7,7 +7,6 @@ import (
 	"log/slog"
 	virtualization_model "nodes-grpc-local/services/model/virtualization-model"
 	libvirt_virtualization "nodes-grpc-local/services/virtualization/libvirt-virtualization"
-	"time"
 
 	"github.com/valkey-io/valkey-glide/go/api"
 	"github.com/valkey-io/valkey-glide/go/api/options"
@@ -33,6 +32,7 @@ func NewWorker(
 
 func (w *Worker) DoWork(ctx context.Context) {
 	thisWorkerContext, cancel := context.WithCancel(ctx)
+	defer cancel()
 
 	for {
 		job, err := w.valkeyClient.BLMove(
@@ -67,9 +67,5 @@ func (w *Worker) DoWork(ctx context.Context) {
 			)
 			cancel()
 		}
-
-		// testing for worker
-		// imitating a long process
-		time.Sleep(15 * time.Second)
 	}
 }

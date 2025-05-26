@@ -24,3 +24,19 @@ type Instance struct {
 	Name   string
 	Status bool
 }
+
+type PidQemuGuestAgent struct {
+	Return Pid `json:"return"`
+}
+
+type Pid struct {
+	PID int `json:"pid"`
+}
+
+type ExecStatusQemuGuestAgent struct {
+	Return ExecStatus `json:"return"`
+}
+
+type ExecStatus struct {
+	Exited bool `json:"exited"`
+}

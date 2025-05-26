@@ -2,6 +2,7 @@ package libvirt_virtualization
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log/slog"
 	virtualization_model "nodes-grpc-local/services/model/virtualization-model"
@@ -133,15 +134,53 @@ func (c *LibvirtVirtualization) createMaster(
 
 		return err
 	}
+
 	slogFunction(thisInstanceName, "waiting until the vm is ready..", nil)
-	time.Sleep(time.Duration(15) * time.Second)
 	waitCloudInitCmd := `{"execute":"guest-exec","arguments":{"path":"/bin/bash","arg":["-c", "cloud-init status --wait"],"capture-output":true}}`
-	_, err = dom.QemuAgentCommand(waitCloudInitCmd, libvirt.DOMAIN_QEMU_AGENT_COMMAND_BLOCK, 0)
+	time.Sleep(15 * time.Second)
+	cloudinitPid, err := dom.QemuAgentCommand(waitCloudInitCmd, libvirt.DOMAIN_QEMU_AGENT_COMMAND_BLOCK, 0)
 	if err != nil {
 		slogFunction(thisInstanceName, "could not spawn node", err)
 		c.deleteInstance(thisInstanceName)
 
 		return err
+	}
+
+	// get PID
+	pidStruct := virtualization_model.PidQemuGuestAgent{}
+	err = json.Unmarshal([]byte(cloudinitPid), &pidStruct)
+	if err != nil {
+		slogFunction(thisInstanceName, "could not spawn node", err)
+		c.deleteInstance(thisInstanceName)
+
+		return err
+	}
+
+	// check PID status
+	cloudinitStatusCmd := fmt.Sprintf(`{"execute":"guest-exec-status","arguments":{"pid":%d}}`, pidStruct.Return.PID)
+	for {
+		cloudinitStatus, err := dom.QemuAgentCommand(cloudinitStatusCmd, libvirt.DOMAIN_QEMU_AGENT_COMMAND_BLOCK, 0)
+		if err != nil {
+			slogFunction(thisInstanceName, "could not spawn node", err)
+			c.deleteInstance(thisInstanceName)
+
+			return err
+		}
+
+		execStatusStruct := virtualization_model.ExecStatusQemuGuestAgent{}
+		err = json.Unmarshal([]byte(cloudinitStatus), &execStatusStruct)
+		if err != nil {
+			slogFunction(thisInstanceName, "could not spawn node", err)
+			c.deleteInstance(thisInstanceName)
+
+			return err
+		}
+
+		if execStatusStruct.Return.Exited {
+			break
+		}
+
+		time.Sleep(10 * time.Second)
 	}
 
 	c.websocketConnection.AddLogToMap(thisInstanceName, "done")
@@ -424,7 +463,7 @@ func createBase(
 					Target: &libvirtxml.DomainConsoleTarget{
 						Type: "virtio",
 						Port: func() *uint {
-							temp := uint(1)
+							temp := uint(0)
 							return &temp
 						}(),
 					},
@@ -451,7 +490,7 @@ func createBase(
 	res := strings.Replace(xmlConfig, "<channel>", `<channel type="unix">`, 1)
 
 	// test the xmlConfig string value
-	fmt.Println(res)
+	// fmt.Println(res)
 
 	return res, nil
 }
@@ -579,7 +618,7 @@ runcmd:
         # apk add git
 
   echo "installing k3s"
-  curl -sfL https://get.k3s.io | INSTALL_K3S_EXEC="server --token 12345" sh -s -
+  curl -sfL https://get.k3s.io | INSTALL_K3S_SKIP_DOWNLOAD=true INSTALL_K3S_EXEC="server --token 12345" sh -s -
         # while [ ! -f /etc/rancher/k3s/k3s.yaml ]; do sleep 1; done
 
   export KUBECONFIG=/etc/rancher/k3s/k3s.yaml
@@ -597,7 +636,7 @@ runcmd:
 
   echo "writing token and starting the dashboard..."
   echo "waiting until all pods in the kubernetes-dashboard namespaces is running"
-  k3s kubectl wait pod --all --for=condition=Ready --namespace=kubernetes-dashboard --timeout=120s
+  k3s kubectl wait pod --all --for=condition=Ready --namespace=kubernetes-dashboard --timeout=300s
         #rc-service kube-dashboard-port-forward restart
 
   echo "done"
@@ -658,7 +697,7 @@ runcmd:
         # apk add bash
   
   echo "installing k3s"
-  curl -sfL https://get.k3s.io | INSTALL_K3S_EXEC="agent --server https://%s:6443 --token 12345" sh -s -
+  curl -sfL https://get.k3s.io | INSTALL_K3S_SKIP_DOWNLOAD=true INSTALL_K3S_EXEC="agent --server https://%s:6443 --token 12345" sh -s -
 
   echo "done"
         # reboot

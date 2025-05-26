@@ -18,7 +18,7 @@ const (
 )
 
 // production environment
-// software engineering lab, ubuntu 24.04
+// software engineering lab computer, ubuntu 24.04
 const (
 	LOADER         = "/usr/share/OVMF/OVMF_CODE_4M.fd"
 	NVRAM_TEMPLATE = "/usr/share/OVMF/OVMF_VARS_4M.fd"

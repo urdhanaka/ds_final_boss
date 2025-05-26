@@ -15,7 +15,7 @@ import (
 
 const (
 	// port to listen
-	GRPC_PORT = ":50051"
+	GRPC_PORT string = ":50051"
 )
 
 type NodeServer struct {
@@ -32,60 +32,6 @@ func NewNodeServer(
 	return &NodeServer{
 		queue: queue,
 	}
-}
-
-func (s *NodeServer) CreateMaster(
-	ctx context.Context,
-	createMasterRequest *proto_model.CreateMasterRequest,
-) (*proto_model.CreateMasterResponse, error) {
-	provisionCtx, cancel := context.WithCancel(ctx)
-	defer cancel()
-
-	instanceName := generateRandom(16)
-
-	instanceRequest := virtualization_model.CreateInstanceRequest{
-		Name:            instanceName,
-		IsMaster:        true,
-		Token:           createMasterRequest.Token,
-		MasterIpAddress: "",
-		Cpu:             createMasterRequest.Requirements.Cpu,
-		Memory:          createMasterRequest.Requirements.Memory,
-		Storage:         createMasterRequest.Requirements.Storage,
-	}
-
-	err := s.queue.AddToQueue(provisionCtx, instanceRequest)
-	if err != nil {
-		return new(proto_model.CreateMasterResponse), err
-	}
-
-	return new(proto_model.CreateMasterResponse), nil
-}
-
-func (s *NodeServer) CreateWorker(
-	ctx context.Context,
-	createWorkerRequest *proto_model.CreateWorkerRequest,
-) (*proto_model.CreateWorkerResponse, error) {
-	provisionCtx, cancel := context.WithCancel(ctx)
-	defer cancel()
-
-	instanceName := generateRandom(16)
-
-	instanceRequest := virtualization_model.CreateInstanceRequest{
-		Name:            instanceName,
-		IsMaster:        false,
-		Token:           createWorkerRequest.Token,
-		MasterIpAddress: createWorkerRequest.IpAddress,
-		Cpu:             createWorkerRequest.Requirements.Cpu,
-		Memory:          createWorkerRequest.Requirements.Memory,
-		Storage:         createWorkerRequest.Requirements.Storage,
-	}
-
-	err := s.queue.AddToQueue(provisionCtx, instanceRequest)
-	if err != nil {
-		return new(proto_model.CreateWorkerResponse), err
-	}
-
-	return new(proto_model.CreateWorkerResponse), nil
 }
 
 func (s *NodeServer) CreateInstance(
