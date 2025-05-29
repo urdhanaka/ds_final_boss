@@ -8,25 +8,22 @@ import (
 
 type InitStruct struct {
 	VirtualizationService *libvirt_virtualization.LibvirtVirtualization
-	DispatcherService     *queue.Dispatcher
 	WebsocketService      *websocket.Websocket
 	QueueService          *queue.Queue
 }
 
 func NewInitStruct() *InitStruct {
-	valkeyClient := queue.InitValkeyConnection()
+	redisClient := queue.InitRedisConnection()
+
+	queueStruct := queue.NewQueue(redisClient)
 
 	websocketConnection := websocket.NewWebsocket()
 
 	libvirtConnection := libvirt_virtualization.InitLibvirtConnection()
 	libvirtService := libvirt_virtualization.NewLibvirtVirtualization(libvirtConnection, websocketConnection)
 
-	queueStruct := queue.NewQueue(valkeyClient)
-	dispatcherService := queue.NewDispatcher(queueStruct, libvirtService)
-
 	return &InitStruct{
 		VirtualizationService: libvirtService,
-		DispatcherService:     dispatcherService,
 		QueueService:          queueStruct,
 		WebsocketService:      websocketConnection,
 	}

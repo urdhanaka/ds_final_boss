@@ -169,7 +169,7 @@ func (x *CreateNodeRequirements) GetStorage() int64 {
 // create master
 type CreateMasterRequest struct {
 	state         protoimpl.MessageState  `protogen:"open.v1"`
-	Token         string                  `protobuf:"bytes,1,opt,name=token,proto3" json:"token,omitempty"`
+	ClusterToken  string                  `protobuf:"bytes,1,opt,name=cluster_token,json=clusterToken,proto3" json:"cluster_token,omitempty"`
 	Requirements  *CreateNodeRequirements `protobuf:"bytes,2,opt,name=requirements,proto3" json:"requirements,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -205,9 +205,9 @@ func (*CreateMasterRequest) Descriptor() ([]byte, []int) {
 	return file_services_model_proto_model_node_proto_rawDescGZIP(), []int{2}
 }
 
-func (x *CreateMasterRequest) GetToken() string {
+func (x *CreateMasterRequest) GetClusterToken() string {
 	if x != nil {
-		return x.Token
+		return x.ClusterToken
 	}
 	return ""
 }
@@ -220,10 +220,11 @@ func (x *CreateMasterRequest) GetRequirements() *CreateNodeRequirements {
 }
 
 type CreateMasterResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	IpAddress     string                 `protobuf:"bytes,1,opt,name=ip_address,json=ipAddress,proto3" json:"ip_address,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	IpAddress      string                 `protobuf:"bytes,1,opt,name=ip_address,json=ipAddress,proto3" json:"ip_address,omitempty"`
+	DashboardToken string                 `protobuf:"bytes,2,opt,name=dashboard_token,json=dashboardToken,proto3" json:"dashboard_token,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
 }
 
 func (x *CreateMasterResponse) Reset() {
@@ -263,10 +264,17 @@ func (x *CreateMasterResponse) GetIpAddress() string {
 	return ""
 }
 
+func (x *CreateMasterResponse) GetDashboardToken() string {
+	if x != nil {
+		return x.DashboardToken
+	}
+	return ""
+}
+
 // create worker
 type CreateWorkerRequest struct {
 	state         protoimpl.MessageState  `protogen:"open.v1"`
-	Token         string                  `protobuf:"bytes,1,opt,name=token,proto3" json:"token,omitempty"`
+	ClusterToken  string                  `protobuf:"bytes,1,opt,name=cluster_token,json=clusterToken,proto3" json:"cluster_token,omitempty"`
 	IpAddress     string                  `protobuf:"bytes,2,opt,name=ip_address,json=ipAddress,proto3" json:"ip_address,omitempty"`
 	Requirements  *CreateNodeRequirements `protobuf:"bytes,3,opt,name=requirements,proto3" json:"requirements,omitempty"`
 	unknownFields protoimpl.UnknownFields
@@ -303,9 +311,9 @@ func (*CreateWorkerRequest) Descriptor() ([]byte, []int) {
 	return file_services_model_proto_model_node_proto_rawDescGZIP(), []int{4}
 }
 
-func (x *CreateWorkerRequest) GetToken() string {
+func (x *CreateWorkerRequest) GetClusterToken() string {
 	if x != nil {
-		return x.Token
+		return x.ClusterToken
 	}
 	return ""
 }
@@ -361,6 +369,7 @@ func (*CreateWorkerResponse) Descriptor() ([]byte, []int) {
 }
 
 // create instance
+// not used for now
 type CreateInstanceRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// top-level name of the cluster
@@ -516,15 +525,16 @@ const file_services_model_proto_model_node_proto_rawDesc = "" +
 	"\x16CreateNodeRequirements\x12\x10\n" +
 	"\x03cpu\x18\x01 \x01(\x03R\x03cpu\x12\x16\n" +
 	"\x06memory\x18\x02 \x01(\x03R\x06memory\x12\x18\n" +
-	"\astorage\x18\x03 \x01(\x03R\astorage\"h\n" +
-	"\x13CreateMasterRequest\x12\x14\n" +
-	"\x05token\x18\x01 \x01(\tR\x05token\x12;\n" +
-	"\frequirements\x18\x02 \x01(\v2\x17.CreateNodeRequirementsR\frequirements\"5\n" +
+	"\astorage\x18\x03 \x01(\x03R\astorage\"w\n" +
+	"\x13CreateMasterRequest\x12#\n" +
+	"\rcluster_token\x18\x01 \x01(\tR\fclusterToken\x12;\n" +
+	"\frequirements\x18\x02 \x01(\v2\x17.CreateNodeRequirementsR\frequirements\"^\n" +
 	"\x14CreateMasterResponse\x12\x1d\n" +
 	"\n" +
-	"ip_address\x18\x01 \x01(\tR\tipAddress\"\x87\x01\n" +
-	"\x13CreateWorkerRequest\x12\x14\n" +
-	"\x05token\x18\x01 \x01(\tR\x05token\x12\x1d\n" +
+	"ip_address\x18\x01 \x01(\tR\tipAddress\x12'\n" +
+	"\x0fdashboard_token\x18\x02 \x01(\tR\x0edashboardToken\"\x96\x01\n" +
+	"\x13CreateWorkerRequest\x12#\n" +
+	"\rcluster_token\x18\x01 \x01(\tR\fclusterToken\x12\x1d\n" +
 	"\n" +
 	"ip_address\x18\x02 \x01(\tR\tipAddress\x12;\n" +
 	"\frequirements\x18\x03 \x01(\v2\x17.CreateNodeRequirementsR\frequirements\"\x16\n" +

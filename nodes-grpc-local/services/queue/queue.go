@@ -5,20 +5,18 @@ import (
 	"encoding/json"
 	virtualization_model "nodes-grpc-local/services/model/virtualization-model"
 
-	"github.com/valkey-io/valkey-glide/go/api"
+	"github.com/redis/go-redis/v9"
 )
 
 type Queue struct {
-	valkeyClient api.GlideClientCommands
-	jobs         chan *Job
+	redisClient *redis.Client
 }
 
 func NewQueue(
-	valkeyClient api.GlideClientCommands,
+	redisClient *redis.Client,
 ) *Queue {
 	return &Queue{
-		valkeyClient: valkeyClient,
-		jobs:         make(chan *Job, 30),
+		redisClient: redisClient,
 	}
 }
 
@@ -32,7 +30,7 @@ func (s *Queue) AddToQueue(
 		return err
 	}
 
-	_, err = s.valkeyClient.RPush(VALKEY_MAIN_QUEUE, []string{string(requestString)})
+	_, err = s.redisClient.LPush(ctx, REDIS_MAIN_QUEUE, string(requestString)).Result()
 	if err != nil {
 		return err
 	}
@@ -40,15 +38,38 @@ func (s *Queue) AddToQueue(
 	return nil
 }
 
-// TryAdd will try to add the job to the queue
-//
-// return true if job is successfully added,
-// return false otherwise
-func (s *Queue) TryAdd(ctx context.Context, job *Job) bool {
-	select {
-	case s.jobs <- job:
-		return true
-	default:
-		return false
+func (s *Queue) PopQueue(
+	ctx context.Context,
+) (*virtualization_model.CreateInstanceRequest, error) {
+	instanceRequest := new(virtualization_model.CreateInstanceRequest)
+
+	job, err := s.redisClient.BRPop(ctx, 0, REDIS_MAIN_QUEUE).Result()
+	if err != nil {
+		return instanceRequest, err
 	}
+
+	// job value is the second element at the array
+	err = json.Unmarshal([]byte(job[1]), instanceRequest)
+	if err != nil {
+		return instanceRequest, err
+	}
+
+	return instanceRequest, nil
+}
+
+func (s *Queue) Subscribe(ctx context.Context, channel string) *redis.PubSub {
+	return s.redisClient.Subscribe(ctx, channel)
+}
+
+func (s *Queue) Publish(
+	ctx context.Context,
+	channel string,
+	message any,
+) error {
+	_, err := s.redisClient.Publish(ctx, channel, message).Result()
+	if err != nil {
+		return err
+	}
+
+	return nil
 }

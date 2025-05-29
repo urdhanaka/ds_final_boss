@@ -9,13 +9,9 @@ import (
 	virtualization_model "nodes-grpc-local/services/model/virtualization-model"
 	"nodes-grpc-local/services/queue"
 	"os"
+	"time"
 
 	"google.golang.org/grpc"
-)
-
-const (
-	// port to listen
-	GRPC_PORT string = ":50051"
 )
 
 type NodeServer struct {
@@ -28,37 +24,82 @@ type NodeServer struct {
 
 func NewNodeServer(
 	queue *queue.Queue,
-) NodeServerInterface {
+) *NodeServer {
 	return &NodeServer{
 		queue: queue,
 	}
 }
 
-func (s *NodeServer) CreateInstance(
+func (s *NodeServer) CreateMaster(
 	ctx context.Context,
-	createInstanceRequest *proto_model.CreateInstanceRequest,
-) (*proto_model.CreateInstanceResponse, error) {
+	createMasterRequest *proto_model.CreateMasterRequest,
+) (*proto_model.CreateMasterResponse, error) {
 	provisionCtx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
-	instanceName := generateRandom(16)
+	res := new(proto_model.CreateMasterResponse)
+
+	instanceName := generateRandom(8)
 
 	virtSpecs := virtualization_model.CreateInstanceRequest{
-		Name:            instanceName,
-		IsMaster:        createInstanceRequest.IsMaster,
-		Token:           createInstanceRequest.Token,
-		MasterIpAddress: createInstanceRequest.IpAddress,
-		Cpu:             createInstanceRequest.Cpu,
-		Memory:          createInstanceRequest.Memory,
-		Storage:         createInstanceRequest.Storage,
+		Name:     instanceName,
+		IsMaster: true,
+		Token:    createMasterRequest.ClusterToken,
+		Cpu:      createMasterRequest.Requirements.Cpu,
+		Memory:   createMasterRequest.Requirements.Memory,
+		Storage:  createMasterRequest.Requirements.Storage,
 	}
 
 	err := s.queue.AddToQueue(provisionCtx, virtSpecs)
 	if err != nil {
-		return new(proto_model.CreateInstanceResponse), err
+		return res, err
 	}
 
-	return new(proto_model.CreateInstanceResponse), nil
+	sub := s.queue.Subscribe(ctx, instanceName)
+	defer sub.Close()
+
+	msgCh := sub.Channel()
+	select {
+	case msg := <-msgCh:
+		res.DashboardToken = msg.Payload
+	case <-time.After(PROVISIONING_TIMEOUT * time.Second):
+		fmt.Println("timeout exceeded")
+	}
+
+	return res, nil
+}
+
+func (s *NodeServer) CreateWorker(
+	ctx context.Context,
+	createWorkerRequest *proto_model.CreateWorkerRequest,
+) (*proto_model.CreateWorkerResponse, error) {
+	provisionCtx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
+	res := new(proto_model.CreateWorkerResponse)
+
+	instanceName := generateRandom(8)
+
+	virtSpecs := virtualization_model.CreateInstanceRequest{
+		Name:     instanceName,
+		IsMaster: false,
+		Token:    createWorkerRequest.ClusterToken,
+		Cpu:      createWorkerRequest.Requirements.Cpu,
+		Memory:   createWorkerRequest.Requirements.Memory,
+		Storage:  createWorkerRequest.Requirements.Storage,
+	}
+
+	err := s.queue.AddToQueue(provisionCtx, virtSpecs)
+	if err != nil {
+		return res, err
+	}
+
+	select {
+	case <-time.After(PROVISIONING_TIMEOUT * time.Second):
+		fmt.Println("timeout exceeded")
+	}
+
+	return res, nil
 }
 
 func StartGrpcServer(connection *InitStruct) {
@@ -69,18 +110,6 @@ func StartGrpcServer(connection *InitStruct) {
 		)
 		os.Exit(1)
 	}
-
-	// start queue
-	for i := 1; i <= queue.MAX_WORKER_SIZE; i++ {
-		go func() {
-			valkeyClient := queue.InitValkeyConnection()
-			worker := queue.NewWorker(valkeyClient, connection.VirtualizationService, i)
-			worker.DoWork(context.Background())
-		}()
-	}
-
-	// start the websocket
-	go connection.WebsocketService.Start()
 
 	s := grpc.NewServer()
 	proto_model.RegisterNodeServiceServer(s, &NodeServer{
@@ -95,4 +124,16 @@ func StartGrpcServer(connection *InitStruct) {
 		)
 		os.Exit(1)
 	}
+}
+
+func StartWorker(connection *InitStruct) {
+	worker := queue.NewWorker(
+		connection.QueueService,
+		connection.VirtualizationService,
+	)
+	worker.DoWork()
+}
+
+func StartWebsocket(connection *InitStruct) {
+	connection.WebsocketService.Start()
 }

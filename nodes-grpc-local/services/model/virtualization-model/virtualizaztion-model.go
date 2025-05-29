@@ -38,5 +38,10 @@ type ExecStatusQemuGuestAgent struct {
 }
 
 type ExecStatus struct {
-	Exited bool `json:"exited"`
+	Exited   bool `json:"exited,omitempty"`
+	ExitCode int  `json:"exitcode,omitempty"`
+
+	// this struct contains string of base-64, make sure
+	// to convert to string if string data type is needed
+	OutData string `json:"out-data,omitempty"`
 }

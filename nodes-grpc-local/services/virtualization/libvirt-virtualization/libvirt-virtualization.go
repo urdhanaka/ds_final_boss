@@ -2,6 +2,7 @@ package libvirt_virtualization
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"log/slog"
@@ -48,8 +49,8 @@ func NewLibvirtVirtualization(
 // this function will be used in queue
 func (c *LibvirtVirtualization) CreateInstance(
 	ctx context.Context,
-	virtRequest virtualization_model.CreateInstanceRequest,
-) error {
+	virtRequest *virtualization_model.CreateInstanceRequest,
+) (*VirtCreateInstanceResponse, error) {
 	if virtRequest.IsMaster {
 		return c.createMaster(ctx, virtRequest)
 	} else {
@@ -59,8 +60,11 @@ func (c *LibvirtVirtualization) CreateInstance(
 
 func (c *LibvirtVirtualization) createMaster(
 	ctx context.Context,
-	virtRequest virtualization_model.CreateInstanceRequest,
-) error {
+	virtRequest *virtualization_model.CreateInstanceRequest,
+) (*VirtCreateInstanceResponse, error) {
+	createRes := new(VirtCreateInstanceResponse)
+	createRes.Status = false
+
 	thisInstanceName := virtRequest.Name
 
 	c.websocketConnection.AddMap(thisInstanceName)
@@ -77,7 +81,7 @@ func (c *LibvirtVirtualization) createMaster(
 		slogFunction(thisInstanceName, "could not create node network", err)
 		c.deleteInstance(thisInstanceName)
 
-		return err
+		return createRes, err
 	}
 
 	// create cloudinit configuration
@@ -88,7 +92,7 @@ func (c *LibvirtVirtualization) createMaster(
 		slogFunction(thisInstanceName, "could not create node cloud-init configuration", err)
 		c.deleteInstance(thisInstanceName)
 
-		return err
+		return createRes, err
 	}
 
 	// creating the image
@@ -99,7 +103,7 @@ func (c *LibvirtVirtualization) createMaster(
 		slogFunction(thisInstanceName, "could not create node image", err)
 		c.deleteInstance(thisInstanceName)
 
-		return err
+		return createRes, err
 	}
 
 	// configure the EFI
@@ -110,7 +114,7 @@ func (c *LibvirtVirtualization) createMaster(
 		slogFunction(thisInstanceName, "could not create node EFI", err)
 		c.deleteInstance(thisInstanceName)
 
-		return err
+		return createRes, err
 	}
 
 	// base xml for the vm
@@ -121,7 +125,7 @@ func (c *LibvirtVirtualization) createMaster(
 		slogFunction(thisInstanceName, "could not create node base xml", err)
 		c.deleteInstance(thisInstanceName)
 
-		return err
+		return createRes, err
 	}
 
 	// spawning
@@ -132,65 +136,53 @@ func (c *LibvirtVirtualization) createMaster(
 		slogFunction(thisInstanceName, "could not spawn node", err)
 		c.deleteInstance(thisInstanceName)
 
-		return err
+		return createRes, err
 	}
 
 	slogFunction(thisInstanceName, "waiting until the vm is ready..", nil)
-	waitCloudInitCmd := `{"execute":"guest-exec","arguments":{"path":"/bin/bash","arg":["-c", "cloud-init status --wait"],"capture-output":true}}`
 	time.Sleep(15 * time.Second)
-	cloudinitPid, err := dom.QemuAgentCommand(waitCloudInitCmd, libvirt.DOMAIN_QEMU_AGENT_COMMAND_BLOCK, 0)
+	waitCloudInitCmd := "cloud-init status --wait"
+	_, err = guestAgentExecStatus(dom, waitCloudInitCmd)
 	if err != nil {
-		slogFunction(thisInstanceName, "could not spawn node", err)
+		slogFunction(thisInstanceName, "error waiting cloud-init process", err)
 		c.deleteInstance(thisInstanceName)
 
-		return err
+		return createRes, err
 	}
 
-	// get PID
-	pidStruct := virtualization_model.PidQemuGuestAgent{}
-	err = json.Unmarshal([]byte(cloudinitPid), &pidStruct)
+	// creating token
+	kubeCreateTokenCmd := "k3s kubectl -n kubernetes-dashboard create token admin-user"
+	createTokenStatus, err := guestAgentExecStatus(dom, kubeCreateTokenCmd)
 	if err != nil {
-		slogFunction(thisInstanceName, "could not spawn node", err)
+		slogFunction(thisInstanceName, "error creating kubernetes dashboard token", err)
 		c.deleteInstance(thisInstanceName)
 
-		return err
+		return createRes, err
 	}
 
-	// check PID status
-	cloudinitStatusCmd := fmt.Sprintf(`{"execute":"guest-exec-status","arguments":{"pid":%d}}`, pidStruct.Return.PID)
-	for {
-		cloudinitStatus, err := dom.QemuAgentCommand(cloudinitStatusCmd, libvirt.DOMAIN_QEMU_AGENT_COMMAND_BLOCK, 0)
-		if err != nil {
-			slogFunction(thisInstanceName, "could not spawn node", err)
-			c.deleteInstance(thisInstanceName)
+	// handle base 64 of the guest agent result
+	decodedBytes, err := base64.StdEncoding.DecodeString(createTokenStatus.Return.OutData)
+	if err != nil {
+		slogFunction(thisInstanceName, "error decoding kubernetes dashboard bytes", err)
+		c.deleteInstance(thisInstanceName)
 
-			return err
-		}
-
-		execStatusStruct := virtualization_model.ExecStatusQemuGuestAgent{}
-		err = json.Unmarshal([]byte(cloudinitStatus), &execStatusStruct)
-		if err != nil {
-			slogFunction(thisInstanceName, "could not spawn node", err)
-			c.deleteInstance(thisInstanceName)
-
-			return err
-		}
-
-		if execStatusStruct.Return.Exited {
-			break
-		}
-
-		time.Sleep(10 * time.Second)
+		return createRes, err
 	}
+
+	createRes.Status = true
+	createRes.DashboardToken = string(decodedBytes)
 
 	c.websocketConnection.AddLogToMap(thisInstanceName, "done")
-	return nil
+	return createRes, nil
 }
 
 func (c *LibvirtVirtualization) createWorker(
 	ctx context.Context,
-	virtRequest virtualization_model.CreateInstanceRequest,
-) error {
+	virtRequest *virtualization_model.CreateInstanceRequest,
+) (*VirtCreateInstanceResponse, error) {
+	createRes := new(VirtCreateInstanceResponse)
+	createRes.Status = false
+
 	thisInstanceName := virtRequest.Name
 
 	c.websocketConnection.AddMap(thisInstanceName)
@@ -207,7 +199,7 @@ func (c *LibvirtVirtualization) createWorker(
 		slogFunction(thisInstanceName, "could not create node network", err)
 		c.deleteInstance(thisInstanceName)
 
-		return err
+		return createRes, err
 	}
 
 	// create cloudinit configuration
@@ -218,7 +210,7 @@ func (c *LibvirtVirtualization) createWorker(
 		slogFunction(thisInstanceName, "could not create node cloud-init configuration", err)
 		c.deleteInstance(thisInstanceName)
 
-		return err
+		return createRes, err
 	}
 
 	// creating the image
@@ -229,7 +221,7 @@ func (c *LibvirtVirtualization) createWorker(
 		slogFunction(thisInstanceName, "could not create node image", err)
 		c.deleteInstance(thisInstanceName)
 
-		return err
+		return createRes, err
 	}
 
 	// configure the EFI
@@ -240,7 +232,7 @@ func (c *LibvirtVirtualization) createWorker(
 		slogFunction(thisInstanceName, "could not create node EFI", err)
 		c.deleteInstance(thisInstanceName)
 
-		return err
+		return createRes, err
 	}
 
 	// base xml for the vm
@@ -251,7 +243,7 @@ func (c *LibvirtVirtualization) createWorker(
 		slogFunction(thisInstanceName, "could not create node base xml", err)
 		c.deleteInstance(thisInstanceName)
 
-		return err
+		return createRes, err
 	}
 
 	// spawning
@@ -262,26 +254,28 @@ func (c *LibvirtVirtualization) createWorker(
 		slogFunction(thisInstanceName, "could not spawn node", err)
 		c.deleteInstance(thisInstanceName)
 
-		return err
+		return createRes, err
 	}
 	slogFunction(thisInstanceName, "waiting until the vm is ready..", nil)
 	time.Sleep(15 * time.Second)
-	waitCloudInitCmd := `{"execute":"guest-exec","arguments":{"path":"/bin/bash","arg":["-c", "cloud-init status --wait"],"capture-output":true}}`
-	_, err = dom.QemuAgentCommand(waitCloudInitCmd, libvirt.DOMAIN_QEMU_AGENT_COMMAND_BLOCK, 0)
+	waitCloudInitCmd := "cloud-init status --wait"
+	_, err = guestAgentExecStatus(dom, waitCloudInitCmd)
 	if err != nil {
 		slogFunction(thisInstanceName, "could not spawn node", err)
 		c.deleteInstance(thisInstanceName)
 
-		return err
+		return createRes, err
 	}
 
+	createRes.Status = true
+
 	c.websocketConnection.AddLogToMap(thisInstanceName, "done")
-	return nil
+	return createRes, nil
 }
 
 func createBase(
 	instanceName string,
-	instanceConfig virtualization_model.CreateInstanceRequest,
+	instanceConfig *virtualization_model.CreateInstanceRequest,
 ) (string, error) {
 	instanceStorage := POOL_DIR + "/" + instanceName + ".qcow2"
 	seedFile := POOL_DIR + "/" + instanceName + ".iso"
@@ -354,7 +348,7 @@ func createBase(
 			Mode: "host-passthrough",
 		},
 		OnPoweroff: "destroy",
-		OnCrash:    "destroy",
+		OnCrash:    "restart",
 		Devices: &libvirtxml.DomainDeviceList{
 			Emulator: "/usr/bin/qemu-system-x86_64",
 			Disks: []libvirtxml.DomainDisk{
@@ -497,7 +491,7 @@ func createBase(
 
 func copyImage(
 	instanceName string,
-	virtRequest virtualization_model.CreateInstanceRequest,
+	virtRequest *virtualization_model.CreateInstanceRequest,
 ) error {
 	imageMut.Lock()
 	defer imageMut.Unlock()
@@ -518,8 +512,6 @@ func copyImage(
 	// resize the qcow2
 	resizeCmd := exec.Command("qemu-img", "resize", destinationPath, "+10G")
 	// resizeCmd := exec.Command("qemu-img", "resize", destinationPath, fmt.Sprintf("+%dG", virtRequest.Storage))
-	resizeCmd.Stderr = os.Stderr
-	resizeCmd.Stdout = os.Stdout
 	err = resizeCmd.Run()
 	if err != nil {
 		return err
@@ -572,19 +564,6 @@ users:
   lock_passwd: false
   shell: /bin/bash
 
-network:
-  version: 2
-  ethernets:
-    enp1s0:
-      addresses:
-        - %s/24
-      nameservers:
-        addresses: [192.168.122.1]
-      routes:
-        - to: 0.0.0.0/0
-          via: 192.168.122.1
-          metric: 100
-
 write_files:
 - path: /root/service-account.yaml
   content: |
@@ -607,6 +586,25 @@ write_files:
     - kind: ServiceAccount
       name: admin-user
       namespace: kubernetes-dashboard
+- path: /etc/systemd/system/kube-dashboard.service
+  content: |
+    [Unit]
+    Description=Kubernetes dashboard
+    Wants=network-online.target
+    After=k3s.service
+
+    [Install]
+    WantedBy=multi-user.target
+
+    [Service]
+    Type=simple
+    User=root
+    Restart=always
+    RestartSec=5s
+    ExecStart=/usr/local/bin/k3s \
+        kubectl -n kubernetes-dashboard \
+        port-forward svc/kubernetes-dashboard-kong-proxy \
+        8443:443 --address 0.0.0.0 \
 
 runcmd:
 - |
@@ -625,7 +623,7 @@ runcmd:
   echo "export KUBECONFIG=/etc/rancher/k3s/k3s.yaml" >> /etc/profile
 
   echo "installing helm for kubernetes"
-  curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+        #curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
 
   echo "creating kubernetes dashboard"
   helm repo add kubernetes-dashboard https://kubernetes.github.io/dashboard/
@@ -636,11 +634,11 @@ runcmd:
 
   echo "writing token and starting the dashboard..."
   echo "waiting until all pods in the kubernetes-dashboard namespaces is running"
-  k3s kubectl wait pod --all --for=condition=Ready --namespace=kubernetes-dashboard --timeout=300s
-        #rc-service kube-dashboard-port-forward restart
+  k3s kubectl wait pod --all --for=condition=Ready --namespace=kubernetes-dashboard --timeout=-1s
+  systemctl start kube-dashboard.service
 
   echo "done"
-`, instanceName, MASTER_NODE_IP)
+`, instanceName)
 
 	err := os.WriteFile(filePath, []byte(userDataContent), 0644)
 	if err != nil {
@@ -676,19 +674,6 @@ users:
   lock_passwd: false
   shell: /bin/bash
 
-network:
-  version: 2
-  ethernets:
-    enp1s0:
-      addresses:
-        - %s/24
-      nameservers:
-        addresses: [192.168.122.1]
-      routes:
-        - to: 0.0.0.0/0
-          via: 192.168.122.1
-          metric: 100
-
 runcmd:
 - |
   echo "running command"
@@ -701,7 +686,7 @@ runcmd:
 
   echo "done"
         # reboot
-`, instanceName, WORKER_NODE_IP, MASTER_NODE_IP)
+`, instanceName, MASTER_NODE_IP)
 
 	err := os.WriteFile(filePath, []byte(userDataContent), 0644)
 	if err != nil {
@@ -830,4 +815,48 @@ func (c *LibvirtVirtualization) deleteInstance(
 			"error", err,
 		)
 	}
+}
+
+func guestAgentExecStatus(
+	dom *libvirt.Domain,
+	execString string,
+) (*ExecStatusQemuGuestAgent, error) {
+	res := new(ExecStatusQemuGuestAgent)
+
+	execCmd := fmt.Sprintf(`{"execute":"guest-exec","arguments":{"path":"/bin/bash","arg":["-c", "%s"],"capture-output":true}}`,
+		execString)
+	cmdPid, err := dom.QemuAgentCommand(execCmd, libvirt.DOMAIN_QEMU_AGENT_COMMAND_BLOCK, 0)
+	if err != nil {
+		return res, err
+	}
+
+	// handle the pid
+	pidStruct := new(PidQemuGuestAgent)
+	err = json.Unmarshal([]byte(cmdPid), pidStruct)
+	if err != nil {
+		return res, err
+	}
+
+	for {
+		cmd := fmt.Sprintf(`{"execute":"guest-exec-status","arguments":{"pid":%d}}`, pidStruct.Return.PID)
+		status, err := dom.QemuAgentCommand(cmd, libvirt.DOMAIN_QEMU_AGENT_COMMAND_BLOCK, 0)
+		if err != nil {
+			return res, err
+		}
+
+		fmt.Println(status)
+
+		err = json.Unmarshal([]byte(status), res)
+		if err != nil {
+			return res, err
+		}
+
+		if res.Return.Exited {
+			break
+		}
+
+		time.Sleep(10 * time.Second)
+	}
+
+	return res, nil
 }

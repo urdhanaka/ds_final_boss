@@ -1,6 +1,11 @@
 package queue
 
 const (
+    // redis address
+    REDIS_ADDRESS = "localhost:6379"
+    // main redis queue key
+    REDIS_MAIN_QUEUE = "spawn-queue"
+
 	// valkey hostname
 	VALKEY_HOST = "localhost"
 	// valkey port
@@ -9,7 +14,4 @@ const (
 	VALKEY_MAIN_QUEUE = "spawn-queue"
 	// valkey processing queue
 	VALKEY_PROCESSING_QUEUE = "spawn-queue-backup"
-
-	// maximum worker that can handle the queue
-	MAX_WORKER_SIZE int = 1
 )

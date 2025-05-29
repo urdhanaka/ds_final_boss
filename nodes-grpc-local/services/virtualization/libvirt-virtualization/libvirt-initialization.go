@@ -15,6 +15,7 @@ var (
 	imageMut     sync.Mutex
 	networkMut   sync.Mutex
 	efiMut       sync.Mutex
+	spawnMut     sync.Mutex
 )
 
 func init() {

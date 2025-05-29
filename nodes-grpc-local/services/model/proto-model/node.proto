@@ -18,17 +18,18 @@ message CreateNodeRequirements {
 
 // create master
 message CreateMasterRequest {
-  string token = 1;
+  string cluster_token = 1;
   CreateNodeRequirements requirements = 2;
 }
 
 message CreateMasterResponse {
   string ip_address = 1;
+  string dashboard_token = 2;
 }
 
 // create worker
 message CreateWorkerRequest {
-  string token = 1;
+  string cluster_token = 1;
   string ip_address = 2;
   CreateNodeRequirements requirements = 3;
 }
@@ -36,6 +37,7 @@ message CreateWorkerRequest {
 message CreateWorkerResponse {}
 
 // create instance
+// not used for now
 message CreateInstanceRequest {
   // top-level name of the cluster
   //
