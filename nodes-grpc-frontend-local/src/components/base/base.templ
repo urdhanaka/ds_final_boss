@@ -16,10 +16,13 @@ templ Page() {
 			<div id="container" class="m-8">
 				<form>
 					<div class="flex gap-4 py-1">
+						// START name textbox
 						<div>
 							<label for="name">Name:</label>
 							<input type="text" id="name" name="name"/>
 						</div>
+						// END name textbox
+						// START vcpu
 						<div>
 							<label for="vcpu">CPU:</label>
 							<select name="vcpu" id="vcpu">
@@ -29,6 +32,8 @@ templ Page() {
 								<option value="4">4 vCPUs</option>
 							</select>
 						</div>
+						// END vcpu
+						// START memory
 						<div>
 							<label for="memory">Memory:</label>
 							<select name="memory" id="memory">
@@ -37,6 +42,8 @@ templ Page() {
 								<option value="16">16 GBs</option>
 							</select>
 						</div>
+						// END memory
+						// START memory
 						<div>
 							<label for="storage">Storage:</label>
 							<select name="storage" id="storage">
@@ -44,6 +51,12 @@ templ Page() {
 								<option value="8">8 GBs</option>
 								<option value="16">16 GBs</option>
 							</select>
+						</div>
+						// END memory
+						// START node size
+						<div>
+							<label>node size</label>
+							<input type="number" id="node_size" name="node_size" min="1" max="5"/>
 						</div>
 					</div>
 					<div class="flex">
@@ -57,8 +70,9 @@ templ Page() {
 					</div>
 				</form>
 			</div>
-			<div id="log" class="m-8">
-			</div>
+			<div id="wait" class="m-8 font-mono"></div>
+			<div id="token" class="m-8 font-mono overflow-hidden text-ellipsis break-words"></div>
+			<div id="log" class="m-8"></div>
 		</body>
 	</html>
 }

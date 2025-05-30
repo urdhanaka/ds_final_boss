@@ -5,6 +5,7 @@ import (
 	"nodes-grpc-frontend-local/src/config"
 	"nodes-grpc-frontend-local/src/model/proto_model"
 	"nodes-grpc-frontend-local/src/model/virtualization_model"
+	"nodes-grpc-frontend-local/src/utils"
 	"strconv"
 )
 
@@ -26,68 +27,75 @@ func NewNodeService() *NodeService {
 func (n *NodeService) CreateCluster(
 	ctx context.Context,
 	clusterRequest *virtualization_model.CreateClusterRequest,
-) error {
+) (*virtualization_model.VirtCreateInstanceResponse, error) {
+	res := new(virtualization_model.VirtCreateInstanceResponse)
+
 	cpu, _ := strconv.ParseInt(clusterRequest.VCPU, 10, 64)
 	memory, _ := strconv.ParseInt(clusterRequest.Memory, 10, 64)
 	storage, _ := strconv.ParseInt(clusterRequest.Storage, 10, 64)
 
-	err := n.createMaster(ctx, &proto_model.CreateInstanceRequest{
-		IsMaster:  true,
-		Token:     "12345",
-		IpAddress: "",
-		Cpu:       cpu,
-		Memory:    memory,
-		Storage:   storage,
+	clusterToken := utils.GenerateRandom(8)
+
+	createMasterRes, err := n.createMaster(ctx, &proto_model.CreateMasterRequest{
+		ClusterToken: clusterToken,
+		Requirements: &proto_model.CreateNodeRequirements{
+			Cpu:     cpu,
+			Memory:  memory,
+			Storage: storage,
+		},
 	})
 	if err != nil {
-		return err
+		return res, err
 	}
 
-	err = n.createWorker(ctx, &proto_model.CreateInstanceRequest{
-		IsMaster:  false,
-		Token:     "12345",
-		IpAddress: "",
-		Cpu:       cpu,
-		Memory:    memory,
-		Storage:   storage,
+	_, err = n.createWorker(ctx, &proto_model.CreateWorkerRequest{
+		ClusterToken: clusterToken,
+		IpAddress:    MASTER_IP_ADDRESS,
+		Requirements: &proto_model.CreateNodeRequirements{
+			Cpu:     cpu,
+			Memory:  memory,
+			Storage: storage,
+		},
 	})
 	if err != nil {
-		return err
+		return res, err
 	}
 
-	return nil
+	res.DashboardToken = createMasterRes.DashboardToken
+
+	return res, nil
 }
 
 func (n *NodeService) createMaster(
 	ctx context.Context,
-	instanceRequest *proto_model.CreateInstanceRequest,
-) error {
+	masterRequest *proto_model.CreateMasterRequest,
+) (*proto_model.CreateMasterResponse, error) {
 	grpcClient, err := config.NewNodeClient()
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	_, err = grpcClient.CreateInstance(ctx, instanceRequest)
+	res, err := grpcClient.CreateMaster(ctx, masterRequest)
 	if err != nil {
-		return err
+		return res, err
 	}
 
-	return nil
+	return res, nil
 }
 
 func (n *NodeService) createWorker(
 	ctx context.Context,
-	instanceRequest *proto_model.CreateInstanceRequest,
-) error {
+	workerRequest *proto_model.CreateWorkerRequest,
+) (*proto_model.CreateWorkerResponse, error) {
 	grpcClient, err := config.NewNodeClient()
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	_, err = grpcClient.CreateInstance(ctx, instanceRequest)
+	res, err := grpcClient.CreateWorker(ctx, workerRequest)
 	if err != nil {
-		return err
+		return res, err
 	}
 
-	return nil
+	return res, nil
 }

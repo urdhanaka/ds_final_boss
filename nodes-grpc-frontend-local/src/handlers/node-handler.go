@@ -5,7 +5,6 @@ import (
 	"nodes-grpc-frontend-local/src/model/virtualization_model"
 	"nodes-grpc-frontend-local/src/services"
 
-	"github.com/a-h/templ"
 	"github.com/gofiber/fiber/v3"
 )
 
@@ -20,7 +19,9 @@ func NewNodeHandler(nodeService *services.NodeService) *NodeHandler {
 }
 
 func (h *NodeHandler) Homepage(c fiber.Ctx) error {
-	return Render(c, base.Page())
+	c.Set("Content-Type", "text/html")
+
+	return base.Page().Render(c.Context(), c.Response().BodyWriter())
 }
 
 func (h *NodeHandler) CreateCluster(c fiber.Ctx) error {
@@ -33,12 +34,12 @@ func (h *NodeHandler) CreateCluster(c fiber.Ctx) error {
 		return c.JSON(NewErrorResponse(err))
 	}
 
-	err = h.NodeService.CreateCluster(c.Context(), clusterRequest)
+	res, err := h.NodeService.CreateCluster(c.Context(), clusterRequest)
 	if err != nil {
 		return c.JSON(NewErrorResponse(err))
 	}
 
-	return c.JSON(NewSuccessResponse())
+	return c.JSON(NewSuccessResponseWithData(res))
 }
 
 func (h *NodeHandler) AccessCluster(c fiber.Ctx) error {
@@ -48,10 +49,4 @@ func (h *NodeHandler) AccessCluster(c fiber.Ctx) error {
 	}
 
 	return nil
-}
-
-func Render(c fiber.Ctx, component templ.Component) error {
-	c.Set("Content-Type", "text/html")
-
-	return component.Render(c.Context(), c.Response().BodyWriter())
 }

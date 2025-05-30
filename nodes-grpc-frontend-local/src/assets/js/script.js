@@ -6,16 +6,20 @@ async function sendRequirementJson() {
   let vcpu = document.getElementById("vcpu").value;
   let memory = document.getElementById("memory").value;
   let storage = document.getElementById("storage").value;
+  let node_size = document.getElementById("node_size").value;
 
   const data = {
     name: name,
     vcpu: vcpu,
     memory: memory,
     storage: storage,
+    node_size: node_size,
   }
 
   // accessClusterButton = document.getElementById("access-button")
   // accessClusterButton.style.visibility = "visible"
+
+  document.getElementById("wait").appendChild(document.createTextNode("creating cluster, please wait..."));
 
   try {
     const response = await fetch("http://localhost:3000/create_cluster", {
@@ -27,7 +31,10 @@ async function sendRequirementJson() {
     });
 
     const result = await response.json();
-    console.log('Success:', result);
+
+    // streamLog()
+    let tokenContent = document.createTextNode(result.data.dashboard_token);
+    document.getElementById("token").appendChild(tokenContent);
 
     // set the session key
     // sessionKey = result;
@@ -37,6 +44,9 @@ async function sendRequirementJson() {
     // accessClusterButton.style.visibility = "visible"
   } catch (error) {
     console.error('Error:', error.message);
+    document.getElementById("wait").appendChild(document.createTextNode("error creating cluster: ", error.message));
+  } finally {
+    document.getElementById("wait").appendChild(document.createTextNode("done"));
   }
 }
 
@@ -44,7 +54,7 @@ function openDashboard() {
   return;
 }
 
-async function streamLog(clusterName) {
+async function streamLog() {
   const logTag = document.getElementById("log")
 
   let fullWebsocketUrl = "ws://localhost:3000/status/" + clusterName;

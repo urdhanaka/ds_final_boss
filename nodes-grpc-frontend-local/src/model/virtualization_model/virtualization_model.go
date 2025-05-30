@@ -8,3 +8,8 @@ type CreateClusterRequest struct {
 	Master  int    `json:"master_node"`
 	Worker  int    `json:"worker_node"`
 }
+
+type VirtCreateInstanceResponse struct {
+	Status         bool   `json:"status"`
+	DashboardToken string `json:"dashboard_token,omitempty"`
+}

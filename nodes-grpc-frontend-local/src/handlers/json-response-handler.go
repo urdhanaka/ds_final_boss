@@ -1,15 +1,15 @@
 package handlers
 
 type SuccessResponse struct {
-	Success bool
-	Message string
-	Data    any
+	Success bool   `json:"success"`
+	Message string `json:"message"`
+	Data    any    `json:"data"`
 }
 
 type ErrorResponse struct {
-	Success bool
-	Message string
-	Error   string
+	Success bool   `json:"success"`
+	Message string `json:"message"`
+	Error   string `json:"error"`
 }
 
 func NewSuccessResponse() SuccessResponse {
