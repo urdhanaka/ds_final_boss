@@ -50,7 +50,7 @@ func NewLibvirtVirtualization(
 func (c *LibvirtVirtualization) CreateInstance(
 	ctx context.Context,
 	virtRequest *virtualization_model.CreateInstanceRequest,
-) (*VirtCreateInstanceResponse, error) {
+) (*virtualization_model.VirtCreateInstanceResponse, error) {
 	if virtRequest.IsMaster {
 		return c.createMaster(ctx, virtRequest)
 	} else {
@@ -61,8 +61,8 @@ func (c *LibvirtVirtualization) CreateInstance(
 func (c *LibvirtVirtualization) createMaster(
 	ctx context.Context,
 	virtRequest *virtualization_model.CreateInstanceRequest,
-) (*VirtCreateInstanceResponse, error) {
-	createRes := new(VirtCreateInstanceResponse)
+) (*virtualization_model.VirtCreateInstanceResponse, error) {
+	createRes := new(virtualization_model.VirtCreateInstanceResponse)
 	createRes.Status = false
 
 	thisInstanceName := virtRequest.Name
@@ -179,8 +179,8 @@ func (c *LibvirtVirtualization) createMaster(
 func (c *LibvirtVirtualization) createWorker(
 	ctx context.Context,
 	virtRequest *virtualization_model.CreateInstanceRequest,
-) (*VirtCreateInstanceResponse, error) {
-	createRes := new(VirtCreateInstanceResponse)
+) (*virtualization_model.VirtCreateInstanceResponse, error) {
+	createRes := new(virtualization_model.VirtCreateInstanceResponse)
 	createRes.Status = false
 
 	thisInstanceName := virtRequest.Name

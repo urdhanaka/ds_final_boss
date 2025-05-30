@@ -45,3 +45,8 @@ type ExecStatus struct {
 	// to convert to string if string data type is needed
 	OutData string `json:"out-data,omitempty"`
 }
+
+type VirtCreateInstanceResponse struct {
+	Status         bool   `json:"status"`
+	DashboardToken string `json:"dashboard_token,omitempty"`
+}

@@ -2,6 +2,7 @@ package services
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log/slog"
 	"net"
@@ -61,7 +62,12 @@ func (s *NodeServer) CreateMaster(
 	msgCh := sub.Channel()
 	select {
 	case msg := <-msgCh:
-		res.DashboardToken = msg.Payload
+		instanceRes := new(virtualization_model.VirtCreateInstanceResponse)
+
+		_ = json.Unmarshal([]byte(msg.Payload), instanceRes)
+
+		res.DashboardToken = instanceRes.DashboardToken
+
 	case <-time.After(PROVISIONING_TIMEOUT * time.Second):
 		fmt.Println("timeout exceeded")
 	}
@@ -92,11 +98,6 @@ func (s *NodeServer) CreateWorker(
 	err := s.queue.AddToQueue(provisionCtx, virtSpecs)
 	if err != nil {
 		return res, err
-	}
-
-	select {
-	case <-time.After(PROVISIONING_TIMEOUT * time.Second):
-		fmt.Println("timeout exceeded")
 	}
 
 	return res, nil
