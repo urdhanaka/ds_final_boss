@@ -7,11 +7,12 @@ const (
 	BRIDGE_NAME = "default"
 
 	// libvirt related
-	BASE_POOL_DIR = "/var/lib/libvirt/images"
-	POOL_DIR      = "/var/lib/libvirt/k3s-virt"
-	NVRAM_DIR     = "/var/lib/libvirt/qemu/nvram"
-	SERIAL_DIR    = "/var/lib/libvirt/serial-logs"
-	CONSOLE_DIR   = "/var/lib/libvirt/console-logs"
+	BASE_POOL_DIR     = "/var/lib/libvirt/images"
+	POOL_DIR          = "/var/lib/libvirt/k3s-virt"
+	NVRAM_DIR         = "/var/lib/libvirt/qemu/nvram"
+	SERIAL_DIR        = "/var/lib/libvirt/serial-logs"
+	CONSOLE_DIR       = "/var/lib/libvirt/console-logs"
+	INSTANCE_LOGS_DIR = "/var/lib/libvirt/instance-logs"
 
 	// image that will be used for VM
 	BASE_IMAGE_NAME = "oracular-server-cloudimg-amd64.img"

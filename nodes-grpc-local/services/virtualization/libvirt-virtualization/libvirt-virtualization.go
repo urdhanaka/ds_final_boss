@@ -169,7 +169,7 @@ func (c *LibvirtVirtualization) createMaster(
 	}
 
 	// getting the IP address
-    // DO NOT TOUCH THE sed SEQUENCE
+	// DO NOT TOUCH THE sed SEQUENCE
 	ipAddressCmd := `ip -f inet addr show enp1s0 | sed -En -e 's/.*inet ([0-9.]+).*/\\1/p'`
 	ipAddressStatus, err := guestAgentExecStatus(dom, ipAddressCmd)
 	if err != nil {
@@ -191,7 +191,7 @@ func (c *LibvirtVirtualization) createMaster(
 	createRes.DashboardToken = string(decodedTokenBytes)
 	createRes.MasterIpAddress = string(decodedIpAddressBytes)
 
-    fmt.Println("create master response: ", createRes)
+	fmt.Println("create master response: ", createRes)
 
 	c.websocketConnection.AddLogToMap(thisInstanceName, "done")
 	return createRes, nil
@@ -300,8 +300,9 @@ func createBase(
 ) (string, error) {
 	instanceStorage := POOL_DIR + "/" + instanceName + ".qcow2"
 	seedFile := POOL_DIR + "/" + instanceName + ".iso"
-	serialSocket := SERIAL_DIR + "/" + instanceName + ".sock"
-	consoleSocket := CONSOLE_DIR + "/" + instanceName + ".sock"
+	logSocket := INSTANCE_LOGS_DIR + "/" + instanceName + ".sock"
+	// serialSocket := SERIAL_DIR + "/" + instanceName + ".sock"
+	// consoleSocket := CONSOLE_DIR + "/" + instanceName + ".sock"
 
 	domConfig := &libvirtxml.Domain{
 		Type: "kvm",
@@ -356,6 +357,9 @@ func createBase(
 				{
 					Dev: "hd",
 				},
+			},
+			BIOS: &libvirtxml.DomainBIOS{
+				UseSerial: "yes",
 			},
 		},
 		Features: &libvirtxml.DomainFeatureList{
@@ -427,31 +431,31 @@ func createBase(
 					},
 					Target: &libvirtxml.DomainSerialTarget{
 						Type: "isa-serial",
-						Model: &libvirtxml.DomainSerialTargetModel{
-							Name: "isa-serial",
-						},
 						Port: func() *uint {
 							temp := uint(0)
 							return &temp
 						}(),
+						Model: &libvirtxml.DomainSerialTargetModel{
+							Name: "isa-serial",
+						},
 					},
 				},
 				{
 					Source: &libvirtxml.DomainChardevSource{
 						UNIX: &libvirtxml.DomainChardevSourceUNIX{
 							Mode: "bind",
-							Path: serialSocket,
+							Path: logSocket,
 						},
 					},
 					Target: &libvirtxml.DomainSerialTarget{
 						Type: "isa-serial",
-						Model: &libvirtxml.DomainSerialTargetModel{
-							Name: "isa-serial",
-						},
 						Port: func() *uint {
 							temp := uint(1)
 							return &temp
 						}(),
+						Model: &libvirtxml.DomainSerialTargetModel{
+							Name: "isa-serial",
+						},
 					},
 				},
 			},
@@ -463,26 +467,26 @@ func createBase(
 					Target: &libvirtxml.DomainConsoleTarget{
 						Type: "serial",
 						Port: func() *uint {
-							temp := uint(0)
+							temp := uint(1)
 							return &temp
 						}(),
 					},
 				},
-				{
-					Source: &libvirtxml.DomainChardevSource{
-						UNIX: &libvirtxml.DomainChardevSourceUNIX{
-							Mode: "bind",
-							Path: consoleSocket,
-						},
-					},
-					Target: &libvirtxml.DomainConsoleTarget{
-						Type: "virtio",
-						Port: func() *uint {
-							temp := uint(0)
-							return &temp
-						}(),
-					},
-				},
+				// {
+				// 	Source: &libvirtxml.DomainChardevSource{
+				// 		UNIX: &libvirtxml.DomainChardevSourceUNIX{
+				// 			Mode: "bind",
+				// 			Path: logSocket,
+				// 		},
+				// 	},
+				// 	Target: &libvirtxml.DomainConsoleTarget{
+				// 		Type: "serial",
+				// 		Port: func() *uint {
+				// 			temp := uint(1)
+				// 			return &temp
+				// 		}(),
+				// 	},
+				// },
 			},
 			Channels: []libvirtxml.DomainChannel{
 				{
@@ -643,7 +647,7 @@ runcmd:
   export KUBECONFIG=/etc/rancher/k3s/k3s.yaml
   echo "export KUBECONFIG=/etc/rancher/k3s/k3s.yaml" >> /etc/profile
 
-  echo "installing helm for kubernetes"
+        #echo "installing helm for kubernetes"
         #curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
 
   echo "creating kubernetes dashboard"
