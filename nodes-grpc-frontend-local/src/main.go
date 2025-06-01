@@ -8,11 +8,11 @@ import (
 
 func StartApp() {
 	app := config.NewFiber()
-	// db := config.NewPsql()
+	db := config.NewPsql()
 	// defer db.Close(context.Background())
 
 	// routers.SetRouters(app, db)
-	routers.SetRouters(app)
+	routers.SetRouters(app, db)
 
 	log.Fatal(app.Listen(":3000"))
 }

@@ -2,17 +2,17 @@ package routers
 
 import (
 	"nodes-grpc-frontend-local/src/handlers"
+	"nodes-grpc-frontend-local/src/repository"
 	"nodes-grpc-frontend-local/src/services"
 
 	"github.com/gofiber/fiber/v3"
 	"github.com/gofiber/fiber/v3/middleware/static"
-	// "github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-// func SetRouters(fiberApp *fiber.App, pgxConn *pgx.Conn) {
-func SetRouters(fiberApp *fiber.App) {
-	// dbService := services.NewDatabaseService(pgxConn)
-	nodeService := services.NewNodeService()
+func SetRouters(fiberApp *fiber.App, dbPool *pgxpool.Pool) {
+	nodeRepository := repository.NewNodeRepository(dbPool)
+	nodeService := services.NewNodeService(nodeRepository)
 
 	nodeHandler := handlers.NewNodeHandler(nodeService)
 
@@ -23,6 +23,9 @@ func SetRouters(fiberApp *fiber.App) {
 
 	// homepage
 	fiberApp.Get("/", nodeHandler.Homepage)
+
+	// POST, register a node
+	fiberApp.Post("/register_node", nodeHandler.RegisterNode)
 
 	// POST, create the cluster
 	fiberApp.Post("/create_cluster", nodeHandler.CreateCluster)

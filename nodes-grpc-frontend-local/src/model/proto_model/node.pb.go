@@ -220,11 +220,11 @@ func (x *CreateMasterRequest) GetRequirements() *CreateNodeRequirements {
 }
 
 type CreateMasterResponse struct {
-	state          protoimpl.MessageState `protogen:"open.v1"`
-	IpAddress      string                 `protobuf:"bytes,1,opt,name=ip_address,json=ipAddress,proto3" json:"ip_address,omitempty"`
-	DashboardToken string                 `protobuf:"bytes,2,opt,name=dashboard_token,json=dashboardToken,proto3" json:"dashboard_token,omitempty"`
-	unknownFields  protoimpl.UnknownFields
-	sizeCache      protoimpl.SizeCache
+	state           protoimpl.MessageState `protogen:"open.v1"`
+	MasterIpAddress string                 `protobuf:"bytes,1,opt,name=master_ip_address,json=masterIpAddress,proto3" json:"master_ip_address,omitempty"`
+	DashboardToken  string                 `protobuf:"bytes,2,opt,name=dashboard_token,json=dashboardToken,proto3" json:"dashboard_token,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
 }
 
 func (x *CreateMasterResponse) Reset() {
@@ -257,9 +257,9 @@ func (*CreateMasterResponse) Descriptor() ([]byte, []int) {
 	return file_services_model_proto_model_node_proto_rawDescGZIP(), []int{3}
 }
 
-func (x *CreateMasterResponse) GetIpAddress() string {
+func (x *CreateMasterResponse) GetMasterIpAddress() string {
 	if x != nil {
-		return x.IpAddress
+		return x.MasterIpAddress
 	}
 	return ""
 }
@@ -273,12 +273,12 @@ func (x *CreateMasterResponse) GetDashboardToken() string {
 
 // create worker
 type CreateWorkerRequest struct {
-	state         protoimpl.MessageState  `protogen:"open.v1"`
-	ClusterToken  string                  `protobuf:"bytes,1,opt,name=cluster_token,json=clusterToken,proto3" json:"cluster_token,omitempty"`
-	IpAddress     string                  `protobuf:"bytes,2,opt,name=ip_address,json=ipAddress,proto3" json:"ip_address,omitempty"`
-	Requirements  *CreateNodeRequirements `protobuf:"bytes,3,opt,name=requirements,proto3" json:"requirements,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state           protoimpl.MessageState  `protogen:"open.v1"`
+	ClusterToken    string                  `protobuf:"bytes,1,opt,name=cluster_token,json=clusterToken,proto3" json:"cluster_token,omitempty"`
+	MasterIpAddress string                  `protobuf:"bytes,2,opt,name=master_ip_address,json=masterIpAddress,proto3" json:"master_ip_address,omitempty"`
+	Requirements    *CreateNodeRequirements `protobuf:"bytes,3,opt,name=requirements,proto3" json:"requirements,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
 }
 
 func (x *CreateWorkerRequest) Reset() {
@@ -318,9 +318,9 @@ func (x *CreateWorkerRequest) GetClusterToken() string {
 	return ""
 }
 
-func (x *CreateWorkerRequest) GetIpAddress() string {
+func (x *CreateWorkerRequest) GetMasterIpAddress() string {
 	if x != nil {
-		return x.IpAddress
+		return x.MasterIpAddress
 	}
 	return ""
 }
@@ -528,15 +528,13 @@ const file_services_model_proto_model_node_proto_rawDesc = "" +
 	"\astorage\x18\x03 \x01(\x03R\astorage\"w\n" +
 	"\x13CreateMasterRequest\x12#\n" +
 	"\rcluster_token\x18\x01 \x01(\tR\fclusterToken\x12;\n" +
-	"\frequirements\x18\x02 \x01(\v2\x17.CreateNodeRequirementsR\frequirements\"^\n" +
-	"\x14CreateMasterResponse\x12\x1d\n" +
-	"\n" +
-	"ip_address\x18\x01 \x01(\tR\tipAddress\x12'\n" +
-	"\x0fdashboard_token\x18\x02 \x01(\tR\x0edashboardToken\"\x96\x01\n" +
+	"\frequirements\x18\x02 \x01(\v2\x17.CreateNodeRequirementsR\frequirements\"k\n" +
+	"\x14CreateMasterResponse\x12*\n" +
+	"\x11master_ip_address\x18\x01 \x01(\tR\x0fmasterIpAddress\x12'\n" +
+	"\x0fdashboard_token\x18\x02 \x01(\tR\x0edashboardToken\"\xa3\x01\n" +
 	"\x13CreateWorkerRequest\x12#\n" +
-	"\rcluster_token\x18\x01 \x01(\tR\fclusterToken\x12\x1d\n" +
-	"\n" +
-	"ip_address\x18\x02 \x01(\tR\tipAddress\x12;\n" +
+	"\rcluster_token\x18\x01 \x01(\tR\fclusterToken\x12*\n" +
+	"\x11master_ip_address\x18\x02 \x01(\tR\x0fmasterIpAddress\x12;\n" +
 	"\frequirements\x18\x03 \x01(\v2\x17.CreateNodeRequirementsR\frequirements\"\x16\n" +
 	"\x14CreateWorkerResponse\"\xc1\x01\n" +
 	"\x15CreateInstanceRequest\x12\x12\n" +

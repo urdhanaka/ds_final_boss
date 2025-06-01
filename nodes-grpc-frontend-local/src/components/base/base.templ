@@ -1,8 +1,10 @@
 package base
 
 import "nodes-grpc-frontend-local/src/components/top-bar"
+import "nodes-grpc-frontend-local/src/components/node-list"
+import "nodes-grpc-frontend-local/src/entity"
 
-templ Page() {
+templ Page(nodes []entity.Node) {
 	<!DOCTYPE html>
 	<html>
 		<head>
@@ -59,7 +61,7 @@ templ Page() {
 							<input type="number" id="node_size" name="node_size" min="1" max="5"/>
 						</div>
 					</div>
-					<div class="flex">
+					<div class="flex gap-2">
 						<button
 							type="button"
 							class="p-4 bg-blue-700 rounded-lg text-white hover:cursor-pointer"
@@ -67,9 +69,17 @@ templ Page() {
 						>
 							Create Cluster
 						</button>
+						<button
+							type="button"
+							class="p-4 bg-blue-700 rounded-lg text-white hover:cursor-pointer invisible"
+							onclick="sendRequirementJson()"
+						>
+							Access Cluster
+						</button>
 					</div>
 				</form>
 			</div>
+      @nodelist.NodeList(nodes)
 			<div id="wait" class="m-8 font-mono"></div>
 			<div id="token" class="m-8 font-mono overflow-hidden text-ellipsis break-words"></div>
 			<div id="log" class="m-8"></div>

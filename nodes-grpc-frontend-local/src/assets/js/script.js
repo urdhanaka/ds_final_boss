@@ -50,7 +50,7 @@ async function sendRequirementJson() {
   }
 }
 
-function openDashboard() {
+function accessCluster() {
   return;
 }
 

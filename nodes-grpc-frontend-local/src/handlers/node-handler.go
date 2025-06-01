@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"nodes-grpc-frontend-local/src/components/base"
+	"nodes-grpc-frontend-local/src/model"
 	"nodes-grpc-frontend-local/src/model/virtualization_model"
 	"nodes-grpc-frontend-local/src/services"
 
@@ -21,7 +22,30 @@ func NewNodeHandler(nodeService *services.NodeService) *NodeHandler {
 func (h *NodeHandler) Homepage(c fiber.Ctx) error {
 	c.Set("Content-Type", "text/html")
 
-	return base.Page().Render(c.Context(), c.Response().BodyWriter())
+	res, err := h.NodeService.GetAllNodes(c.Context())
+	if err != nil {
+		return err
+	}
+
+	return base.Page(res).Render(c.Context(), c.Response().BodyWriter())
+}
+
+func (h *NodeHandler) RegisterNode(c fiber.Ctx) error {
+	c.Accepts("application/json")
+
+	registerNodeRequest := new(model.Node)
+
+	err := c.Bind().Body(registerNodeRequest)
+	if err != nil {
+		return c.JSON(NewErrorResponse(err))
+	}
+
+	err = h.NodeService.RegisterNode(c.Context(), registerNodeRequest)
+	if err != nil {
+		return c.JSON(NewErrorResponse(err))
+	}
+
+	return c.JSON(NewSuccessResponse())
 }
 
 func (h *NodeHandler) CreateCluster(c fiber.Ctx) error {

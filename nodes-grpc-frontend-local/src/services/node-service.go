@@ -3,10 +3,15 @@ package services
 import (
 	"context"
 	"nodes-grpc-frontend-local/src/config"
+	"nodes-grpc-frontend-local/src/entity"
+	"nodes-grpc-frontend-local/src/model"
 	"nodes-grpc-frontend-local/src/model/proto_model"
 	"nodes-grpc-frontend-local/src/model/virtualization_model"
+	"nodes-grpc-frontend-local/src/repository"
 	"nodes-grpc-frontend-local/src/utils"
 	"strconv"
+
+	"github.com/google/uuid"
 )
 
 const (
@@ -15,12 +20,12 @@ const (
 )
 
 type NodeService struct {
-	// databaseService *DatabaseService
+	nodeRepository *repository.NodeRepository
 }
 
-func NewNodeService() *NodeService {
+func NewNodeService(nodeRepository *repository.NodeRepository) *NodeService {
 	return &NodeService{
-		// databaseService: databaseService,
+		nodeRepository,
 	}
 }
 
@@ -48,18 +53,18 @@ func (n *NodeService) CreateCluster(
 		return res, err
 	}
 
-	_, err = n.createWorker(ctx, &proto_model.CreateWorkerRequest{
-		ClusterToken: clusterToken,
-		IpAddress:    MASTER_IP_ADDRESS,
-		Requirements: &proto_model.CreateNodeRequirements{
-			Cpu:     cpu,
-			Memory:  memory,
-			Storage: storage,
-		},
-	})
-	if err != nil {
-		return res, err
-	}
+	// _, err = n.createWorker(ctx, &proto_model.CreateWorkerRequest{
+	// 	ClusterToken: clusterToken,
+	// 	IpAddress:    MASTER_IP_ADDRESS,
+	// 	Requirements: &proto_model.CreateNodeRequirements{
+	// 		Cpu:     cpu,
+	// 		Memory:  memory,
+	// 		Storage: storage,
+	// 	},
+	// })
+	// if err != nil {
+	// 	return res, err
+	// }
 
 	res.DashboardToken = createMasterRes.DashboardToken
 
@@ -98,4 +103,25 @@ func (n *NodeService) createWorker(
 	}
 
 	return res, nil
+}
+
+func (n *NodeService) GetAllNodes(ctx context.Context) ([]entity.Node, error) {
+	return n.nodeRepository.GetAllNodes(ctx)
+}
+
+func (n *NodeService) RegisterNode(
+	ctx context.Context,
+	registerNodeRequest *model.Node,
+) error {
+	nodeEntity := new(entity.Node)
+	nodeEntity.ID = uuid.New()
+	nodeEntity.IpAddress = registerNodeRequest.IpAddress
+	nodeEntity.Hostname = registerNodeRequest.Hostname
+
+	err := n.nodeRepository.AddNode(ctx, nodeEntity)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
