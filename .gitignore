@@ -2,3 +2,6 @@ vms/
 references/
 tmp/
 node.db
+postgrestools.jsonc
+eslint.config.js
+tailwind.config.js

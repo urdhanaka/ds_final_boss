@@ -10,7 +10,7 @@ func slogFunction(instanceName string, message string, err error) {
 
 	if err != nil {
 		slog.Error(fullMessage,
-			"err", err.Error(),
+			"error", err,
 		)
 	} else {
 		slog.Info(fullMessage)

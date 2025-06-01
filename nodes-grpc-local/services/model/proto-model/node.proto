@@ -23,14 +23,14 @@ message CreateMasterRequest {
 }
 
 message CreateMasterResponse {
-  string ip_address = 1;
+  string master_ip_address = 1;
   string dashboard_token = 2;
 }
 
 // create worker
 message CreateWorkerRequest {
   string cluster_token = 1;
-  string ip_address = 2;
+  string master_ip_address = 2;
   CreateNodeRequirements requirements = 3;
 }
 

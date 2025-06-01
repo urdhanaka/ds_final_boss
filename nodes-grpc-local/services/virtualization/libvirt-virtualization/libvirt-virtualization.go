@@ -159,9 +159,27 @@ func (c *LibvirtVirtualization) createMaster(
 
 		return createRes, err
 	}
-
 	// handle base 64 of the guest agent result
-	decodedBytes, err := base64.StdEncoding.DecodeString(createTokenStatus.Return.OutData)
+	decodedTokenBytes, err := base64.StdEncoding.DecodeString(createTokenStatus.Return.OutData)
+	if err != nil {
+		slogFunction(thisInstanceName, "error decoding kubernetes dashboard bytes", err)
+		c.deleteInstance(thisInstanceName)
+
+		return createRes, err
+	}
+
+	// getting the IP address
+    // DO NOT TOUCH THE sed SEQUENCE
+	ipAddressCmd := `ip -f inet addr show enp1s0 | sed -En -e 's/.*inet ([0-9.]+).*/\\1/p'`
+	ipAddressStatus, err := guestAgentExecStatus(dom, ipAddressCmd)
+	if err != nil {
+		slogFunction(thisInstanceName, "error getting master instance ip address", err)
+		// c.deleteInstance(thisInstanceName)
+
+		return createRes, err
+	}
+	// handle base 64 of the guest agent result
+	decodedIpAddressBytes, err := base64.StdEncoding.DecodeString(ipAddressStatus.Return.OutData)
 	if err != nil {
 		slogFunction(thisInstanceName, "error decoding kubernetes dashboard bytes", err)
 		c.deleteInstance(thisInstanceName)
@@ -170,7 +188,10 @@ func (c *LibvirtVirtualization) createMaster(
 	}
 
 	createRes.Status = true
-	createRes.DashboardToken = string(decodedBytes)
+	createRes.DashboardToken = string(decodedTokenBytes)
+	createRes.MasterIpAddress = string(decodedIpAddressBytes)
+
+    fmt.Println("create master response: ", createRes)
 
 	c.websocketConnection.AddLogToMap(thisInstanceName, "done")
 	return createRes, nil

@@ -47,6 +47,7 @@ type ExecStatus struct {
 }
 
 type VirtCreateInstanceResponse struct {
-	Status         bool   `json:"status"`
-	DashboardToken string `json:"dashboard_token,omitempty"`
+	MasterIpAddress string `json:"master_ip_address"`
+	Status          bool   `json:"status"`
+	DashboardToken  string `json:"dashboard_token,omitempty"`
 }
