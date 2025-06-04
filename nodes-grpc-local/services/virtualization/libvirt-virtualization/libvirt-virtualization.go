@@ -127,7 +127,7 @@ func (c *LibvirtVirtualization) createMaster(
 	}
 
 	slogFunction(virtRequest.Name, thisInstanceName, "waiting until the vm is ready..", nil)
-	time.Sleep(15 * time.Second)
+	time.Sleep(CLOUD_INIT_TIMEOUT * time.Second)
 	waitCloudInitCmd := "cloud-init status --wait"
 	_, err = guestAgentExecStatus(dom, waitCloudInitCmd)
 	if err != nil {
@@ -136,6 +136,26 @@ func (c *LibvirtVirtualization) createMaster(
 
 		return createRes, err
 	}
+
+	// check for cloud init error
+	longStatusCloudInitCmd := "cloud-init status --long"
+	longStatus, err := guestAgentExecStatus(dom, longStatusCloudInitCmd)
+	if err != nil {
+		slogFunction(virtRequest.Name, thisInstanceName, "error exec cloud-init wait --long", err)
+		c.deleteInstance(thisInstanceName)
+
+		return createRes, err
+	}
+	decodedLongStatusBytes, err := base64.StdEncoding.DecodeString(longStatus.Return.OutData)
+	if err != nil {
+		slogFunction(virtRequest.Name, thisInstanceName, "error decoding kubernetes dashboard bytes", err)
+		c.deleteInstance(thisInstanceName)
+
+		return createRes, err
+	}
+	slog.Debug("master cloud-init status --long",
+		"debug", string(decodedLongStatusBytes),
+	)
 
 	// creating token
 	kubeCreateTokenCmd := "k3s kubectl -n kubernetes-dashboard create token admin-user"
@@ -207,7 +227,7 @@ func (c *LibvirtVirtualization) createWorker(
 
 	// create cloudinit configuration
 	slogFunction(virtRequest.Name, thisInstanceName, "creating node cloud-init configuration", nil)
-	err = createCloudInitWorker(thisInstanceName)
+	err = createCloudInitWorker(thisInstanceName, virtRequest.MasterIpAddress)
 	if err != nil {
 		slogFunction(virtRequest.Name, thisInstanceName, "could not create node cloud-init configuration", err)
 		c.deleteInstance(thisInstanceName)
@@ -255,7 +275,7 @@ func (c *LibvirtVirtualization) createWorker(
 		return createRes, err
 	}
 	slogFunction(virtRequest.Name, thisInstanceName, "waiting until the vm is ready..", nil)
-	time.Sleep(15 * time.Second)
+	time.Sleep(CLOUD_INIT_TIMEOUT * time.Second)
 	waitCloudInitCmd := "cloud-init status --wait"
 	_, err = guestAgentExecStatus(dom, waitCloudInitCmd)
 	if err != nil {
@@ -264,6 +284,26 @@ func (c *LibvirtVirtualization) createWorker(
 
 		return createRes, err
 	}
+
+	// check for cloud init error
+	longStatusCloudInitCmd := "cloud-init status --long"
+	longStatus, err := guestAgentExecStatus(dom, longStatusCloudInitCmd)
+	if err != nil {
+		slogFunction(virtRequest.Name, thisInstanceName, "error exec cloud-init wait --long", err)
+		c.deleteInstance(thisInstanceName)
+
+		return createRes, err
+	}
+	decodedLongStatusBytes, err := base64.StdEncoding.DecodeString(longStatus.Return.OutData)
+	if err != nil {
+		slogFunction(virtRequest.Name, thisInstanceName, "error decoding kubernetes dashboard bytes", err)
+		c.deleteInstance(thisInstanceName)
+
+		return createRes, err
+	}
+	slog.Debug("worker cloud-init status --long",
+		"debug", string(decodedLongStatusBytes),
+	)
 
 	createRes.Status = true
 
@@ -322,8 +362,8 @@ func createBase(
 			},
 			NVRam: &libvirtxml.DomainNVRam{
 				NVRam:    fmt.Sprintf("/var/lib/libvirt/qemu/nvram/%s_VARS.fd", instanceName),
-				// Template: NVRAM_TEMPLATE_LOCAL, // NOTE: only works in local
-				Template:       NVRAM_TEMPLATE, // NOTE: directory according to ubuntu 24.04
+				Template: NVRAM_TEMPLATE_LOCAL, // NOTE: only works in local
+				// Template:       NVRAM_TEMPLATE, // NOTE: directory according to ubuntu 24.04
 				TemplateFormat: "raw",
 				Format:         "raw",
 			},
@@ -388,9 +428,12 @@ func createBase(
 			Interfaces: []libvirtxml.DomainInterface{
 				{
 					Source: &libvirtxml.DomainInterfaceSource{
+						// Bridge: &libvirtxml.DomainInterfaceSourceBridge{
+						// 	Bridge: BRIDGE_NAME,
+						// },
 						Network: &libvirtxml.DomainInterfaceSourceNetwork{
-							Network: BRIDGE_NAME,
-							Bridge:  BRIDGE_NAME,
+							Network: DEFAULT_BRIDGE_NAME,
+							Bridge:  DEFAULT_BRIDGE_NAME,
 						},
 					},
 					Model: &libvirtxml.DomainInterfaceModel{
@@ -530,6 +573,8 @@ func copyEfi(instanceName string) error {
 		return err
 	}
 
+	fmt.Println("")
+
 	err = os.WriteFile(destinationPath, data, 0644)
 	if err != nil {
 		return err
@@ -654,7 +699,7 @@ runcmd:
 	return nil
 }
 
-func createCloudInitWorker(instanceName string) error {
+func createCloudInitWorker(instanceName string, masterIp string) error {
 	cloudInitMut.Lock()
 	defer cloudInitMut.Unlock()
 
@@ -674,18 +719,10 @@ users:
   shell: /bin/bash
 
 runcmd:
-- |
-  echo "running command"
-  echo "updating apk and upgrade"
-        # apk update && apk upgrade
-        # apk add bash
-  
-  echo "installing k3s"
-  curl -sfL https://get.k3s.io | INSTALL_K3S_SKIP_DOWNLOAD=true INSTALL_K3S_EXEC="agent --server https://%s:6443 --token 12345" sh -s -
-
-  echo "done"
-        # reboot
-`, instanceName, MASTER_NODE_IP)
+- echo "installing k3s"
+- 'curl -sfL https://get.k3s.io | INSTALL_K3S_SKIP_DOWNLOAD=true INSTALL_K3S_EXEC="agent --server https://%s:6443 --token 12345" sh -s -'
+- echo "done"
+`, instanceName, masterIp)
 
 	err := os.WriteFile(filePath, []byte(userDataContent), 0644)
 	if err != nil {
@@ -703,22 +740,22 @@ runcmd:
 }
 
 func createNetwork() error {
-    networkMut.Lock()
-    defer networkMut.Unlock()
+	networkMut.Lock()
+	defer networkMut.Unlock()
 
-    filePath := BASE_POOL_DIR + "/" + "network-config"
-    userDataContent := `network:
+	filePath := BASE_POOL_DIR + "/" + "network-config"
+	userDataContent := `network:
   version: 2
   ethernets:
     enp1s0:
       dhcp4: true`
 
-    err := os.WriteFile(filePath, []byte(userDataContent), 0644)
-    if err != nil {
-        return err
-    }
+	err := os.WriteFile(filePath, []byte(userDataContent), 0644)
+	if err != nil {
+		return err
+	}
 
-    return nil
+	return nil
 }
 
 // NOTE: this function might not needed
@@ -768,19 +805,19 @@ func createNetworkWorker() error {
 
 	filePath := BASE_POOL_DIR + "/" + "network-config"
 	// NOTE: static address
-// 	userDataContent := fmt.Sprintf(`network:
-//   version: 2
-//   ethernets:
-//     enp1s0:
-//       addresses:
-//         - %s/24
-//       nameservers:
-//         addresses: [192.168.122.1]
-//       routes:
-//         - to: 0.0.0.0/0
-//           via: 192.168.122.1
-//           metric: 100
-// `, WORKER_NODE_IP)
+	// 	userDataContent := fmt.Sprintf(`network:
+	//   version: 2
+	//   ethernets:
+	//     enp1s0:
+	//       addresses:
+	//         - %s/24
+	//       nameservers:
+	//         addresses: [192.168.122.1]
+	//       routes:
+	//         - to: 0.0.0.0/0
+	//           via: 192.168.122.1
+	//           metric: 100
+	// `, WORKER_NODE_IP)
 
 	// NOTE: dynamic address
 	userDataContent := fmt.Sprintf(`network:
@@ -878,6 +915,15 @@ func guestAgentExecStatus(
 		}
 
 		fmt.Println(res)
+
+		if res.Return.ErrData != "" {
+			decodedTokenBytes, _ := base64.StdEncoding.DecodeString(res.Return.ErrData)
+			fmt.Println("err-data", string(decodedTokenBytes))
+		}
+		if res.Return.OutData != "" {
+			decodedTokenBytes, _ := base64.StdEncoding.DecodeString(res.Return.OutData)
+			fmt.Println("out-data", string(decodedTokenBytes))
+		}
 
 		if res.Return.Exited {
 			break

@@ -3,8 +3,8 @@ package libvirt_virtualization
 // development and production
 const (
 	// bridge interface name
-	// BRIDGE_NAME = "k3s-br0"
-	BRIDGE_NAME = "default"
+	BRIDGE_NAME         = "k3s-br0"
+	DEFAULT_BRIDGE_NAME = "default"
 
 	// libvirt related
 	BASE_POOL_DIR     = "/var/lib/libvirt/images"

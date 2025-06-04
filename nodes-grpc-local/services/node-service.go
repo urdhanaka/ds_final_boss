@@ -63,7 +63,7 @@ func (s *NodeServer) CreateMaster(
 		return res, err
 	}
 
-	go sendLogs(instanceName, createMasterRequest.ClusterName)
+	// go sendLogs(instanceName, createMasterRequest.ClusterName)
 
 	sub := s.queue.Subscribe(ctx, instanceName)
 	defer sub.Close()
@@ -97,12 +97,13 @@ func (s *NodeServer) CreateWorker(
 	instanceName := createWorkerRequest.Requirements.NodeName
 
 	virtSpecs := virtualization_model.CreateInstanceRequest{
-		Name:     instanceName,
-		IsMaster: false,
-		Token:    createWorkerRequest.ClusterToken,
-		Cpu:      createWorkerRequest.Requirements.Cpu,
-		Memory:   createWorkerRequest.Requirements.Memory,
-		Storage:  createWorkerRequest.Requirements.Storage,
+		Name:            instanceName,
+		IsMaster:        false,
+		MasterIpAddress: createWorkerRequest.MasterIpAddress,
+		Token:           createWorkerRequest.ClusterToken,
+		Cpu:             createWorkerRequest.Requirements.Cpu,
+		Memory:          createWorkerRequest.Requirements.Memory,
+		Storage:         createWorkerRequest.Requirements.Storage,
 	}
 
 	err := s.queue.AddToQueue(provisionCtx, virtSpecs)
@@ -110,7 +111,7 @@ func (s *NodeServer) CreateWorker(
 		return res, err
 	}
 
-	go sendLogs(instanceName, createWorkerRequest.ClusterName)
+	// go sendLogs(instanceName, createWorkerRequest.ClusterName)
 
 	return res, nil
 }
@@ -159,7 +160,7 @@ func connectToServer() (string, error) {
 	ipAddress := getIpAddress()
 
 	body := []byte(fmt.Sprintf(`{"hostname":"%s","ip_address":"%s"}`, hostname, ipAddress))
-	req, err := http.NewRequest("POST", fmt.Sprintf("http://%s/register_node", MAIN_SERVER_URL_RPL), bytes.NewBuffer(body))
+	req, err := http.NewRequest("POST", fmt.Sprintf("http://%s/register_node", MAIN_SERVER_URL_LOCAL), bytes.NewBuffer(body))
 	req.Header.Set("Content-Type", "application/json")
 
 	client := &http.Client{}
@@ -206,7 +207,7 @@ func sendLogs(
 
 	u := url.URL{
 		Scheme: "ws",
-		Host:   MAIN_SERVER_URL_RPL,
+		Host:   MAIN_SERVER_URL_LOCAL,
 		Path:   fmt.Sprintf("/ws/receive_logs/%s", clusterName),
 	}
 	c, _, err := websocket.DefaultDialer.Dial(u.String(), nil)
