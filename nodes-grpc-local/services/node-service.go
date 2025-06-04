@@ -1,6 +1,7 @@
 package services
 
 import (
+	"bufio"
 	"bytes"
 	"context"
 	"encoding/json"
@@ -9,12 +10,15 @@ import (
 	"log/slog"
 	"net"
 	"net/http"
+	"net/url"
 	proto_model "nodes-grpc-local/services/model/proto-model"
 	virtualization_model "nodes-grpc-local/services/model/virtualization-model"
 	"nodes-grpc-local/services/queue"
+	libvirt_virtualization "nodes-grpc-local/services/virtualization/libvirt-virtualization"
 	"os"
 	"time"
 
+	"github.com/gorilla/websocket"
 	"google.golang.org/grpc"
 )
 
@@ -43,7 +47,7 @@ func (s *NodeServer) CreateMaster(
 
 	res := new(proto_model.CreateMasterResponse)
 
-	instanceName := generateRandom(8)
+	instanceName := createMasterRequest.Requirements.NodeName
 
 	virtSpecs := virtualization_model.CreateInstanceRequest{
 		Name:     instanceName,
@@ -58,6 +62,8 @@ func (s *NodeServer) CreateMaster(
 	if err != nil {
 		return res, err
 	}
+
+	go sendLogs(instanceName, createMasterRequest.ClusterName)
 
 	sub := s.queue.Subscribe(ctx, instanceName)
 	defer sub.Close()
@@ -88,7 +94,7 @@ func (s *NodeServer) CreateWorker(
 
 	res := new(proto_model.CreateWorkerResponse)
 
-	instanceName := generateRandom(8)
+	instanceName := createWorkerRequest.Requirements.NodeName
 
 	virtSpecs := virtualization_model.CreateInstanceRequest{
 		Name:     instanceName,
@@ -103,6 +109,8 @@ func (s *NodeServer) CreateWorker(
 	if err != nil {
 		return res, err
 	}
+
+	go sendLogs(instanceName, createWorkerRequest.ClusterName)
 
 	return res, nil
 }
@@ -123,7 +131,6 @@ func StartGrpcServer(connection *InitStruct) {
 
 	// background job
 	go startWorker(connection)
-	go startWebsocket(connection)
 
 	// connect to main server
 	slog.Info("node is ready, connecting to main server")
@@ -152,7 +159,7 @@ func connectToServer() (string, error) {
 	ipAddress := getIpAddress()
 
 	body := []byte(fmt.Sprintf(`{"hostname":"%s","ip_address":"%s"}`, hostname, ipAddress))
-	req, err := http.NewRequest("POST", "http://localhost:3000/register_node", bytes.NewBuffer(body))
+	req, err := http.NewRequest("POST", fmt.Sprintf("http://%s/register_node", MAIN_SERVER_URL_RPL), bytes.NewBuffer(body))
 	req.Header.Set("Content-Type", "application/json")
 
 	client := &http.Client{}
@@ -175,6 +182,48 @@ func startWorker(connection *InitStruct) {
 	worker.DoWork()
 }
 
-func startWebsocket(connection *InitStruct) {
-	connection.WebsocketService.Start()
+func sendLogs(
+	instanceName string,
+	clusterName string,
+) {
+	var sock net.Conn
+	var err error
+
+	logSocketFile := libvirt_virtualization.INSTANCE_LOGS_DIR + "/" + instanceName + ".sock"
+
+	for {
+		sock, err = net.Dial("unix", logSocketFile)
+		if err != nil {
+			slog.Error(fmt.Sprintf("%s | error accessing socket file, retrying...", instanceName),
+				"error", err,
+			)
+			time.Sleep(1 * time.Second)
+			continue
+		}
+		break
+	}
+	defer sock.Close()
+
+	u := url.URL{
+		Scheme: "ws",
+		Host:   MAIN_SERVER_URL_RPL,
+		Path:   fmt.Sprintf("/ws/receive_logs/%s", clusterName),
+	}
+	c, _, err := websocket.DefaultDialer.Dial(u.String(), nil)
+	if err != nil {
+		slog.Error(fmt.Sprintf("%s | error dialing websocket", instanceName),
+			"error", err,
+		)
+		return
+	}
+	defer c.Close()
+
+	scanner := bufio.NewScanner(sock)
+	for scanner.Scan() {
+		line := scanner.Text()
+		if err := c.WriteMessage(websocket.TextMessage, []byte(line)); err != nil {
+			slog.Error("Send error:", "error", err)
+			break
+		}
+	}
 }

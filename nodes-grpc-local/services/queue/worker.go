@@ -42,13 +42,13 @@ func (w *Worker) DoWork() {
 			continue
 		}
 
-        jsonBytes, err := json.Marshal(res)
-        if err != nil {
+		jsonBytes, err := json.Marshal(res)
+		if err != nil {
 			slog.Error("error creating instance",
 				"error", err,
 			)
 			continue
-        }
+		}
 
 		err = w.queue.Publish(ctx, instanceRequest.Name, string(jsonBytes))
 		if err != nil {

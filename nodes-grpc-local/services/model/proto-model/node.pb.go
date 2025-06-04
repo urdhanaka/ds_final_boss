@@ -108,9 +108,10 @@ func (*Empty) Descriptor() ([]byte, []int) {
 
 type CreateNodeRequirements struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Cpu           int64                  `protobuf:"varint,1,opt,name=cpu,proto3" json:"cpu,omitempty"`
-	Memory        int64                  `protobuf:"varint,2,opt,name=memory,proto3" json:"memory,omitempty"`
-	Storage       int64                  `protobuf:"varint,3,opt,name=storage,proto3" json:"storage,omitempty"`
+	NodeName      string                 `protobuf:"bytes,1,opt,name=node_name,json=nodeName,proto3" json:"node_name,omitempty"`
+	Cpu           int64                  `protobuf:"varint,2,opt,name=cpu,proto3" json:"cpu,omitempty"`
+	Memory        int64                  `protobuf:"varint,3,opt,name=memory,proto3" json:"memory,omitempty"`
+	Storage       int64                  `protobuf:"varint,4,opt,name=storage,proto3" json:"storage,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -145,6 +146,13 @@ func (*CreateNodeRequirements) Descriptor() ([]byte, []int) {
 	return file_services_model_proto_model_node_proto_rawDescGZIP(), []int{1}
 }
 
+func (x *CreateNodeRequirements) GetNodeName() string {
+	if x != nil {
+		return x.NodeName
+	}
+	return ""
+}
+
 func (x *CreateNodeRequirements) GetCpu() int64 {
 	if x != nil {
 		return x.Cpu
@@ -169,8 +177,9 @@ func (x *CreateNodeRequirements) GetStorage() int64 {
 // create master
 type CreateMasterRequest struct {
 	state         protoimpl.MessageState  `protogen:"open.v1"`
-	ClusterToken  string                  `protobuf:"bytes,1,opt,name=cluster_token,json=clusterToken,proto3" json:"cluster_token,omitempty"`
-	Requirements  *CreateNodeRequirements `protobuf:"bytes,2,opt,name=requirements,proto3" json:"requirements,omitempty"`
+	ClusterName   string                  `protobuf:"bytes,1,opt,name=cluster_name,json=clusterName,proto3" json:"cluster_name,omitempty"`
+	ClusterToken  string                  `protobuf:"bytes,2,opt,name=cluster_token,json=clusterToken,proto3" json:"cluster_token,omitempty"`
+	Requirements  *CreateNodeRequirements `protobuf:"bytes,3,opt,name=requirements,proto3" json:"requirements,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -203,6 +212,13 @@ func (x *CreateMasterRequest) ProtoReflect() protoreflect.Message {
 // Deprecated: Use CreateMasterRequest.ProtoReflect.Descriptor instead.
 func (*CreateMasterRequest) Descriptor() ([]byte, []int) {
 	return file_services_model_proto_model_node_proto_rawDescGZIP(), []int{2}
+}
+
+func (x *CreateMasterRequest) GetClusterName() string {
+	if x != nil {
+		return x.ClusterName
+	}
+	return ""
 }
 
 func (x *CreateMasterRequest) GetClusterToken() string {
@@ -274,9 +290,10 @@ func (x *CreateMasterResponse) GetDashboardToken() string {
 // create worker
 type CreateWorkerRequest struct {
 	state           protoimpl.MessageState  `protogen:"open.v1"`
-	ClusterToken    string                  `protobuf:"bytes,1,opt,name=cluster_token,json=clusterToken,proto3" json:"cluster_token,omitempty"`
-	MasterIpAddress string                  `protobuf:"bytes,2,opt,name=master_ip_address,json=masterIpAddress,proto3" json:"master_ip_address,omitempty"`
-	Requirements    *CreateNodeRequirements `protobuf:"bytes,3,opt,name=requirements,proto3" json:"requirements,omitempty"`
+	ClusterName     string                  `protobuf:"bytes,1,opt,name=cluster_name,json=clusterName,proto3" json:"cluster_name,omitempty"`
+	ClusterToken    string                  `protobuf:"bytes,2,opt,name=cluster_token,json=clusterToken,proto3" json:"cluster_token,omitempty"`
+	MasterIpAddress string                  `protobuf:"bytes,3,opt,name=master_ip_address,json=masterIpAddress,proto3" json:"master_ip_address,omitempty"`
+	Requirements    *CreateNodeRequirements `protobuf:"bytes,4,opt,name=requirements,proto3" json:"requirements,omitempty"`
 	unknownFields   protoimpl.UnknownFields
 	sizeCache       protoimpl.SizeCache
 }
@@ -309,6 +326,13 @@ func (x *CreateWorkerRequest) ProtoReflect() protoreflect.Message {
 // Deprecated: Use CreateWorkerRequest.ProtoReflect.Descriptor instead.
 func (*CreateWorkerRequest) Descriptor() ([]byte, []int) {
 	return file_services_model_proto_model_node_proto_rawDescGZIP(), []int{4}
+}
+
+func (x *CreateWorkerRequest) GetClusterName() string {
+	if x != nil {
+		return x.ClusterName
+	}
+	return ""
 }
 
 func (x *CreateWorkerRequest) GetClusterToken() string {
@@ -368,195 +392,37 @@ func (*CreateWorkerResponse) Descriptor() ([]byte, []int) {
 	return file_services_model_proto_model_node_proto_rawDescGZIP(), []int{5}
 }
 
-// create instance
-// not used for now
-type CreateInstanceRequest struct {
-	state protoimpl.MessageState `protogen:"open.v1"`
-	// top-level name of the cluster
-	Name string `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
-	// true if spawning master instance
-	// false otherwise
-	IsMaster bool `protobuf:"varint,2,opt,name=is_master,json=isMaster,proto3" json:"is_master,omitempty"`
-	// token for creating k3s cluster
-	// only needed when spawning worker
-	// token will created when spawning master
-	Token string `protobuf:"bytes,3,opt,name=token,proto3" json:"token,omitempty"`
-	// ip address of the master instance
-	// only needed when spawning worker
-	IpAddress string `protobuf:"bytes,4,opt,name=ip_address,json=ipAddress,proto3" json:"ip_address,omitempty"`
-	// instance hardware requirements
-	Cpu           int64 `protobuf:"varint,5,opt,name=cpu,proto3" json:"cpu,omitempty"`
-	Memory        int64 `protobuf:"varint,6,opt,name=memory,proto3" json:"memory,omitempty"`
-	Storage       int64 `protobuf:"varint,7,opt,name=storage,proto3" json:"storage,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *CreateInstanceRequest) Reset() {
-	*x = CreateInstanceRequest{}
-	mi := &file_services_model_proto_model_node_proto_msgTypes[6]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *CreateInstanceRequest) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*CreateInstanceRequest) ProtoMessage() {}
-
-func (x *CreateInstanceRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_services_model_proto_model_node_proto_msgTypes[6]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use CreateInstanceRequest.ProtoReflect.Descriptor instead.
-func (*CreateInstanceRequest) Descriptor() ([]byte, []int) {
-	return file_services_model_proto_model_node_proto_rawDescGZIP(), []int{6}
-}
-
-func (x *CreateInstanceRequest) GetName() string {
-	if x != nil {
-		return x.Name
-	}
-	return ""
-}
-
-func (x *CreateInstanceRequest) GetIsMaster() bool {
-	if x != nil {
-		return x.IsMaster
-	}
-	return false
-}
-
-func (x *CreateInstanceRequest) GetToken() string {
-	if x != nil {
-		return x.Token
-	}
-	return ""
-}
-
-func (x *CreateInstanceRequest) GetIpAddress() string {
-	if x != nil {
-		return x.IpAddress
-	}
-	return ""
-}
-
-func (x *CreateInstanceRequest) GetCpu() int64 {
-	if x != nil {
-		return x.Cpu
-	}
-	return 0
-}
-
-func (x *CreateInstanceRequest) GetMemory() int64 {
-	if x != nil {
-		return x.Memory
-	}
-	return 0
-}
-
-func (x *CreateInstanceRequest) GetStorage() int64 {
-	if x != nil {
-		return x.Storage
-	}
-	return 0
-}
-
-type CreateInstanceResponse struct {
-	state protoimpl.MessageState `protogen:"open.v1"`
-	// returns ip address of master instance
-	IpAddress     string `protobuf:"bytes,1,opt,name=ip_address,json=ipAddress,proto3" json:"ip_address,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *CreateInstanceResponse) Reset() {
-	*x = CreateInstanceResponse{}
-	mi := &file_services_model_proto_model_node_proto_msgTypes[7]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *CreateInstanceResponse) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*CreateInstanceResponse) ProtoMessage() {}
-
-func (x *CreateInstanceResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_services_model_proto_model_node_proto_msgTypes[7]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use CreateInstanceResponse.ProtoReflect.Descriptor instead.
-func (*CreateInstanceResponse) Descriptor() ([]byte, []int) {
-	return file_services_model_proto_model_node_proto_rawDescGZIP(), []int{7}
-}
-
-func (x *CreateInstanceResponse) GetIpAddress() string {
-	if x != nil {
-		return x.IpAddress
-	}
-	return ""
-}
-
 var File_services_model_proto_model_node_proto protoreflect.FileDescriptor
 
 const file_services_model_proto_model_node_proto_rawDesc = "" +
 	"\n" +
 	"%services/model/proto-model/node.proto\"\a\n" +
-	"\x05Empty\"\\\n" +
-	"\x16CreateNodeRequirements\x12\x10\n" +
-	"\x03cpu\x18\x01 \x01(\x03R\x03cpu\x12\x16\n" +
-	"\x06memory\x18\x02 \x01(\x03R\x06memory\x12\x18\n" +
-	"\astorage\x18\x03 \x01(\x03R\astorage\"w\n" +
-	"\x13CreateMasterRequest\x12#\n" +
-	"\rcluster_token\x18\x01 \x01(\tR\fclusterToken\x12;\n" +
-	"\frequirements\x18\x02 \x01(\v2\x17.CreateNodeRequirementsR\frequirements\"k\n" +
+	"\x05Empty\"y\n" +
+	"\x16CreateNodeRequirements\x12\x1b\n" +
+	"\tnode_name\x18\x01 \x01(\tR\bnodeName\x12\x10\n" +
+	"\x03cpu\x18\x02 \x01(\x03R\x03cpu\x12\x16\n" +
+	"\x06memory\x18\x03 \x01(\x03R\x06memory\x12\x18\n" +
+	"\astorage\x18\x04 \x01(\x03R\astorage\"\x9a\x01\n" +
+	"\x13CreateMasterRequest\x12!\n" +
+	"\fcluster_name\x18\x01 \x01(\tR\vclusterName\x12#\n" +
+	"\rcluster_token\x18\x02 \x01(\tR\fclusterToken\x12;\n" +
+	"\frequirements\x18\x03 \x01(\v2\x17.CreateNodeRequirementsR\frequirements\"k\n" +
 	"\x14CreateMasterResponse\x12*\n" +
 	"\x11master_ip_address\x18\x01 \x01(\tR\x0fmasterIpAddress\x12'\n" +
-	"\x0fdashboard_token\x18\x02 \x01(\tR\x0edashboardToken\"\xa3\x01\n" +
-	"\x13CreateWorkerRequest\x12#\n" +
-	"\rcluster_token\x18\x01 \x01(\tR\fclusterToken\x12*\n" +
-	"\x11master_ip_address\x18\x02 \x01(\tR\x0fmasterIpAddress\x12;\n" +
-	"\frequirements\x18\x03 \x01(\v2\x17.CreateNodeRequirementsR\frequirements\"\x16\n" +
-	"\x14CreateWorkerResponse\"\xc1\x01\n" +
-	"\x15CreateInstanceRequest\x12\x12\n" +
-	"\x04name\x18\x01 \x01(\tR\x04name\x12\x1b\n" +
-	"\tis_master\x18\x02 \x01(\bR\bisMaster\x12\x14\n" +
-	"\x05token\x18\x03 \x01(\tR\x05token\x12\x1d\n" +
-	"\n" +
-	"ip_address\x18\x04 \x01(\tR\tipAddress\x12\x10\n" +
-	"\x03cpu\x18\x05 \x01(\x03R\x03cpu\x12\x16\n" +
-	"\x06memory\x18\x06 \x01(\x03R\x06memory\x12\x18\n" +
-	"\astorage\x18\a \x01(\x03R\astorage\"7\n" +
-	"\x16CreateInstanceResponse\x12\x1d\n" +
-	"\n" +
-	"ip_address\x18\x01 \x01(\tR\tipAddress*N\n" +
+	"\x0fdashboard_token\x18\x02 \x01(\tR\x0edashboardToken\"\xc6\x01\n" +
+	"\x13CreateWorkerRequest\x12!\n" +
+	"\fcluster_name\x18\x01 \x01(\tR\vclusterName\x12#\n" +
+	"\rcluster_token\x18\x02 \x01(\tR\fclusterToken\x12*\n" +
+	"\x11master_ip_address\x18\x03 \x01(\tR\x0fmasterIpAddress\x12;\n" +
+	"\frequirements\x18\x04 \x01(\v2\x17.CreateNodeRequirementsR\frequirements\"\x16\n" +
+	"\x14CreateWorkerResponse*N\n" +
 	"\x06Status\x12\x16\n" +
 	"\x12STATUS_UNSPECIFIED\x10\x00\x12\x14\n" +
 	"\x10STATUS_AVAILABLE\x10\x01\x12\x16\n" +
-	"\x12STATUS_UNAVAILABLE\x10\x022\xd0\x01\n" +
+	"\x12STATUS_UNAVAILABLE\x10\x022\x8b\x01\n" +
 	"\vNodeService\x12=\n" +
 	"\fCreateMaster\x12\x14.CreateMasterRequest\x1a\x15.CreateMasterResponse\"\x00\x12=\n" +
-	"\fCreateWorker\x12\x14.CreateWorkerRequest\x1a\x15.CreateWorkerResponse\"\x00\x12C\n" +
-	"\x0eCreateInstance\x12\x16.CreateInstanceRequest\x1a\x17.CreateInstanceResponse\"\x00B\x1eZ\x1c./services/model/proto-modelb\x06proto3"
+	"\fCreateWorker\x12\x14.CreateWorkerRequest\x1a\x15.CreateWorkerResponse\"\x00B\x1eZ\x1c./services/model/proto-modelb\x06proto3"
 
 var (
 	file_services_model_proto_model_node_proto_rawDescOnce sync.Once
@@ -571,7 +437,7 @@ func file_services_model_proto_model_node_proto_rawDescGZIP() []byte {
 }
 
 var file_services_model_proto_model_node_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_services_model_proto_model_node_proto_msgTypes = make([]protoimpl.MessageInfo, 8)
+var file_services_model_proto_model_node_proto_msgTypes = make([]protoimpl.MessageInfo, 6)
 var file_services_model_proto_model_node_proto_goTypes = []any{
 	(Status)(0),                    // 0: Status
 	(*Empty)(nil),                  // 1: Empty
@@ -580,20 +446,16 @@ var file_services_model_proto_model_node_proto_goTypes = []any{
 	(*CreateMasterResponse)(nil),   // 4: CreateMasterResponse
 	(*CreateWorkerRequest)(nil),    // 5: CreateWorkerRequest
 	(*CreateWorkerResponse)(nil),   // 6: CreateWorkerResponse
-	(*CreateInstanceRequest)(nil),  // 7: CreateInstanceRequest
-	(*CreateInstanceResponse)(nil), // 8: CreateInstanceResponse
 }
 var file_services_model_proto_model_node_proto_depIdxs = []int32{
 	2, // 0: CreateMasterRequest.requirements:type_name -> CreateNodeRequirements
 	2, // 1: CreateWorkerRequest.requirements:type_name -> CreateNodeRequirements
 	3, // 2: NodeService.CreateMaster:input_type -> CreateMasterRequest
 	5, // 3: NodeService.CreateWorker:input_type -> CreateWorkerRequest
-	7, // 4: NodeService.CreateInstance:input_type -> CreateInstanceRequest
-	4, // 5: NodeService.CreateMaster:output_type -> CreateMasterResponse
-	6, // 6: NodeService.CreateWorker:output_type -> CreateWorkerResponse
-	8, // 7: NodeService.CreateInstance:output_type -> CreateInstanceResponse
-	5, // [5:8] is the sub-list for method output_type
-	2, // [2:5] is the sub-list for method input_type
+	4, // 4: NodeService.CreateMaster:output_type -> CreateMasterResponse
+	6, // 5: NodeService.CreateWorker:output_type -> CreateWorkerResponse
+	4, // [4:6] is the sub-list for method output_type
+	2, // [2:4] is the sub-list for method input_type
 	2, // [2:2] is the sub-list for extension type_name
 	2, // [2:2] is the sub-list for extension extendee
 	0, // [0:2] is the sub-list for field type_name
@@ -610,7 +472,7 @@ func file_services_model_proto_model_node_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_services_model_proto_model_node_proto_rawDesc), len(file_services_model_proto_model_node_proto_rawDesc)),
 			NumEnums:      1,
-			NumMessages:   8,
+			NumMessages:   6,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

@@ -20,7 +20,7 @@ func NewInitStruct() *InitStruct {
 	websocketConnection := websocket.NewWebsocket()
 
 	libvirtConnection := libvirt_virtualization.InitLibvirtConnection()
-	libvirtService := libvirt_virtualization.NewLibvirtVirtualization(libvirtConnection, websocketConnection)
+	libvirtService := libvirt_virtualization.NewLibvirtVirtualization(libvirtConnection)
 
 	return &InitStruct{
 		VirtualizationService: libvirtService,

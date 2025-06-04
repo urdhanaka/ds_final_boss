@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"log/slog"
 	virtualization_model "nodes-grpc-local/services/model/virtualization-model"
-	"nodes-grpc-local/services/websocket"
 	"os"
 	"os/exec"
 	"strings"
@@ -17,7 +16,7 @@ import (
 	"libvirt.org/go/libvirtxml"
 )
 
-// these hardcoded IP is for testing only
+// these hardcoded IP are for testing only
 const (
 	MASTER_NODE_IP = "192.168.122.49"
 	WORKER_NODE_IP = "192.168.122.50"
@@ -31,17 +30,14 @@ const (
 )
 
 type LibvirtVirtualization struct {
-	libvirtConnection   *libvirt.Connect
-	websocketConnection *websocket.Websocket
+	libvirtConnection *libvirt.Connect
 }
 
 func NewLibvirtVirtualization(
 	libvirtConnection *libvirt.Connect,
-	websocketConnection *websocket.Websocket,
 ) *LibvirtVirtualization {
 	return &LibvirtVirtualization{
-		libvirtConnection:   libvirtConnection,
-		websocketConnection: websocketConnection,
+		libvirtConnection: libvirtConnection,
 	}
 }
 
@@ -67,84 +63,75 @@ func (c *LibvirtVirtualization) createMaster(
 
 	thisInstanceName := virtRequest.Name
 
-	c.websocketConnection.AddMap(thisInstanceName)
-
 	slog.Info(fmt.Sprintf("master node name is %s", thisInstanceName))
-	slogFunction(thisInstanceName, "creating master instance", nil)
-	c.websocketConnection.AddLogToMap(thisInstanceName, "creating master instance")
+	slogFunction(virtRequest.Name, thisInstanceName, "creating master instance", nil)
 
 	// create network
-	c.websocketConnection.AddLogToMap(thisInstanceName, "creating node network")
-	slogFunction(thisInstanceName, "creating node network", nil)
-	err := createNetworkMaster()
+	slogFunction(virtRequest.Name, thisInstanceName, "creating node network", nil)
+	err := createNetwork()
 	if err != nil {
-		slogFunction(thisInstanceName, "could not create node network", err)
+		slogFunction(virtRequest.Name, thisInstanceName, "could not create node network", err)
 		c.deleteInstance(thisInstanceName)
 
 		return createRes, err
 	}
 
 	// create cloudinit configuration
-	c.websocketConnection.AddLogToMap(thisInstanceName, "creating cloud-init configuration")
-	slogFunction(thisInstanceName, "creating node cloud-init configuration", nil)
+	slogFunction(virtRequest.Name, thisInstanceName, "creating node cloud-init configuration", nil)
 	err = createCloudInitMaster(thisInstanceName)
 	if err != nil {
-		slogFunction(thisInstanceName, "could not create node cloud-init configuration", err)
+		slogFunction(virtRequest.Name, thisInstanceName, "could not create node cloud-init configuration", err)
 		c.deleteInstance(thisInstanceName)
 
 		return createRes, err
 	}
 
 	// creating the image
-	c.websocketConnection.AddLogToMap(thisInstanceName, "creating base image for instance")
-	slogFunction(thisInstanceName, "creating base image for instance", nil)
+	slogFunction(virtRequest.Name, thisInstanceName, "creating base image for instance", nil)
 	err = copyImage(thisInstanceName, virtRequest)
 	if err != nil {
-		slogFunction(thisInstanceName, "could not create node image", err)
+		slogFunction(virtRequest.Name, thisInstanceName, "could not create node image", err)
 		c.deleteInstance(thisInstanceName)
 
 		return createRes, err
 	}
 
 	// configure the EFI
-	c.websocketConnection.AddLogToMap(thisInstanceName, "creating instance EFI file")
-	slogFunction(thisInstanceName, "creating instance EFI file", nil)
+	slogFunction(virtRequest.Name, thisInstanceName, "creating instance EFI file", nil)
 	err = copyEfi(thisInstanceName)
 	if err != nil {
-		slogFunction(thisInstanceName, "could not create node EFI", err)
+		slogFunction(virtRequest.Name, thisInstanceName, "could not create node EFI", err)
 		c.deleteInstance(thisInstanceName)
 
 		return createRes, err
 	}
 
 	// base xml for the vm
-	c.websocketConnection.AddLogToMap(thisInstanceName, "creating instance base xml")
-	slogFunction(thisInstanceName, "creating instance base xml", nil)
+	slogFunction(virtRequest.Name, thisInstanceName, "creating instance base xml", nil)
 	domainXmlConfig, err := createBase(thisInstanceName, virtRequest)
 	if err != nil {
-		slogFunction(thisInstanceName, "could not create node base xml", err)
+		slogFunction(virtRequest.Name, thisInstanceName, "could not create node base xml", err)
 		c.deleteInstance(thisInstanceName)
 
 		return createRes, err
 	}
 
 	// spawning
-	c.websocketConnection.AddLogToMap(thisInstanceName, "spawning node")
-	slogFunction(thisInstanceName, "spawning node", nil)
+	slogFunction(virtRequest.Name, thisInstanceName, "spawning node", nil)
 	dom, err := c.libvirtConnection.DomainCreateXML(domainXmlConfig, libvirt.DomainCreateFlags(0))
 	if err != nil {
-		slogFunction(thisInstanceName, "could not spawn node", err)
+		slogFunction(virtRequest.Name, thisInstanceName, "could not spawn node", err)
 		c.deleteInstance(thisInstanceName)
 
 		return createRes, err
 	}
 
-	slogFunction(thisInstanceName, "waiting until the vm is ready..", nil)
+	slogFunction(virtRequest.Name, thisInstanceName, "waiting until the vm is ready..", nil)
 	time.Sleep(15 * time.Second)
 	waitCloudInitCmd := "cloud-init status --wait"
 	_, err = guestAgentExecStatus(dom, waitCloudInitCmd)
 	if err != nil {
-		slogFunction(thisInstanceName, "error waiting cloud-init process", err)
+		slogFunction(virtRequest.Name, thisInstanceName, "error waiting cloud-init process", err)
 		c.deleteInstance(thisInstanceName)
 
 		return createRes, err
@@ -154,7 +141,7 @@ func (c *LibvirtVirtualization) createMaster(
 	kubeCreateTokenCmd := "k3s kubectl -n kubernetes-dashboard create token admin-user"
 	createTokenStatus, err := guestAgentExecStatus(dom, kubeCreateTokenCmd)
 	if err != nil {
-		slogFunction(thisInstanceName, "error creating kubernetes dashboard token", err)
+		slogFunction(virtRequest.Name, thisInstanceName, "error creating kubernetes dashboard token", err)
 		c.deleteInstance(thisInstanceName)
 
 		return createRes, err
@@ -162,7 +149,7 @@ func (c *LibvirtVirtualization) createMaster(
 	// handle base 64 of the guest agent result
 	decodedTokenBytes, err := base64.StdEncoding.DecodeString(createTokenStatus.Return.OutData)
 	if err != nil {
-		slogFunction(thisInstanceName, "error decoding kubernetes dashboard bytes", err)
+		slogFunction(virtRequest.Name, thisInstanceName, "error decoding kubernetes dashboard bytes", err)
 		c.deleteInstance(thisInstanceName)
 
 		return createRes, err
@@ -173,15 +160,15 @@ func (c *LibvirtVirtualization) createMaster(
 	ipAddressCmd := `ip -f inet addr show enp1s0 | sed -En -e 's/.*inet ([0-9.]+).*/\\1/p'`
 	ipAddressStatus, err := guestAgentExecStatus(dom, ipAddressCmd)
 	if err != nil {
-		slogFunction(thisInstanceName, "error getting master instance ip address", err)
-		// c.deleteInstance(thisInstanceName)
+		slogFunction(virtRequest.Name, thisInstanceName, "error getting master instance ip address", err)
+		c.deleteInstance(thisInstanceName)
 
 		return createRes, err
 	}
 	// handle base 64 of the guest agent result
 	decodedIpAddressBytes, err := base64.StdEncoding.DecodeString(ipAddressStatus.Return.OutData)
 	if err != nil {
-		slogFunction(thisInstanceName, "error decoding kubernetes dashboard bytes", err)
+		slogFunction(virtRequest.Name, thisInstanceName, "error decoding kubernetes dashboard bytes", err)
 		c.deleteInstance(thisInstanceName)
 
 		return createRes, err
@@ -193,7 +180,6 @@ func (c *LibvirtVirtualization) createMaster(
 
 	fmt.Println("create master response: ", createRes)
 
-	c.websocketConnection.AddLogToMap(thisInstanceName, "done")
 	return createRes, nil
 }
 
@@ -206,83 +192,74 @@ func (c *LibvirtVirtualization) createWorker(
 
 	thisInstanceName := virtRequest.Name
 
-	c.websocketConnection.AddMap(thisInstanceName)
-
 	slog.Info(fmt.Sprintf("worker node name is %s", thisInstanceName))
-	slogFunction(thisInstanceName, "creating worker instance", nil)
-	c.websocketConnection.AddLogToMap(thisInstanceName, "creating worker instance")
+	slogFunction(virtRequest.Name, thisInstanceName, "creating worker instance", nil)
 
 	// create network
-	c.websocketConnection.AddLogToMap(thisInstanceName, "creating instance network")
-	slogFunction(thisInstanceName, "creating instance network", nil)
-	err := createNetworkWorker()
+	slogFunction(virtRequest.Name, thisInstanceName, "creating instance network", nil)
+	err := createNetwork()
 	if err != nil {
-		slogFunction(thisInstanceName, "could not create node network", err)
+		slogFunction(virtRequest.Name, thisInstanceName, "could not create node network", err)
 		c.deleteInstance(thisInstanceName)
 
 		return createRes, err
 	}
 
 	// create cloudinit configuration
-	c.websocketConnection.AddLogToMap(thisInstanceName, "creating cloud-init configuration")
-	slogFunction(thisInstanceName, "creating node cloud-init configuration", nil)
+	slogFunction(virtRequest.Name, thisInstanceName, "creating node cloud-init configuration", nil)
 	err = createCloudInitWorker(thisInstanceName)
 	if err != nil {
-		slogFunction(thisInstanceName, "could not create node cloud-init configuration", err)
+		slogFunction(virtRequest.Name, thisInstanceName, "could not create node cloud-init configuration", err)
 		c.deleteInstance(thisInstanceName)
 
 		return createRes, err
 	}
 
 	// creating the image
-	c.websocketConnection.AddLogToMap(thisInstanceName, "creating base image for instance")
-	slogFunction(thisInstanceName, "creating node image", nil)
+	slogFunction(virtRequest.Name, thisInstanceName, "creating node image", nil)
 	err = copyImage(thisInstanceName, virtRequest)
 	if err != nil {
-		slogFunction(thisInstanceName, "could not create node image", err)
+		slogFunction(virtRequest.Name, thisInstanceName, "could not create node image", err)
 		c.deleteInstance(thisInstanceName)
 
 		return createRes, err
 	}
 
 	// configure the EFI
-	c.websocketConnection.AddLogToMap(thisInstanceName, "creating instance EFI file")
-	slogFunction(thisInstanceName, "creating node EFI", nil)
+	slogFunction(virtRequest.Name, thisInstanceName, "creating node EFI", nil)
 	err = copyEfi(thisInstanceName)
 	if err != nil {
-		slogFunction(thisInstanceName, "could not create node EFI", err)
+		slogFunction(virtRequest.Name, thisInstanceName, "could not create node EFI", err)
 		c.deleteInstance(thisInstanceName)
 
 		return createRes, err
 	}
 
 	// base xml for the vm
-	c.websocketConnection.AddLogToMap(thisInstanceName, "creating instance base xml")
-	slogFunction(thisInstanceName, "creating node base xml", nil)
+	slogFunction(virtRequest.Name, thisInstanceName, "creating node base xml", nil)
 	domainXmlConfig, err := createBase(thisInstanceName, virtRequest)
 	if err != nil {
-		slogFunction(thisInstanceName, "could not create node base xml", err)
+		slogFunction(virtRequest.Name, thisInstanceName, "could not create node base xml", err)
 		c.deleteInstance(thisInstanceName)
 
 		return createRes, err
 	}
 
 	// spawning
-	c.websocketConnection.AddLogToMap(thisInstanceName, "spawning node")
-	slogFunction(thisInstanceName, "spawning node", nil)
+	slogFunction(virtRequest.Name, thisInstanceName, "spawning node", nil)
 	dom, err := c.libvirtConnection.DomainCreateXML(domainXmlConfig, libvirt.DOMAIN_NONE)
 	if err != nil {
-		slogFunction(thisInstanceName, "could not spawn node", err)
+		slogFunction(virtRequest.Name, thisInstanceName, "could not spawn node", err)
 		c.deleteInstance(thisInstanceName)
 
 		return createRes, err
 	}
-	slogFunction(thisInstanceName, "waiting until the vm is ready..", nil)
+	slogFunction(virtRequest.Name, thisInstanceName, "waiting until the vm is ready..", nil)
 	time.Sleep(15 * time.Second)
 	waitCloudInitCmd := "cloud-init status --wait"
 	_, err = guestAgentExecStatus(dom, waitCloudInitCmd)
 	if err != nil {
-		slogFunction(thisInstanceName, "could not spawn node", err)
+		slogFunction(virtRequest.Name, thisInstanceName, "could not spawn node", err)
 		c.deleteInstance(thisInstanceName)
 
 		return createRes, err
@@ -290,7 +267,6 @@ func (c *LibvirtVirtualization) createWorker(
 
 	createRes.Status = true
 
-	c.websocketConnection.AddLogToMap(thisInstanceName, "done")
 	return createRes, nil
 }
 
@@ -301,8 +277,6 @@ func createBase(
 	instanceStorage := POOL_DIR + "/" + instanceName + ".qcow2"
 	seedFile := POOL_DIR + "/" + instanceName + ".iso"
 	logSocket := INSTANCE_LOGS_DIR + "/" + instanceName + ".sock"
-	// serialSocket := SERIAL_DIR + "/" + instanceName + ".sock"
-	// consoleSocket := CONSOLE_DIR + "/" + instanceName + ".sock"
 
 	domConfig := &libvirtxml.Domain{
 		Type: "kvm",
@@ -348,8 +322,8 @@ func createBase(
 			},
 			NVRam: &libvirtxml.DomainNVRam{
 				NVRam:    fmt.Sprintf("/var/lib/libvirt/qemu/nvram/%s_VARS.fd", instanceName),
-				Template: NVRAM_TEMPLATE_LOCAL, // NOTE: only works in local
-				// Template:       NVRAM_TEMPLATE, // NOTE: directory according to ubuntu 24.04
+				// Template: NVRAM_TEMPLATE_LOCAL, // NOTE: only works in local
+				Template:       NVRAM_TEMPLATE, // NOTE: directory according to ubuntu 24.04
 				TemplateFormat: "raw",
 				Format:         "raw",
 			},
@@ -535,8 +509,8 @@ func copyImage(
 	}
 
 	// resize the qcow2
-	resizeCmd := exec.Command("qemu-img", "resize", destinationPath, "+10G")
-	// resizeCmd := exec.Command("qemu-img", "resize", destinationPath, fmt.Sprintf("+%dG", virtRequest.Storage))
+	// resizeCmd := exec.Command("qemu-img", "resize", destinationPath, "+10G")
+	resizeCmd := exec.Command("qemu-img", "resize", destinationPath, fmt.Sprintf("+%dG", virtRequest.Storage))
 	err = resizeCmd.Run()
 	if err != nil {
 		return err
@@ -728,6 +702,25 @@ runcmd:
 	return nil
 }
 
+func createNetwork() error {
+    networkMut.Lock()
+    defer networkMut.Unlock()
+
+    filePath := BASE_POOL_DIR + "/" + "network-config"
+    userDataContent := `network:
+  version: 2
+  ethernets:
+    enp1s0:
+      dhcp4: true`
+
+    err := os.WriteFile(filePath, []byte(userDataContent), 0644)
+    if err != nil {
+        return err
+    }
+
+    return nil
+}
+
 // NOTE: this function might not needed
 // it's needed if we want to configure the network
 // whether to be set to static or changing the nameservers, etc.
@@ -737,26 +730,26 @@ func createNetworkMaster() error {
 
 	filePath := BASE_POOL_DIR + "/" + "network-config"
 	// NOTE: static address
+	// 	userDataContent := fmt.Sprintf(`network:
+	//   version: 2
+	//   ethernets:
+	//     enp1s0:
+	//       addresses:
+	//         - %s/24
+	//       nameservers:
+	//         addresses: [192.168.122.1]
+	//       routes:
+	//         - to: 0.0.0.0/0
+	//           via: 192.168.122.1
+	//           metric: 100
+	// `, MASTER_NODE_IP)
+
+	// NOTE: dynamic address
 	userDataContent := fmt.Sprintf(`network:
   version: 2
   ethernets:
     enp1s0:
-      addresses:
-        - %s/24
-      nameservers:
-        addresses: [192.168.122.1]
-      routes:
-        - to: 0.0.0.0/0
-          via: 192.168.122.1
-          metric: 100
-`, MASTER_NODE_IP)
-
-	// NOTE: dynamic address
-	//     userDataContent := fmt.Sprintf(`version: 2
-	// ethernets:
-	//   eth0:
-	//     dhcp4: true
-	// `)
+	  dhcp4: true`)
 
 	err := os.WriteFile(filePath, []byte(userDataContent), 0644)
 	if err != nil {
@@ -775,26 +768,26 @@ func createNetworkWorker() error {
 
 	filePath := BASE_POOL_DIR + "/" + "network-config"
 	// NOTE: static address
+// 	userDataContent := fmt.Sprintf(`network:
+//   version: 2
+//   ethernets:
+//     enp1s0:
+//       addresses:
+//         - %s/24
+//       nameservers:
+//         addresses: [192.168.122.1]
+//       routes:
+//         - to: 0.0.0.0/0
+//           via: 192.168.122.1
+//           metric: 100
+// `, WORKER_NODE_IP)
+
+	// NOTE: dynamic address
 	userDataContent := fmt.Sprintf(`network:
   version: 2
   ethernets:
     enp1s0:
-      addresses:
-        - %s/24
-      nameservers:
-        addresses: [192.168.122.1]
-      routes:
-        - to: 0.0.0.0/0
-          via: 192.168.122.1
-          metric: 100
-`, WORKER_NODE_IP)
-
-	// NOTE: dynamic address
-	//     userDataContent := fmt.Sprintf(`version: 2
-	// ethernets:
-	//   eth0:
-	//     dhcp4: true
-	// `)
+	  dhcp4: true`)
 
 	err := os.WriteFile(filePath, []byte(userDataContent), 0644)
 	if err != nil {
@@ -840,6 +833,14 @@ func (c *LibvirtVirtualization) deleteInstance(
 			"error", err,
 		)
 	}
+	deleteFilesCommand = fmt.Sprintf("rm %s/%s.*", NVRAM_DIR, domainName)
+	cmd = exec.Command("/bin/bash", "-c", deleteFilesCommand)
+	err = cmd.Run()
+	if err != nil {
+		slog.Error("could not clean domain files",
+			"error", err,
+		)
+	}
 }
 
 func guestAgentExecStatus(
@@ -875,6 +876,8 @@ func guestAgentExecStatus(
 		if err != nil {
 			return res, err
 		}
+
+		fmt.Println(res)
 
 		if res.Return.Exited {
 			break

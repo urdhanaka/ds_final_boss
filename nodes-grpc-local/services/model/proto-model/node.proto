@@ -11,15 +11,17 @@ enum Status {
 message Empty {}
 
 message CreateNodeRequirements {
-  int64 cpu = 1;
-  int64 memory = 2;
-  int64 storage = 3;
+  string node_name = 1;
+  int64 cpu = 2;
+  int64 memory = 3;
+  int64 storage = 4;
 }
 
 // create master
 message CreateMasterRequest {
-  string cluster_token = 1;
-  CreateNodeRequirements requirements = 2;
+  string cluster_name = 1;
+  string cluster_token = 2;
+  CreateNodeRequirements requirements = 3;
 }
 
 message CreateMasterResponse {
@@ -29,48 +31,17 @@ message CreateMasterResponse {
 
 // create worker
 message CreateWorkerRequest {
-  string cluster_token = 1;
-  string master_ip_address = 2;
-  CreateNodeRequirements requirements = 3;
+  string cluster_name = 1;
+  string cluster_token = 2;
+  string master_ip_address = 3;
+  CreateNodeRequirements requirements = 4;
 }
 
 message CreateWorkerResponse {}
 
-// create instance
-// not used for now
-message CreateInstanceRequest {
-  // top-level name of the cluster
-  //
-  string name = 1;
-
-  // true if spawning master instance
-  // false otherwise
-  bool is_master = 2;
-
-  // token for creating k3s cluster
-  // only needed when spawning worker
-  // token will created when spawning master
-  string token = 3;
-
-  // ip address of the master instance
-  // only needed when spawning worker
-  string ip_address = 4;
-
-  // instance hardware requirements
-  int64 cpu = 5;
-  int64 memory = 6;
-  int64 storage = 7;
-}
-
-message CreateInstanceResponse {
-  // returns ip address of master instance
-  string ip_address = 1;
-}
-
 service NodeService {
   rpc CreateMaster(CreateMasterRequest) returns (CreateMasterResponse) {}
   rpc CreateWorker(CreateWorkerRequest) returns (CreateWorkerResponse) {}
-  rpc CreateInstance(CreateInstanceRequest) returns (CreateInstanceResponse) {}
   // rpc RegisterNode(RegisterNodeRequest) returns (RegisterNodeResponse) {}
   // rpc ThisNodeStatus(Empty) returns (Temp) {}
   // rpc Status(Empty) returns (NodeStatus) {}

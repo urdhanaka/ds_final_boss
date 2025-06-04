@@ -5,8 +5,8 @@ import (
 	"log/slog"
 )
 
-func slogFunction(instanceName string, message string, err error) {
-	fullMessage := fmt.Sprintf("%s | %s", instanceName, message)
+func slogFunction(clusterName string, instanceName string, message string, err error) {
+	fullMessage := fmt.Sprintf("%s | %s | %s", clusterName, instanceName, message)
 
 	if err != nil {
 		slog.Error(fullMessage,
