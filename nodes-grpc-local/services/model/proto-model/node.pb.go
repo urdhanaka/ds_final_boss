@@ -392,6 +392,174 @@ func (*CreateWorkerResponse) Descriptor() ([]byte, []int) {
 	return file_services_model_proto_model_node_proto_rawDescGZIP(), []int{5}
 }
 
+// node status
+type NodeUsagePercentage struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// cpu usage percentage
+	CpuUsagePercentage float64 `protobuf:"fixed64,1,opt,name=cpu_usage_percentage,json=cpuUsagePercentage,proto3" json:"cpu_usage_percentage,omitempty"`
+	// storage usage percentage
+	StorageAvailable       uint64  `protobuf:"varint,2,opt,name=storage_available,json=storageAvailable,proto3" json:"storage_available,omitempty"`
+	StorageUsagePercentage float64 `protobuf:"fixed64,3,opt,name=storage_usage_percentage,json=storageUsagePercentage,proto3" json:"storage_usage_percentage,omitempty"`
+	// memory usage
+	MemoryAvailable       uint64  `protobuf:"varint,4,opt,name=memory_available,json=memoryAvailable,proto3" json:"memory_available,omitempty"`
+	MemoryUsagePercentage float64 `protobuf:"fixed64,5,opt,name=memory_usage_percentage,json=memoryUsagePercentage,proto3" json:"memory_usage_percentage,omitempty"`
+	unknownFields         protoimpl.UnknownFields
+	sizeCache             protoimpl.SizeCache
+}
+
+func (x *NodeUsagePercentage) Reset() {
+	*x = NodeUsagePercentage{}
+	mi := &file_services_model_proto_model_node_proto_msgTypes[6]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *NodeUsagePercentage) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*NodeUsagePercentage) ProtoMessage() {}
+
+func (x *NodeUsagePercentage) ProtoReflect() protoreflect.Message {
+	mi := &file_services_model_proto_model_node_proto_msgTypes[6]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use NodeUsagePercentage.ProtoReflect.Descriptor instead.
+func (*NodeUsagePercentage) Descriptor() ([]byte, []int) {
+	return file_services_model_proto_model_node_proto_rawDescGZIP(), []int{6}
+}
+
+func (x *NodeUsagePercentage) GetCpuUsagePercentage() float64 {
+	if x != nil {
+		return x.CpuUsagePercentage
+	}
+	return 0
+}
+
+func (x *NodeUsagePercentage) GetStorageAvailable() uint64 {
+	if x != nil {
+		return x.StorageAvailable
+	}
+	return 0
+}
+
+func (x *NodeUsagePercentage) GetStorageUsagePercentage() float64 {
+	if x != nil {
+		return x.StorageUsagePercentage
+	}
+	return 0
+}
+
+func (x *NodeUsagePercentage) GetMemoryAvailable() uint64 {
+	if x != nil {
+		return x.MemoryAvailable
+	}
+	return 0
+}
+
+func (x *NodeUsagePercentage) GetMemoryUsagePercentage() float64 {
+	if x != nil {
+		return x.MemoryUsagePercentage
+	}
+	return 0
+}
+
+type NodeStatusRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *NodeStatusRequest) Reset() {
+	*x = NodeStatusRequest{}
+	mi := &file_services_model_proto_model_node_proto_msgTypes[7]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *NodeStatusRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*NodeStatusRequest) ProtoMessage() {}
+
+func (x *NodeStatusRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_services_model_proto_model_node_proto_msgTypes[7]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use NodeStatusRequest.ProtoReflect.Descriptor instead.
+func (*NodeStatusRequest) Descriptor() ([]byte, []int) {
+	return file_services_model_proto_model_node_proto_rawDescGZIP(), []int{7}
+}
+
+type NodeStatusResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	NodeUsage     *NodeUsagePercentage   `protobuf:"bytes,1,opt,name=node_usage,json=nodeUsage,proto3" json:"node_usage,omitempty"`
+	NodeStatus    Status                 `protobuf:"varint,2,opt,name=node_status,json=nodeStatus,proto3,enum=Status" json:"node_status,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *NodeStatusResponse) Reset() {
+	*x = NodeStatusResponse{}
+	mi := &file_services_model_proto_model_node_proto_msgTypes[8]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *NodeStatusResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*NodeStatusResponse) ProtoMessage() {}
+
+func (x *NodeStatusResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_services_model_proto_model_node_proto_msgTypes[8]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use NodeStatusResponse.ProtoReflect.Descriptor instead.
+func (*NodeStatusResponse) Descriptor() ([]byte, []int) {
+	return file_services_model_proto_model_node_proto_rawDescGZIP(), []int{8}
+}
+
+func (x *NodeStatusResponse) GetNodeUsage() *NodeUsagePercentage {
+	if x != nil {
+		return x.NodeUsage
+	}
+	return nil
+}
+
+func (x *NodeStatusResponse) GetNodeStatus() Status {
+	if x != nil {
+		return x.NodeStatus
+	}
+	return Status_STATUS_UNSPECIFIED
+}
+
 var File_services_model_proto_model_node_proto protoreflect.FileDescriptor
 
 const file_services_model_proto_model_node_proto_rawDesc = "" +
@@ -415,14 +583,28 @@ const file_services_model_proto_model_node_proto_rawDesc = "" +
 	"\rcluster_token\x18\x02 \x01(\tR\fclusterToken\x12*\n" +
 	"\x11master_ip_address\x18\x03 \x01(\tR\x0fmasterIpAddress\x12;\n" +
 	"\frequirements\x18\x04 \x01(\v2\x17.CreateNodeRequirementsR\frequirements\"\x16\n" +
-	"\x14CreateWorkerResponse*N\n" +
+	"\x14CreateWorkerResponse\"\x91\x02\n" +
+	"\x13NodeUsagePercentage\x120\n" +
+	"\x14cpu_usage_percentage\x18\x01 \x01(\x01R\x12cpuUsagePercentage\x12+\n" +
+	"\x11storage_available\x18\x02 \x01(\x04R\x10storageAvailable\x128\n" +
+	"\x18storage_usage_percentage\x18\x03 \x01(\x01R\x16storageUsagePercentage\x12)\n" +
+	"\x10memory_available\x18\x04 \x01(\x04R\x0fmemoryAvailable\x126\n" +
+	"\x17memory_usage_percentage\x18\x05 \x01(\x01R\x15memoryUsagePercentage\"\x13\n" +
+	"\x11NodeStatusRequest\"s\n" +
+	"\x12NodeStatusResponse\x123\n" +
+	"\n" +
+	"node_usage\x18\x01 \x01(\v2\x14.NodeUsagePercentageR\tnodeUsage\x12(\n" +
+	"\vnode_status\x18\x02 \x01(\x0e2\a.StatusR\n" +
+	"nodeStatus*N\n" +
 	"\x06Status\x12\x16\n" +
 	"\x12STATUS_UNSPECIFIED\x10\x00\x12\x14\n" +
 	"\x10STATUS_AVAILABLE\x10\x01\x12\x16\n" +
-	"\x12STATUS_UNAVAILABLE\x10\x022\x8b\x01\n" +
+	"\x12STATUS_UNAVAILABLE\x10\x022\xc4\x01\n" +
 	"\vNodeService\x12=\n" +
 	"\fCreateMaster\x12\x14.CreateMasterRequest\x1a\x15.CreateMasterResponse\"\x00\x12=\n" +
-	"\fCreateWorker\x12\x14.CreateWorkerRequest\x1a\x15.CreateWorkerResponse\"\x00B\x1eZ\x1c./services/model/proto-modelb\x06proto3"
+	"\fCreateWorker\x12\x14.CreateWorkerRequest\x1a\x15.CreateWorkerResponse\"\x00\x127\n" +
+	"\n" +
+	"NodeStatus\x12\x12.NodeStatusRequest\x1a\x13.NodeStatusResponse\"\x00B\x1eZ\x1c./services/model/proto-modelb\x06proto3"
 
 var (
 	file_services_model_proto_model_node_proto_rawDescOnce sync.Once
@@ -437,7 +619,7 @@ func file_services_model_proto_model_node_proto_rawDescGZIP() []byte {
 }
 
 var file_services_model_proto_model_node_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_services_model_proto_model_node_proto_msgTypes = make([]protoimpl.MessageInfo, 6)
+var file_services_model_proto_model_node_proto_msgTypes = make([]protoimpl.MessageInfo, 9)
 var file_services_model_proto_model_node_proto_goTypes = []any{
 	(Status)(0),                    // 0: Status
 	(*Empty)(nil),                  // 1: Empty
@@ -446,19 +628,26 @@ var file_services_model_proto_model_node_proto_goTypes = []any{
 	(*CreateMasterResponse)(nil),   // 4: CreateMasterResponse
 	(*CreateWorkerRequest)(nil),    // 5: CreateWorkerRequest
 	(*CreateWorkerResponse)(nil),   // 6: CreateWorkerResponse
+	(*NodeUsagePercentage)(nil),    // 7: NodeUsagePercentage
+	(*NodeStatusRequest)(nil),      // 8: NodeStatusRequest
+	(*NodeStatusResponse)(nil),     // 9: NodeStatusResponse
 }
 var file_services_model_proto_model_node_proto_depIdxs = []int32{
 	2, // 0: CreateMasterRequest.requirements:type_name -> CreateNodeRequirements
 	2, // 1: CreateWorkerRequest.requirements:type_name -> CreateNodeRequirements
-	3, // 2: NodeService.CreateMaster:input_type -> CreateMasterRequest
-	5, // 3: NodeService.CreateWorker:input_type -> CreateWorkerRequest
-	4, // 4: NodeService.CreateMaster:output_type -> CreateMasterResponse
-	6, // 5: NodeService.CreateWorker:output_type -> CreateWorkerResponse
-	4, // [4:6] is the sub-list for method output_type
-	2, // [2:4] is the sub-list for method input_type
-	2, // [2:2] is the sub-list for extension type_name
-	2, // [2:2] is the sub-list for extension extendee
-	0, // [0:2] is the sub-list for field type_name
+	7, // 2: NodeStatusResponse.node_usage:type_name -> NodeUsagePercentage
+	0, // 3: NodeStatusResponse.node_status:type_name -> Status
+	3, // 4: NodeService.CreateMaster:input_type -> CreateMasterRequest
+	5, // 5: NodeService.CreateWorker:input_type -> CreateWorkerRequest
+	8, // 6: NodeService.NodeStatus:input_type -> NodeStatusRequest
+	4, // 7: NodeService.CreateMaster:output_type -> CreateMasterResponse
+	6, // 8: NodeService.CreateWorker:output_type -> CreateWorkerResponse
+	9, // 9: NodeService.NodeStatus:output_type -> NodeStatusResponse
+	7, // [7:10] is the sub-list for method output_type
+	4, // [4:7] is the sub-list for method input_type
+	4, // [4:4] is the sub-list for extension type_name
+	4, // [4:4] is the sub-list for extension extendee
+	0, // [0:4] is the sub-list for field type_name
 }
 
 func init() { file_services_model_proto_model_node_proto_init() }
@@ -472,7 +661,7 @@ func file_services_model_proto_model_node_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_services_model_proto_model_node_proto_rawDesc), len(file_services_model_proto_model_node_proto_rawDesc)),
 			NumEnums:      1,
-			NumMessages:   6,
+			NumMessages:   9,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

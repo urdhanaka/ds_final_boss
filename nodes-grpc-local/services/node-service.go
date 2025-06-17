@@ -63,7 +63,7 @@ func (s *NodeServer) CreateMaster(
 		return res, err
 	}
 
-	// go sendLogs(instanceName, createMasterRequest.ClusterName)
+	go sendLogs(instanceName, createMasterRequest.ClusterName)
 
 	sub := s.queue.Subscribe(ctx, instanceName)
 	defer sub.Close()
@@ -111,9 +111,35 @@ func (s *NodeServer) CreateWorker(
 		return res, err
 	}
 
-	// go sendLogs(instanceName, createWorkerRequest.ClusterName)
+	go sendLogs(instanceName, createWorkerRequest.ClusterName)
 
 	return res, nil
+}
+
+func (s *NodeServer) NodeStatus(
+	ctx context.Context,
+	nodeStatusRequest *proto_model.NodeStatusRequest,
+) (*proto_model.NodeStatusResponse, error) {
+	CpuUsage := getCpuUsage()
+	memoryStat, err := getMemoryUsage()
+	if err != nil {
+		return &proto_model.NodeStatusResponse{}, err
+	}
+	storageStat, err := getStorageUsage()
+	if err != nil {
+		return &proto_model.NodeStatusResponse{}, err
+	}
+
+	return &proto_model.NodeStatusResponse{
+		NodeUsage: &proto_model.NodeUsagePercentage{
+			CpuUsagePercentage:     CpuUsage,
+			MemoryAvailable:        memoryStat.Memory,
+			MemoryUsagePercentage:  memoryStat.MemoryPercentage,
+			StorageAvailable:       storageStat.Storage,
+			StorageUsagePercentage: storageStat.StoragePercentage,
+		},
+		NodeStatus: proto_model.Status_STATUS_AVAILABLE,
+	}, nil
 }
 
 func StartGrpcServer(connection *InitStruct) {

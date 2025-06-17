@@ -16,12 +16,6 @@ import (
 	"libvirt.org/go/libvirtxml"
 )
 
-// these hardcoded IP are for testing only
-const (
-	MASTER_NODE_IP = "192.168.122.49"
-	WORKER_NODE_IP = "192.168.122.50"
-)
-
 const (
 	// timeout in second when waiting the cloud init operations
 	CLOUD_INIT_TIMEOUT = 60
@@ -78,7 +72,7 @@ func (c *LibvirtVirtualization) createMaster(
 
 	// create cloudinit configuration
 	slogFunction(virtRequest.Name, thisInstanceName, "creating node cloud-init configuration", nil)
-	err = createCloudInitMaster(thisInstanceName)
+	err = createCloudInitMaster(thisInstanceName, virtRequest.Token)
 	if err != nil {
 		slogFunction(virtRequest.Name, thisInstanceName, "could not create node cloud-init configuration", err)
 		c.deleteInstance(thisInstanceName)
@@ -97,14 +91,14 @@ func (c *LibvirtVirtualization) createMaster(
 	}
 
 	// configure the EFI
-	slogFunction(virtRequest.Name, thisInstanceName, "creating instance EFI file", nil)
-	err = copyEfi(thisInstanceName)
-	if err != nil {
-		slogFunction(virtRequest.Name, thisInstanceName, "could not create node EFI", err)
-		c.deleteInstance(thisInstanceName)
-
-		return createRes, err
-	}
+	// slogFunction(virtRequest.Name, thisInstanceName, "creating instance EFI file", nil)
+	// err = copyEfi(thisInstanceName)
+	// if err != nil {
+	// 	slogFunction(virtRequest.Name, thisInstanceName, "could not create node EFI", err)
+	// 	c.deleteInstance(thisInstanceName)
+	//
+	// 	return createRes, err
+	// }
 
 	// base xml for the vm
 	slogFunction(virtRequest.Name, thisInstanceName, "creating instance base xml", nil)
@@ -227,7 +221,7 @@ func (c *LibvirtVirtualization) createWorker(
 
 	// create cloudinit configuration
 	slogFunction(virtRequest.Name, thisInstanceName, "creating node cloud-init configuration", nil)
-	err = createCloudInitWorker(thisInstanceName, virtRequest.MasterIpAddress)
+	err = createCloudInitWorker(thisInstanceName, virtRequest.MasterIpAddress, virtRequest.Token)
 	if err != nil {
 		slogFunction(virtRequest.Name, thisInstanceName, "could not create node cloud-init configuration", err)
 		c.deleteInstance(thisInstanceName)
@@ -246,14 +240,14 @@ func (c *LibvirtVirtualization) createWorker(
 	}
 
 	// configure the EFI
-	slogFunction(virtRequest.Name, thisInstanceName, "creating node EFI", nil)
-	err = copyEfi(thisInstanceName)
-	if err != nil {
-		slogFunction(virtRequest.Name, thisInstanceName, "could not create node EFI", err)
-		c.deleteInstance(thisInstanceName)
-
-		return createRes, err
-	}
+	// slogFunction(virtRequest.Name, thisInstanceName, "creating node EFI", nil)
+	// err = copyEfi(thisInstanceName)
+	// if err != nil {
+	// 	slogFunction(virtRequest.Name, thisInstanceName, "could not create node EFI", err)
+	// 	c.deleteInstance(thisInstanceName)
+	//
+	// 	return createRes, err
+	// }
 
 	// base xml for the vm
 	slogFunction(virtRequest.Name, thisInstanceName, "creating node base xml", nil)
@@ -338,7 +332,7 @@ func createBase(
 			Firmware: "efi",
 			Type: &libvirtxml.DomainOSType{
 				Arch:    "x86_64",
-				Machine: "pc-q35-9.2",
+				Machine: "q35",
 				Type:    "hvm",
 			},
 			FirmwareInfo: &libvirtxml.DomainOSFirmwareInfo{
@@ -377,6 +371,11 @@ func createBase(
 			},
 		},
 		Features: &libvirtxml.DomainFeatureList{
+			KVM: &libvirtxml.DomainFeatureKVM{
+				Hidden: &libvirtxml.DomainFeatureState{
+					State: "on",
+				},
+			},
 			ACPI: &libvirtxml.DomainFeature{},
 			APIC: &libvirtxml.DomainFeatureAPIC{},
 			VMPort: &libvirtxml.DomainFeatureState{
@@ -562,34 +561,34 @@ func copyImage(
 	return nil
 }
 
-func copyEfi(instanceName string) error {
-	efiMut.Lock()
-	defer efiMut.Unlock()
+// func copyEfi(instanceName string) error {
+// 	efiMut.Lock()
+// 	defer efiMut.Unlock()
+//
+// 	destinationPath := NVRAM_DIR + "/" + instanceName + "_VARS.fd"
+//
+// 	data, err := os.ReadFile(NVRAM_TEMPLATE_LOCAL)
+// 	if err != nil {
+// 		return err
+// 	}
+//
+// 	fmt.Println("")
+//
+// 	err = os.WriteFile(destinationPath, data, 0644)
+// 	if err != nil {
+// 		return err
+// 	}
+//
+// 	cmd := exec.Command("chown", "qemu:qemu", destinationPath)
+// 	err = cmd.Run()
+// 	if err != nil {
+// 		return err
+// 	}
+//
+// 	return nil
+// }
 
-	destinationPath := NVRAM_DIR + "/" + instanceName + "_VARS.fd"
-
-	data, err := os.ReadFile(NVRAM_TEMPLATE_LOCAL)
-	if err != nil {
-		return err
-	}
-
-	fmt.Println("")
-
-	err = os.WriteFile(destinationPath, data, 0644)
-	if err != nil {
-		return err
-	}
-
-	cmd := exec.Command("chown", "qemu:qemu", destinationPath)
-	err = cmd.Run()
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func createCloudInitMaster(instanceName string) error {
+func createCloudInitMaster(instanceName string, clusterToken string) error {
 	cloudInitMut.Lock()
 	defer cloudInitMut.Unlock()
 
@@ -654,20 +653,14 @@ runcmd:
 - |
   echo "running command"
   echo "updating and upgrading packages"
-        # apt-get update && apt-get upgrade
   
   echo "installing necessary packages"
-        # apk add git
 
   echo "installing k3s"
-  curl -sfL https://get.k3s.io | INSTALL_K3S_SKIP_DOWNLOAD=true INSTALL_K3S_EXEC="server --token 12345" sh -s -
-        # while [ ! -f /etc/rancher/k3s/k3s.yaml ]; do sleep 1; done
+  curl -sfL https://get.k3s.io | INSTALL_K3S_SKIP_DOWNLOAD=true INSTALL_K3S_EXEC="server --token %s" sh -s -
 
   export KUBECONFIG=/etc/rancher/k3s/k3s.yaml
   echo "export KUBECONFIG=/etc/rancher/k3s/k3s.yaml" >> /etc/profile
-
-        #echo "installing helm for kubernetes"
-        #curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
 
   echo "creating kubernetes dashboard"
   helm repo add kubernetes-dashboard https://kubernetes.github.io/dashboard/
@@ -682,7 +675,7 @@ runcmd:
   systemctl start kube-dashboard.service
 
   echo "done"
-`, instanceName)
+`, instanceName, clusterToken)
 
 	err := os.WriteFile(filePath, []byte(userDataContent), 0644)
 	if err != nil {
@@ -699,7 +692,7 @@ runcmd:
 	return nil
 }
 
-func createCloudInitWorker(instanceName string, masterIp string) error {
+func createCloudInitWorker(instanceName string, masterIp string, clusterToken string) error {
 	cloudInitMut.Lock()
 	defer cloudInitMut.Unlock()
 
@@ -719,10 +712,13 @@ users:
   shell: /bin/bash
 
 runcmd:
-- echo "installing k3s"
-- 'curl -sfL https://get.k3s.io | INSTALL_K3S_SKIP_DOWNLOAD=true INSTALL_K3S_EXEC="agent --server https://%s:6443 --token 12345" sh -s -'
-- echo "done"
-`, instanceName, masterIp)
+- | 
+  echo "installing k3s"
+  curl -sfL https://get.k3s.io | INSTALL_K3S_SKIP_DOWNLOAD=true INSTALL_K3S_EXEC="agent --server https://%s:6443 --token %s" sh -s -
+  echo "done"
+`, instanceName, masterIp, clusterToken)
+
+    fmt.Println(userDataContent)
 
 	err := os.WriteFile(filePath, []byte(userDataContent), 0644)
 	if err != nil {
@@ -746,6 +742,7 @@ func createNetwork() error {
 	filePath := BASE_POOL_DIR + "/" + "network-config"
 	userDataContent := `network:
   version: 2
+  renderer: NetworkManager
   ethernets:
     enp1s0:
       dhcp4: true`

@@ -10,4 +10,7 @@ const (
 
 	// provisioning timeout
 	PROVISIONING_TIMEOUT = 600
+
+    // cpu usage interval value in seconds
+    CPU_USAGE_INTERVAL = 1
 )

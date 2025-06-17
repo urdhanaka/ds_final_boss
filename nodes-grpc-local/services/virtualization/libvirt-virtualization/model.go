@@ -20,5 +20,5 @@ type ExecStatus struct {
 	// to convert to string if string data type is needed
 	OutData string `json:"out-data,omitempty"`
 
-    ErrData string `json:"err-data,omitempty"`
+	ErrData string `json:"err-data,omitempty"`
 }

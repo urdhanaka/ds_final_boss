@@ -39,9 +39,32 @@ message CreateWorkerRequest {
 
 message CreateWorkerResponse {}
 
+// node status
+message NodeUsagePercentage {
+  // cpu usage percentage
+  double cpu_usage_percentage = 1;
+
+  // storage usage percentage
+  uint64 storage_available = 2;
+  double storage_usage_percentage = 3;
+
+  // memory usage
+  uint64 memory_available = 4;
+  double memory_usage_percentage = 5;
+}
+
+message NodeStatusRequest {}
+
+message NodeStatusResponse {
+  NodeUsagePercentage node_usage = 1;
+  Status node_status = 2;
+}
+
+
 service NodeService {
   rpc CreateMaster(CreateMasterRequest) returns (CreateMasterResponse) {}
   rpc CreateWorker(CreateWorkerRequest) returns (CreateWorkerResponse) {}
+  rpc NodeStatus(NodeStatusRequest) returns (NodeStatusResponse) {}
   // rpc RegisterNode(RegisterNodeRequest) returns (RegisterNodeResponse) {}
   // rpc ThisNodeStatus(Empty) returns (Temp) {}
   // rpc Status(Empty) returns (NodeStatus) {}
