@@ -19,9 +19,10 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	NodeService_CreateMaster_FullMethodName = "/NodeService/CreateMaster"
-	NodeService_CreateWorker_FullMethodName = "/NodeService/CreateWorker"
-	NodeService_NodeStatus_FullMethodName   = "/NodeService/NodeStatus"
+	NodeService_CreateMaster_FullMethodName   = "/NodeService/CreateMaster"
+	NodeService_CreateWorker_FullMethodName   = "/NodeService/CreateWorker"
+	NodeService_NodeStatus_FullMethodName     = "/NodeService/NodeStatus"
+	NodeService_DeleteInstance_FullMethodName = "/NodeService/DeleteInstance"
 )
 
 // NodeServiceClient is the client API for NodeService service.
@@ -31,6 +32,7 @@ type NodeServiceClient interface {
 	CreateMaster(ctx context.Context, in *CreateMasterRequest, opts ...grpc.CallOption) (*CreateMasterResponse, error)
 	CreateWorker(ctx context.Context, in *CreateWorkerRequest, opts ...grpc.CallOption) (*CreateWorkerResponse, error)
 	NodeStatus(ctx context.Context, in *NodeStatusRequest, opts ...grpc.CallOption) (*NodeStatusResponse, error)
+	DeleteInstance(ctx context.Context, in *DeleteInstanceRequest, opts ...grpc.CallOption) (*DeleteInstanceResponse, error)
 }
 
 type nodeServiceClient struct {
@@ -71,6 +73,16 @@ func (c *nodeServiceClient) NodeStatus(ctx context.Context, in *NodeStatusReques
 	return out, nil
 }
 
+func (c *nodeServiceClient) DeleteInstance(ctx context.Context, in *DeleteInstanceRequest, opts ...grpc.CallOption) (*DeleteInstanceResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(DeleteInstanceResponse)
+	err := c.cc.Invoke(ctx, NodeService_DeleteInstance_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // NodeServiceServer is the server API for NodeService service.
 // All implementations must embed UnimplementedNodeServiceServer
 // for forward compatibility.
@@ -78,6 +90,7 @@ type NodeServiceServer interface {
 	CreateMaster(context.Context, *CreateMasterRequest) (*CreateMasterResponse, error)
 	CreateWorker(context.Context, *CreateWorkerRequest) (*CreateWorkerResponse, error)
 	NodeStatus(context.Context, *NodeStatusRequest) (*NodeStatusResponse, error)
+	DeleteInstance(context.Context, *DeleteInstanceRequest) (*DeleteInstanceResponse, error)
 	mustEmbedUnimplementedNodeServiceServer()
 }
 
@@ -96,6 +109,9 @@ func (UnimplementedNodeServiceServer) CreateWorker(context.Context, *CreateWorke
 }
 func (UnimplementedNodeServiceServer) NodeStatus(context.Context, *NodeStatusRequest) (*NodeStatusResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method NodeStatus not implemented")
+}
+func (UnimplementedNodeServiceServer) DeleteInstance(context.Context, *DeleteInstanceRequest) (*DeleteInstanceResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method DeleteInstance not implemented")
 }
 func (UnimplementedNodeServiceServer) mustEmbedUnimplementedNodeServiceServer() {}
 func (UnimplementedNodeServiceServer) testEmbeddedByValue()                     {}
@@ -172,6 +188,24 @@ func _NodeService_NodeStatus_Handler(srv interface{}, ctx context.Context, dec f
 	return interceptor(ctx, in, info, handler)
 }
 
+func _NodeService_DeleteInstance_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DeleteInstanceRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(NodeServiceServer).DeleteInstance(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: NodeService_DeleteInstance_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(NodeServiceServer).DeleteInstance(ctx, req.(*DeleteInstanceRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // NodeService_ServiceDesc is the grpc.ServiceDesc for NodeService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -190,6 +224,10 @@ var NodeService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "NodeStatus",
 			Handler:    _NodeService_NodeStatus_Handler,
+		},
+		{
+			MethodName: "DeleteInstance",
+			Handler:    _NodeService_DeleteInstance_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

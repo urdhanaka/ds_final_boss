@@ -15,7 +15,7 @@ type InitStruct struct {
 func NewInitStruct() *InitStruct {
 	redisClient := queue.InitRedisConnection()
 
-	queueStruct := queue.NewQueue(redisClient)
+	queueService := queue.NewQueue(redisClient)
 
 	websocketConnection := websocket.NewWebsocket()
 
@@ -24,7 +24,7 @@ func NewInitStruct() *InitStruct {
 
 	return &InitStruct{
 		VirtualizationService: libvirtService,
-		QueueService:          queueStruct,
+		QueueService:          queueService,
 		WebsocketService:      websocketConnection,
 	}
 }

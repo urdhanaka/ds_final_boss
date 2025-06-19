@@ -11,3 +11,9 @@ type StorageStat struct {
 	MaxStorage        uint64
 	StoragePercentage float64
 }
+
+type CpuStat struct {
+	LogicalCounts int
+	FreeLogical   int
+	CurrentUsage  float64
+}

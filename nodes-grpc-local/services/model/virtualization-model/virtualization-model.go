@@ -1,5 +1,7 @@
 package virtualization_model
 
+import proto_model "nodes-grpc-local/services/model/proto-model"
+
 type CreateInstanceRequest struct {
 	// instance name
 	Name string `json:"name"`
@@ -18,6 +20,10 @@ type CreateInstanceRequest struct {
 
 	// is the instance the master?
 	IsMaster bool `json:"isMaster"`
+}
+
+type DeleteInstanceRequest struct {
+	Name string `json:"name"`
 }
 
 type Instance struct {
@@ -47,7 +53,9 @@ type ExecStatus struct {
 }
 
 type VirtCreateInstanceResponse struct {
-	MasterIpAddress string `json:"master_ip_address"`
-	Status          bool   `json:"status"`
-	DashboardToken  string `json:"dashboard_token,omitempty"`
+	MasterIpAddress string             `json:"master_ip_address,omitempty"`
+	DashboardToken  string             `json:"dashboard_token,omitempty"`
+	Message         string             `json:"message,omitempty"`
+	CreationStatus  bool               `json:"creation_status,omitempty"`
+	NodeStatus      proto_model.Status `json:"node_status"`
 }

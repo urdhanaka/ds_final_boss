@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log/slog"
 	virtualization_model "nodes-grpc-local/services/model/virtualization-model"
@@ -18,7 +19,7 @@ import (
 
 const (
 	// timeout in second when waiting the cloud init operations
-	CLOUD_INIT_TIMEOUT = 60
+	CLOUD_INIT_TIMEOUT = 30
 
 	SHUTDOWN_RETRIES = 3
 )
@@ -53,9 +54,17 @@ func (c *LibvirtVirtualization) createMaster(
 	virtRequest *virtualization_model.CreateInstanceRequest,
 ) (*virtualization_model.VirtCreateInstanceResponse, error) {
 	createRes := new(virtualization_model.VirtCreateInstanceResponse)
-	createRes.Status = false
+	createRes.CreationStatus = false
 
 	thisInstanceName := virtRequest.Name
+
+	// defering vm cleanup in case
+	// error happens or deadline exceeded
+	defer func() {
+		if createRes.CreationStatus == false {
+			c.DeleteInstance(thisInstanceName)
+		}
+	}()
 
 	slog.Info(fmt.Sprintf("master node name is %s", thisInstanceName))
 	slogFunction(virtRequest.Name, thisInstanceName, "creating master instance", nil)
@@ -65,7 +74,6 @@ func (c *LibvirtVirtualization) createMaster(
 	err := createNetwork()
 	if err != nil {
 		slogFunction(virtRequest.Name, thisInstanceName, "could not create node network", err)
-		c.deleteInstance(thisInstanceName)
 
 		return createRes, err
 	}
@@ -75,7 +83,6 @@ func (c *LibvirtVirtualization) createMaster(
 	err = createCloudInitMaster(thisInstanceName, virtRequest.Token)
 	if err != nil {
 		slogFunction(virtRequest.Name, thisInstanceName, "could not create node cloud-init configuration", err)
-		c.deleteInstance(thisInstanceName)
 
 		return createRes, err
 	}
@@ -85,27 +92,17 @@ func (c *LibvirtVirtualization) createMaster(
 	err = copyImage(thisInstanceName, virtRequest)
 	if err != nil {
 		slogFunction(virtRequest.Name, thisInstanceName, "could not create node image", err)
-		c.deleteInstance(thisInstanceName)
+		c.DeleteInstance(thisInstanceName)
 
 		return createRes, err
 	}
-
-	// configure the EFI
-	// slogFunction(virtRequest.Name, thisInstanceName, "creating instance EFI file", nil)
-	// err = copyEfi(thisInstanceName)
-	// if err != nil {
-	// 	slogFunction(virtRequest.Name, thisInstanceName, "could not create node EFI", err)
-	// 	c.deleteInstance(thisInstanceName)
-	//
-	// 	return createRes, err
-	// }
 
 	// base xml for the vm
 	slogFunction(virtRequest.Name, thisInstanceName, "creating instance base xml", nil)
 	domainXmlConfig, err := createBase(thisInstanceName, virtRequest)
 	if err != nil {
 		slogFunction(virtRequest.Name, thisInstanceName, "could not create node base xml", err)
-		c.deleteInstance(thisInstanceName)
+		c.DeleteInstance(thisInstanceName)
 
 		return createRes, err
 	}
@@ -115,7 +112,7 @@ func (c *LibvirtVirtualization) createMaster(
 	dom, err := c.libvirtConnection.DomainCreateXML(domainXmlConfig, libvirt.DomainCreateFlags(0))
 	if err != nil {
 		slogFunction(virtRequest.Name, thisInstanceName, "could not spawn node", err)
-		c.deleteInstance(thisInstanceName)
+		c.DeleteInstance(thisInstanceName)
 
 		return createRes, err
 	}
@@ -126,7 +123,7 @@ func (c *LibvirtVirtualization) createMaster(
 	_, err = guestAgentExecStatus(dom, waitCloudInitCmd)
 	if err != nil {
 		slogFunction(virtRequest.Name, thisInstanceName, "error waiting cloud-init process", err)
-		c.deleteInstance(thisInstanceName)
+		c.DeleteInstance(thisInstanceName)
 
 		return createRes, err
 	}
@@ -136,14 +133,14 @@ func (c *LibvirtVirtualization) createMaster(
 	longStatus, err := guestAgentExecStatus(dom, longStatusCloudInitCmd)
 	if err != nil {
 		slogFunction(virtRequest.Name, thisInstanceName, "error exec cloud-init wait --long", err)
-		c.deleteInstance(thisInstanceName)
+		c.DeleteInstance(thisInstanceName)
 
 		return createRes, err
 	}
 	decodedLongStatusBytes, err := base64.StdEncoding.DecodeString(longStatus.Return.OutData)
 	if err != nil {
 		slogFunction(virtRequest.Name, thisInstanceName, "error decoding kubernetes dashboard bytes", err)
-		c.deleteInstance(thisInstanceName)
+		c.DeleteInstance(thisInstanceName)
 
 		return createRes, err
 	}
@@ -156,7 +153,7 @@ func (c *LibvirtVirtualization) createMaster(
 	createTokenStatus, err := guestAgentExecStatus(dom, kubeCreateTokenCmd)
 	if err != nil {
 		slogFunction(virtRequest.Name, thisInstanceName, "error creating kubernetes dashboard token", err)
-		c.deleteInstance(thisInstanceName)
+		c.DeleteInstance(thisInstanceName)
 
 		return createRes, err
 	}
@@ -164,18 +161,18 @@ func (c *LibvirtVirtualization) createMaster(
 	decodedTokenBytes, err := base64.StdEncoding.DecodeString(createTokenStatus.Return.OutData)
 	if err != nil {
 		slogFunction(virtRequest.Name, thisInstanceName, "error decoding kubernetes dashboard bytes", err)
-		c.deleteInstance(thisInstanceName)
+		c.DeleteInstance(thisInstanceName)
 
 		return createRes, err
 	}
 
 	// getting the IP address
 	// DO NOT TOUCH THE sed SEQUENCE
-	ipAddressCmd := `ip -f inet addr show enp1s0 | sed -En -e 's/.*inet ([0-9.]+).*/\\1/p'`
+	ipAddressCmd := `ip -f inet addr show enp1s0 | awk '/inet / {print $2}' | cut -d'/' -f1 | tr -d '\n'`
 	ipAddressStatus, err := guestAgentExecStatus(dom, ipAddressCmd)
 	if err != nil {
 		slogFunction(virtRequest.Name, thisInstanceName, "error getting master instance ip address", err)
-		c.deleteInstance(thisInstanceName)
+		c.DeleteInstance(thisInstanceName)
 
 		return createRes, err
 	}
@@ -183,12 +180,12 @@ func (c *LibvirtVirtualization) createMaster(
 	decodedIpAddressBytes, err := base64.StdEncoding.DecodeString(ipAddressStatus.Return.OutData)
 	if err != nil {
 		slogFunction(virtRequest.Name, thisInstanceName, "error decoding kubernetes dashboard bytes", err)
-		c.deleteInstance(thisInstanceName)
+		c.DeleteInstance(thisInstanceName)
 
 		return createRes, err
 	}
 
-	createRes.Status = true
+	createRes.CreationStatus = true
 	createRes.DashboardToken = string(decodedTokenBytes)
 	createRes.MasterIpAddress = string(decodedIpAddressBytes)
 
@@ -202,7 +199,7 @@ func (c *LibvirtVirtualization) createWorker(
 	virtRequest *virtualization_model.CreateInstanceRequest,
 ) (*virtualization_model.VirtCreateInstanceResponse, error) {
 	createRes := new(virtualization_model.VirtCreateInstanceResponse)
-	createRes.Status = false
+	createRes.CreationStatus = false
 
 	thisInstanceName := virtRequest.Name
 
@@ -214,7 +211,7 @@ func (c *LibvirtVirtualization) createWorker(
 	err := createNetwork()
 	if err != nil {
 		slogFunction(virtRequest.Name, thisInstanceName, "could not create node network", err)
-		c.deleteInstance(thisInstanceName)
+		c.DeleteInstance(thisInstanceName)
 
 		return createRes, err
 	}
@@ -224,7 +221,7 @@ func (c *LibvirtVirtualization) createWorker(
 	err = createCloudInitWorker(thisInstanceName, virtRequest.MasterIpAddress, virtRequest.Token)
 	if err != nil {
 		slogFunction(virtRequest.Name, thisInstanceName, "could not create node cloud-init configuration", err)
-		c.deleteInstance(thisInstanceName)
+		c.DeleteInstance(thisInstanceName)
 
 		return createRes, err
 	}
@@ -234,27 +231,17 @@ func (c *LibvirtVirtualization) createWorker(
 	err = copyImage(thisInstanceName, virtRequest)
 	if err != nil {
 		slogFunction(virtRequest.Name, thisInstanceName, "could not create node image", err)
-		c.deleteInstance(thisInstanceName)
+		c.DeleteInstance(thisInstanceName)
 
 		return createRes, err
 	}
-
-	// configure the EFI
-	// slogFunction(virtRequest.Name, thisInstanceName, "creating node EFI", nil)
-	// err = copyEfi(thisInstanceName)
-	// if err != nil {
-	// 	slogFunction(virtRequest.Name, thisInstanceName, "could not create node EFI", err)
-	// 	c.deleteInstance(thisInstanceName)
-	//
-	// 	return createRes, err
-	// }
 
 	// base xml for the vm
 	slogFunction(virtRequest.Name, thisInstanceName, "creating node base xml", nil)
 	domainXmlConfig, err := createBase(thisInstanceName, virtRequest)
 	if err != nil {
 		slogFunction(virtRequest.Name, thisInstanceName, "could not create node base xml", err)
-		c.deleteInstance(thisInstanceName)
+		c.DeleteInstance(thisInstanceName)
 
 		return createRes, err
 	}
@@ -264,17 +251,18 @@ func (c *LibvirtVirtualization) createWorker(
 	dom, err := c.libvirtConnection.DomainCreateXML(domainXmlConfig, libvirt.DOMAIN_NONE)
 	if err != nil {
 		slogFunction(virtRequest.Name, thisInstanceName, "could not spawn node", err)
-		c.deleteInstance(thisInstanceName)
+		c.DeleteInstance(thisInstanceName)
 
 		return createRes, err
 	}
+
 	slogFunction(virtRequest.Name, thisInstanceName, "waiting until the vm is ready..", nil)
 	time.Sleep(CLOUD_INIT_TIMEOUT * time.Second)
 	waitCloudInitCmd := "cloud-init status --wait"
 	_, err = guestAgentExecStatus(dom, waitCloudInitCmd)
 	if err != nil {
 		slogFunction(virtRequest.Name, thisInstanceName, "could not spawn node", err)
-		c.deleteInstance(thisInstanceName)
+		c.DeleteInstance(thisInstanceName)
 
 		return createRes, err
 	}
@@ -284,14 +272,14 @@ func (c *LibvirtVirtualization) createWorker(
 	longStatus, err := guestAgentExecStatus(dom, longStatusCloudInitCmd)
 	if err != nil {
 		slogFunction(virtRequest.Name, thisInstanceName, "error exec cloud-init wait --long", err)
-		c.deleteInstance(thisInstanceName)
+		c.DeleteInstance(thisInstanceName)
 
 		return createRes, err
 	}
 	decodedLongStatusBytes, err := base64.StdEncoding.DecodeString(longStatus.Return.OutData)
 	if err != nil {
 		slogFunction(virtRequest.Name, thisInstanceName, "error decoding kubernetes dashboard bytes", err)
-		c.deleteInstance(thisInstanceName)
+		c.DeleteInstance(thisInstanceName)
 
 		return createRes, err
 	}
@@ -299,7 +287,7 @@ func (c *LibvirtVirtualization) createWorker(
 		"debug", string(decodedLongStatusBytes),
 	)
 
-	createRes.Status = true
+	createRes.CreationStatus = true
 
 	return createRes, nil
 }
@@ -524,9 +512,6 @@ func createBase(
 	// why, libvirtxml, why?
 	res := strings.Replace(xmlConfig, "<channel>", `<channel type="unix">`, 1)
 
-	// test the xmlConfig string value
-	// fmt.Println(res)
-
 	return res, nil
 }
 
@@ -560,33 +545,6 @@ func copyImage(
 
 	return nil
 }
-
-// func copyEfi(instanceName string) error {
-// 	efiMut.Lock()
-// 	defer efiMut.Unlock()
-//
-// 	destinationPath := NVRAM_DIR + "/" + instanceName + "_VARS.fd"
-//
-// 	data, err := os.ReadFile(NVRAM_TEMPLATE_LOCAL)
-// 	if err != nil {
-// 		return err
-// 	}
-//
-// 	fmt.Println("")
-//
-// 	err = os.WriteFile(destinationPath, data, 0644)
-// 	if err != nil {
-// 		return err
-// 	}
-//
-// 	cmd := exec.Command("chown", "qemu:qemu", destinationPath)
-// 	err = cmd.Run()
-// 	if err != nil {
-// 		return err
-// 	}
-//
-// 	return nil
-// }
 
 func createCloudInitMaster(instanceName string, clusterToken string) error {
 	cloudInitMut.Lock()
@@ -651,6 +609,9 @@ write_files:
 
 runcmd:
 - |
+  echo "wait until network is connected"
+  nm-online -s
+
   echo "running command"
   echo "updating and upgrading packages"
   
@@ -712,13 +673,12 @@ users:
   shell: /bin/bash
 
 runcmd:
-- | 
-  echo "installing k3s"
-  curl -sfL https://get.k3s.io | INSTALL_K3S_SKIP_DOWNLOAD=true INSTALL_K3S_EXEC="agent --server https://%s:6443 --token %s" sh -s -
-  echo "done"
+- echo "installing k3s"
+- curl -sfL https://get.k3s.io | INSTALL_K3S_SKIP_DOWNLOAD=true INSTALL_K3S_EXEC="agent --server https://%s:6443 --token %s" sh -s -
+- echo "done"
 `, instanceName, masterIp, clusterToken)
 
-    fmt.Println(userDataContent)
+	fmt.Println(userDataContent)
 
 	err := os.WriteFile(filePath, []byte(userDataContent), 0644)
 	if err != nil {
@@ -755,103 +715,39 @@ func createNetwork() error {
 	return nil
 }
 
-// NOTE: this function might not needed
-// it's needed if we want to configure the network
-// whether to be set to static or changing the nameservers, etc.
-func createNetworkMaster() error {
-	networkMut.Lock()
-	defer networkMut.Unlock()
-
-	filePath := BASE_POOL_DIR + "/" + "network-config"
-	// NOTE: static address
-	// 	userDataContent := fmt.Sprintf(`network:
-	//   version: 2
-	//   ethernets:
-	//     enp1s0:
-	//       addresses:
-	//         - %s/24
-	//       nameservers:
-	//         addresses: [192.168.122.1]
-	//       routes:
-	//         - to: 0.0.0.0/0
-	//           via: 192.168.122.1
-	//           metric: 100
-	// `, MASTER_NODE_IP)
-
-	// NOTE: dynamic address
-	userDataContent := fmt.Sprintf(`network:
-  version: 2
-  ethernets:
-    enp1s0:
-	  dhcp4: true`)
-
-	err := os.WriteFile(filePath, []byte(userDataContent), 0644)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-// NOTE: this function might not needed
-// it's needed if we want to configure the network
-// whether to be set to static or changing the nameservers, etc.
-func createNetworkWorker() error {
-	networkMut.Lock()
-	defer networkMut.Unlock()
-
-	filePath := BASE_POOL_DIR + "/" + "network-config"
-	// NOTE: static address
-	// 	userDataContent := fmt.Sprintf(`network:
-	//   version: 2
-	//   ethernets:
-	//     enp1s0:
-	//       addresses:
-	//         - %s/24
-	//       nameservers:
-	//         addresses: [192.168.122.1]
-	//       routes:
-	//         - to: 0.0.0.0/0
-	//           via: 192.168.122.1
-	//           metric: 100
-	// `, WORKER_NODE_IP)
-
-	// NOTE: dynamic address
-	userDataContent := fmt.Sprintf(`network:
-  version: 2
-  ethernets:
-    enp1s0:
-	  dhcp4: true`)
-
-	err := os.WriteFile(filePath, []byte(userDataContent), 0644)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func (c *LibvirtVirtualization) deleteInstance(
+func (c *LibvirtVirtualization) DeleteInstance(
 	domainName string,
 ) {
 	domain, err := c.libvirtConnection.LookupDomainByName(domainName)
 	if err != nil {
-		slog.Error("error getting the domain",
-			"error", err,
-		)
+		// if the err value is other than VIR_ERR_NO_DOMAIN, return err
+		// otherwise, just continue
+		if !errors.Is(err, libvirt.ERR_NO_DOMAIN) {
+			slog.Error("error getting the domain",
+				"error", err,
+			)
+		}
 	}
 
 	// every domain is set to delete when shutdown
-	err = domain.Shutdown()
-	if err != nil {
-		slog.Error("could not shutdown the domain, retrying after this",
-			"error", err,
-		)
+	// make sure the domain is not NULL
+	if domain != nil {
+		err = domain.Shutdown()
+		if err != nil {
+			for i := 1; i <= SHUTDOWN_RETRIES; i++ {
+				err = domain.Shutdown()
+				if err != nil {
+					slog.Error("could not shutdown the domain, retrying after this",
+						"error", err,
+					)
+				}
+			}
 
-		for i := 1; i <= SHUTDOWN_RETRIES; i++ {
-			err = domain.Shutdown()
+			slog.Info("forcing shutdown to domain")
+
+			err = domain.Destroy()
 			if err != nil {
-				slog.Error("could not shutdown the domain, retrying after this",
+				slog.Error("could not destroy the domain",
 					"error", err,
 				)
 			}
@@ -904,23 +800,22 @@ func guestAgentExecStatus(
 			return res, err
 		}
 
-		fmt.Println(status)
-
 		err = json.Unmarshal([]byte(status), res)
 		if err != nil {
+			slog.Error("gues-exec error",
+				"error", err,
+			)
 			return res, err
 		}
 
-		fmt.Println(res)
-
-		if res.Return.ErrData != "" {
-			decodedTokenBytes, _ := base64.StdEncoding.DecodeString(res.Return.ErrData)
-			fmt.Println("err-data", string(decodedTokenBytes))
-		}
-		if res.Return.OutData != "" {
-			decodedTokenBytes, _ := base64.StdEncoding.DecodeString(res.Return.OutData)
-			fmt.Println("out-data", string(decodedTokenBytes))
-		}
+		// if res.Return.ErrData != "" {
+		// 	decodedTokenBytes, _ := base64.StdEncoding.DecodeString(res.Return.ErrData)
+		// 	fmt.Println("err-data", string(decodedTokenBytes))
+		// }
+		// if res.Return.OutData != "" {
+		// 	decodedTokenBytes, _ := base64.StdEncoding.DecodeString(res.Return.OutData)
+		// 	fmt.Println("out-data", string(decodedTokenBytes))
+		// }
 
 		if res.Return.Exited {
 			break
@@ -931,3 +826,23 @@ func guestAgentExecStatus(
 
 	return res, nil
 }
+
+// func handleExecStatusOutData(
+// 	dom *libvirt.Domain,
+// ) ([]byte, error) {
+// 	createTokenStatus, err := guestAgentExecStatus(dom, kubeCreateTokenCmd)
+// 	if err != nil {
+// 		slogFunction(virtRequest.Name, thisInstanceName, "error creating kubernetes dashboard token", err)
+// 		c.DeleteInstance(thisInstanceName)
+//
+// 		return createRes, err
+// 	}
+// 	// handle base 64 of the guest agent result
+// 	decodedTokenBytes, err := base64.StdEncoding.DecodeString(createTokenStatus.Return.OutData)
+// 	if err != nil {
+// 		slogFunction(virtRequest.Name, thisInstanceName, "error decoding kubernetes dashboard bytes", err)
+// 		c.DeleteInstance(thisInstanceName)
+//
+// 		return createRes, err
+// 	}
+// }

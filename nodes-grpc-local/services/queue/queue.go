@@ -8,6 +8,15 @@ import (
 	"github.com/redis/go-redis/v9"
 )
 
+const (
+	// redis address
+	REDIS_ADDRESS = "localhost:6379"
+
+	// redis queue key
+	REDIS_SPAWN_QUEUE  = "spawn-queue"
+	REDIS_DELETE_QUEUE = "delete-queue"
+)
+
 type Queue struct {
 	redisClient *redis.Client
 }
@@ -21,7 +30,7 @@ func NewQueue(
 }
 
 // add new job to queue
-func (s *Queue) AddToQueue(
+func (s *Queue) AddToSpawnQueue(
 	ctx context.Context,
 	instanceRequest virtualization_model.CreateInstanceRequest,
 ) error {
@@ -30,7 +39,7 @@ func (s *Queue) AddToQueue(
 		return err
 	}
 
-	_, err = s.redisClient.LPush(ctx, REDIS_MAIN_QUEUE, string(requestString)).Result()
+	_, err = s.redisClient.LPush(ctx, REDIS_SPAWN_QUEUE, string(requestString)).Result()
 	if err != nil {
 		return err
 	}
@@ -38,12 +47,12 @@ func (s *Queue) AddToQueue(
 	return nil
 }
 
-func (s *Queue) PopQueue(
+func (s *Queue) PopSpawnQueue(
 	ctx context.Context,
 ) (*virtualization_model.CreateInstanceRequest, error) {
 	instanceRequest := new(virtualization_model.CreateInstanceRequest)
 
-	job, err := s.redisClient.BRPop(ctx, 0, REDIS_MAIN_QUEUE).Result()
+	job, err := s.redisClient.BRPop(ctx, 0, REDIS_SPAWN_QUEUE).Result()
 	if err != nil {
 		return instanceRequest, err
 	}
@@ -55,6 +64,42 @@ func (s *Queue) PopQueue(
 	}
 
 	return instanceRequest, nil
+}
+
+func (s *Queue) AddToDeleteQueue(
+	ctx context.Context,
+	deleteRequest virtualization_model.DeleteInstanceRequest,
+) error {
+	requestString, err := json.Marshal(deleteRequest)
+	if err != nil {
+		return err
+	}
+
+	_, err = s.redisClient.LPush(ctx, REDIS_DELETE_QUEUE, string(requestString)).Result()
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (s *Queue) PopDeleteQueue(
+	ctx context.Context,
+) (*virtualization_model.DeleteInstanceRequest, error) {
+	deleteRequest := new(virtualization_model.DeleteInstanceRequest)
+
+	job, err := s.redisClient.BRPop(ctx, 0, REDIS_DELETE_QUEUE).Result()
+	if err != nil {
+		return deleteRequest, err
+	}
+
+	// job value is the second element at the array
+	err = json.Unmarshal([]byte(job[1]), deleteRequest)
+	if err != nil {
+		return deleteRequest, err
+	}
+
+	return deleteRequest, nil
 }
 
 func (s *Queue) Subscribe(ctx context.Context, channel string) *redis.PubSub {

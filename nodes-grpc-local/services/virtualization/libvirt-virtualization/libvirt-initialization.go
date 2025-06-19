@@ -26,7 +26,7 @@ func init() {
 	if err != nil && errors.Is(err, fs.ErrNotExist) {
 		slog.Info("pool directory doesn't exist, creating...")
 
-		err = os.Mkdir(POOL_DIR, 711)
+		err = os.Mkdir(POOL_DIR, 0711)
 		if err != nil {
 			slog.Error("could not create pool directory",
 				"error", err.Error())

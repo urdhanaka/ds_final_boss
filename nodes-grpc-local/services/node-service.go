@@ -20,6 +20,7 @@ import (
 
 	"github.com/gorilla/websocket"
 	"google.golang.org/grpc"
+	"libvirt.org/go/libvirt"
 )
 
 type NodeServer struct {
@@ -27,14 +28,17 @@ type NodeServer struct {
 	proto_model.UnimplementedNodeServiceServer
 
 	// queue
-	queue *queue.Queue
+	queue             *queue.Queue
+	// libvirtConnection *libvirt.Connect
 }
 
 func NewNodeServer(
 	queue *queue.Queue,
+	libvirtConnection *libvirt.Connect,
 ) *NodeServer {
 	return &NodeServer{
-		queue: queue,
+		queue:             queue,
+		// libvirtConnection: libvirtConnection,
 	}
 }
 
@@ -42,7 +46,10 @@ func (s *NodeServer) CreateMaster(
 	ctx context.Context,
 	createMasterRequest *proto_model.CreateMasterRequest,
 ) (*proto_model.CreateMasterResponse, error) {
-	provisionCtx, cancel := context.WithCancel(ctx)
+	provisionCtx, cancel := context.WithTimeout(
+		ctx,
+		time.Second*PROVISIONING_TIME,
+	)
 	defer cancel()
 
 	res := new(proto_model.CreateMasterResponse)
@@ -58,12 +65,12 @@ func (s *NodeServer) CreateMaster(
 		Storage:  createMasterRequest.Requirements.Storage,
 	}
 
-	err := s.queue.AddToQueue(provisionCtx, virtSpecs)
+	err := s.queue.AddToSpawnQueue(provisionCtx, virtSpecs)
 	if err != nil {
 		return res, err
 	}
 
-	go sendLogs(instanceName, createMasterRequest.ClusterName)
+	// go sendLogs(instanceName, createMasterRequest.ClusterName)
 
 	sub := s.queue.Subscribe(ctx, instanceName)
 	defer sub.Close()
@@ -78,8 +85,15 @@ func (s *NodeServer) CreateMaster(
 		res.DashboardToken = instanceRes.DashboardToken
 		res.MasterIpAddress = instanceRes.MasterIpAddress
 
-	case <-time.After(PROVISIONING_TIMEOUT * time.Second):
-		fmt.Println("timeout exceeded")
+		// provisioning status
+		res.CreationStatus.Success = instanceRes.CreationStatus
+		res.CreationStatus.Message = instanceRes.Message
+
+	case <-provisionCtx.Done():
+		slog.Info("timeout exceeded")
+
+		res.CreationStatus.Success = false
+		res.CreationStatus.Message = "timeout exceeded"
 	}
 
 	return res, nil
@@ -89,7 +103,10 @@ func (s *NodeServer) CreateWorker(
 	ctx context.Context,
 	createWorkerRequest *proto_model.CreateWorkerRequest,
 ) (*proto_model.CreateWorkerResponse, error) {
-	provisionCtx, cancel := context.WithCancel(ctx)
+	provisionCtx, cancel := context.WithTimeout(
+		ctx,
+		time.Second*PROVISIONING_TIME,
+	)
 	defer cancel()
 
 	res := new(proto_model.CreateWorkerResponse)
@@ -106,12 +123,33 @@ func (s *NodeServer) CreateWorker(
 		Storage:         createWorkerRequest.Requirements.Storage,
 	}
 
-	err := s.queue.AddToQueue(provisionCtx, virtSpecs)
+	err := s.queue.AddToSpawnQueue(provisionCtx, virtSpecs)
 	if err != nil {
 		return res, err
 	}
 
-	go sendLogs(instanceName, createWorkerRequest.ClusterName)
+	sub := s.queue.Subscribe(ctx, instanceName)
+	defer sub.Close()
+
+	msgCh := sub.Channel()
+	select {
+	case msg := <-msgCh:
+		instanceRes := new(virtualization_model.VirtCreateInstanceResponse)
+
+		_ = json.Unmarshal([]byte(msg.Payload), instanceRes)
+
+		// provisioning status
+		res.CreationStatus.Success = instanceRes.CreationStatus
+		res.CreationStatus.Message = instanceRes.Message
+
+		res.NodeStatus = instanceRes.NodeStatus
+
+	case <-provisionCtx.Done():
+		slog.Info("timeout exceeded")
+
+		res.CreationStatus.Success = false
+		res.CreationStatus.Message = "timeout exceeded"
+	}
 
 	return res, nil
 }
@@ -120,27 +158,40 @@ func (s *NodeServer) NodeStatus(
 	ctx context.Context,
 	nodeStatusRequest *proto_model.NodeStatusRequest,
 ) (*proto_model.NodeStatusResponse, error) {
-	CpuUsage := getCpuUsage()
-	memoryStat, err := getMemoryUsage()
+	CpuUsage, err := getCpuStatus()
 	if err != nil {
 		return &proto_model.NodeStatusResponse{}, err
 	}
-	storageStat, err := getStorageUsage()
+
+	memoryStat, err := getMemoryStatus()
+	if err != nil {
+		return &proto_model.NodeStatusResponse{}, err
+	}
+
+	storageStatus, err := getStorageStatus()
 	if err != nil {
 		return &proto_model.NodeStatusResponse{}, err
 	}
 
 	return &proto_model.NodeStatusResponse{
 		NodeUsage: &proto_model.NodeUsagePercentage{
-			CpuUsagePercentage:     CpuUsage,
+			CpuUsagePercentage:     CpuUsage.CurrentUsage,
+			MaxVcpu:                uint64(CpuUsage.LogicalCounts),
+			FreeVcpu:               uint64(CpuUsage.FreeLogical),
 			MemoryAvailable:        memoryStat.Memory,
 			MemoryUsagePercentage:  memoryStat.MemoryPercentage,
-			StorageAvailable:       storageStat.Storage,
-			StorageUsagePercentage: storageStat.StoragePercentage,
+			StorageAvailable:       storageStatus.Storage,
+			StorageUsagePercentage: storageStatus.StoragePercentage,
 		},
 		NodeStatus: proto_model.Status_STATUS_AVAILABLE,
 	}, nil
 }
+
+// func (s *NodeServer) DeleteInstance(
+// 	ctx context.Context,
+// 	deleteInstanceRequest *proto_model.DeleteInstanceRequest,
+// ) (*proto_model.DeleteInstanceResponse, error) {
+// }
 
 func StartGrpcServer(connection *InitStruct) {
 	lis, err := net.Listen("tcp", GRPC_PORT)
@@ -157,7 +208,7 @@ func StartGrpcServer(connection *InitStruct) {
 	})
 
 	// background job
-	go startWorker(connection)
+	startWorker(connection)
 
 	// connect to main server
 	slog.Info("node is ready, connecting to main server")
@@ -185,7 +236,7 @@ func connectToServer() (string, error) {
 	hostname := getHostname()
 	ipAddress := getIpAddress()
 
-	body := []byte(fmt.Sprintf(`{"hostname":"%s","ip_address":"%s"}`, hostname, ipAddress))
+	body := fmt.Appendf(nil, `{"hostname":"%s","ip_address":"%s"}`, hostname, ipAddress)
 	req, err := http.NewRequest("POST", fmt.Sprintf("http://%s/register_node", MAIN_SERVER_URL_LOCAL), bytes.NewBuffer(body))
 	req.Header.Set("Content-Type", "application/json")
 
@@ -206,7 +257,9 @@ func startWorker(connection *InitStruct) {
 		connection.QueueService,
 		connection.VirtualizationService,
 	)
-	worker.DoWork()
+
+	go worker.DoSpawnWork()
+	go worker.DoDeleteWork()
 }
 
 func sendLogs(

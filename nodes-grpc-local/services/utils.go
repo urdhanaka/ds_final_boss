@@ -5,6 +5,8 @@ import (
 	"net"
 	"nodes-grpc-local/services/model"
 	"os"
+	"os/exec"
+	"strconv"
 	"strings"
 	"time"
 
@@ -46,16 +48,7 @@ func getIpAddress() string {
 	return strings.Split(localAddr, ":")[0]
 }
 
-func getCpuUsage() float64 {
-	res, err := cpu.Percent(CPU_USAGE_INTERVAL*time.Second, false)
-	if err != nil {
-		return 0.0
-	}
-
-	return res[0]
-}
-
-func getMemoryUsage() (*model.MemoryStat, error) {
+func getMemoryStatus() (*model.MemoryStat, error) {
 	stat, err := mem.VirtualMemory()
 	if err != nil {
 		return nil, err
@@ -68,7 +61,7 @@ func getMemoryUsage() (*model.MemoryStat, error) {
 	}, nil
 }
 
-func getStorageUsage() (*model.StorageStat, error) {
+func getStorageStatus() (*model.StorageStat, error) {
 	stat, err := disk.Usage("/")
 	if err != nil {
 		return nil, err
@@ -78,5 +71,31 @@ func getStorageUsage() (*model.StorageStat, error) {
 		Storage:           stat.Free,
 		MaxStorage:        stat.Total,
 		StoragePercentage: stat.UsedPercent,
+	}, nil
+}
+
+func getCpuStatus() (*model.CpuStat, error) {
+	logicalCpuCounts, err := cpu.Counts(true)
+	if err != nil {
+		return nil, err
+	}
+
+	// executing shell script
+	output, err := exec.Command("/bin/bash", "./scripts/get-used-vcpu.sh").Output()
+	if err != nil {
+		return nil, err
+	}
+	outputInt, _ := strconv.Atoi(string(output))
+
+	// cpu usage
+	usage, err := cpu.Percent(time.Second*1, false)
+	if err != nil {
+		return nil, err
+	}
+
+	return &model.CpuStat{
+		LogicalCounts: logicalCpuCounts,
+		FreeLogical:   outputInt,
+		CurrentUsage:  usage[0],
 	}, nil
 }
