@@ -2,13 +2,14 @@ package config
 
 import (
 	"context"
+	"embed"
 	"errors"
 	"log/slog"
 	"os"
 
 	"github.com/golang-migrate/migrate/v4"
 	_ "github.com/golang-migrate/migrate/v4/database/postgres"
-	_ "github.com/golang-migrate/migrate/v4/source/file"
+	"github.com/golang-migrate/migrate/v4/source/iofs"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -17,7 +18,7 @@ const (
 	PSQL_ROOT_URL = "postgres://root:root@localhost:5432/root?sslmode=disable"
 )
 
-func NewPsqlConnection() *pgxpool.Pool {
+func NewPsqlConnection(migrationFS embed.FS) *pgxpool.Pool {
 	conn, err := pgxpool.New(context.Background(), PSQL_URL)
 	if err != nil {
 		slog.Error("Could not connect to psql",
@@ -35,7 +36,14 @@ func NewPsqlConnection() *pgxpool.Pool {
 		os.Exit(1)
 	}
 
-	m, err := migrate.New("file://migrations", PSQL_ROOT_URL)
+	d, err := iofs.New(migrationFS, "migrations")
+	if err != nil {
+		slog.Error("Could not create new migrate instances",
+			"error", err,
+		)
+		os.Exit(1)
+	}
+	m, err := migrate.NewWithSourceInstance("iofs", d, PSQL_ROOT_URL)
 	if err != nil {
 		slog.Error("Could not create new migrate instances",
 			"error", err,
@@ -55,8 +63,15 @@ func NewPsqlConnection() *pgxpool.Pool {
 	return conn
 }
 
-func DropTable() {
-	m, err := migrate.New("file://migrations", PSQL_ROOT_URL)
+func DropTable(migrationFS embed.FS) {
+	d, err := iofs.New(migrationFS, "migrations")
+	if err != nil {
+		slog.Error("Could not create new migrate instances",
+			"error", err,
+		)
+		os.Exit(1)
+	}
+	m, err := migrate.NewWithSourceInstance("iofs", d, PSQL_ROOT_URL)
 	if err != nil {
 		slog.Error("Could not create new migrate instances",
 			"error", err,

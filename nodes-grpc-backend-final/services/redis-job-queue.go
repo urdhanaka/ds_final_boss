@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
+	consts "nodes-grpc-be/const"
 	"nodes-grpc-be/entities"
 	"time"
 
@@ -17,24 +18,28 @@ const (
 )
 
 type RedisJobQueue struct {
-	client     *redis.Client
-	queueName  string
-	ctx        context.Context
-	workers    int
-	cancel     context.CancelFunc
-	retryDelay time.Duration
-	clusterSvc *ClusterService
+	client         *redis.Client
+	queueName      string
+	ctx            context.Context
+	workers        int
+	cancel         context.CancelFunc
+	retryDelay     time.Duration
+	clusterService *ClusterService
 }
 
-func NewRedisJobQueue(redisClient *redis.Client, queueName string) *RedisJobQueue {
+func NewRedisJobQueue(
+	redisClient *redis.Client,
+	clusterService *ClusterService,
+) *RedisJobQueue {
 	ctx, cancel := context.WithCancel(context.Background())
 
 	jq := &RedisJobQueue{
-		client:     redisClient,
-		queueName:  queueName,
-		ctx:        ctx,
-		cancel:     cancel,
-		retryDelay: 30 * time.Second,
+		client:         redisClient,
+		queueName:      consts.REDIS_NAME,
+		ctx:            ctx,
+		cancel:         cancel,
+		retryDelay:     30 * time.Second,
+		clusterService: clusterService,
 	}
 
 	return jq

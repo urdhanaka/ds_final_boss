@@ -17,6 +17,7 @@ type LoginUser struct {
 type MeUserReturn struct {
 	UserId         uuid.UUID `json:"user_id"`
 	Name           string    `json:"name"`
+	GroupId        int       `json:"group_id"`
 	Group          string    `json:"group"`
 	Vcpu           int       `json:"vcpu"`
 	Ram            int       `json:"ram"`

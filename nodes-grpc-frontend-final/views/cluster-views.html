@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Dashboard</title>
+    <link rel="stylesheet" href="/public/assets/styles.css" />
+  </head>
+  <body class="h-screen bg-gray-50 font-mono">
+    <div id="container" class="m-8">
+      <div>
+        Hello, {{ .Name }}. You are in {{ .GroupName }} group. This group
+        resources:
+      </div>
+      <ul>
+        <li>VCPU: {{ .Vcpu }}</li>
+        <li>RAM: {{ .Ram }}</li>
+        <li>Storage: {{ .Storage }}</li>
+        <li>Node per cluster: {{ .NodeSize }}</li>
+        <li>Current cluster for this group: {{ .CurrentCluster }}</li>
+        <li>Max cluster for this group: {{ .MaxCluster }}</li>
+      </ul>
+      <div class="flex flex-col mt-8">
+        <p class="text-4xl">Cluster Information:</p>
+        {{ if .Cluster }}
+        <p>ID: {{ .Cluster.ClusterId }}</p>
+        <p>Name: {{ .Cluster.ClusterName }}</p>
+        <p>Status: {{ .Cluster.ClusterStatus }}</p>
+        <p>Ip address: {{ .Cluster.IpAddress }}</p>
+        <p>Access token: {{ .Cluster.AccessToken }}</p>
+        <p>Created at: {{ .Cluster.CreatedAt }}</p>
+        {{ else }}
+        <p>The cluster doesn't exists</p>
+        {{ end }}
+      </div>
+    </div>
+  </body>
+</html>

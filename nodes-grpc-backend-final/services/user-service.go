@@ -39,7 +39,7 @@ func (s *UserService) Login(ctx context.Context, user *models.LoginUser) (string
 
 	// no user is found or password is wrong
 	if userGet == nil || userEntity.Password != userGet.Password {
-        fmt.Println("here")
+		fmt.Println("here")
 		return "", fmt.Errorf("email or password is wrong")
 	}
 
@@ -68,6 +68,7 @@ func (s *UserService) Me(ctx context.Context, token string) (*models.MeUserRetur
 	return &models.MeUserReturn{
 		UserId:         userId,
 		Name:           user.Name,
+		GroupId:        user.GroupID,
 		Group:          group.Name,
 		Vcpu:           group.Vcpu,
 		Ram:            group.Ram,

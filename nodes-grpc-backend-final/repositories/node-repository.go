@@ -23,12 +23,12 @@ func (r *NodeRepository) AddNode(ctx context.Context, node *entities.Node) error
 	if err != nil {
 		return err
 	}
-    defer conn.Release()
+	defer conn.Release()
 
 	_, err = conn.Exec(
 		ctx,
-		"INSERT INTO nodes (node_id, hostname, ip_address, group_id, cpu, ram, storage) VALUES ($1, $2, $3, $4, $5, $6, $7)",
-		node.NodeID, node.Hostname, node.IpAddress, node.GroupId, node.Cpu, node.Ram, node.Storage,
+		"INSERT INTO nodes (node_id, hostname, ip_address, group_id, vcpu, ram, storage) VALUES ($1, $2, $3, $4, $5, $6, $7)",
+		node.NodeID, node.Hostname, node.IpAddress, node.GroupId, node.VCpu, node.Ram, node.Storage,
 	)
 	if err != nil {
 		return err
@@ -45,7 +45,7 @@ func (r *NodeRepository) GetNodesFromGroup(
 	if err != nil {
 		return nil, err
 	}
-    defer conn.Release()
+	defer conn.Release()
 
 	rows, err := conn.Query(ctx, "SELECT * FROM nodes WHERE group_id=$1", groupId)
 	if err != nil {
@@ -60,7 +60,7 @@ func (r *NodeRepository) DeleteNode(ctx context.Context, node *entities.Node) er
 	if err != nil {
 		return err
 	}
-    defer conn.Release()
+	defer conn.Release()
 
 	_, err = conn.Exec(
 		ctx,

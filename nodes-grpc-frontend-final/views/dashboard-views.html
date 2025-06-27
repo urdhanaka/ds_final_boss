@@ -4,23 +4,58 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Dashboard</title>
-    <link rel="stylesheet" href="./public/assets/styles.css" />
+    <link rel="stylesheet" href="/public/assets/styles.css" />
   </head>
   <body class="h-screen bg-gray-50 font-mono">
     <div id="container" class="m-8">
-      <div>Hello, {{ .Name }}</div>
+      <div>
+        Hello, {{ .Name }}. You are in {{ .GroupName }} group. This group
+        resources:
+      </div>
       <ul>
-        <li>Group: {{ .GroupName }}</li>
         <li>VCPU: {{ .Vcpu }}</li>
         <li>RAM: {{ .Ram }}</li>
         <li>Storage: {{ .Storage }}</li>
-        <li>NodeSize per cluster: {{ .NodeSize }}</li>
+        <li>Node per cluster: {{ .NodeSize }}</li>
         <li>Current cluster for this group: {{ .CurrentCluster }}</li>
         <li>Max cluster for this group: {{ .MaxCluster }}</li>
       </ul>
       <div class="flex flex-col mt-8">
+        <p class="text-4xl">Group Worker Computers:</p>
+        {{ if .GroupNodes }}
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 my-2">
+          {{ range .GroupNodes }}
+          <div class="p-4 rounded-md border">
+            <p>Hostname: {{ .Hostname }}</p>
+            <p>IP address: {{ .IpAddress }}</p>
+            <p>VCPU: {{ .VCpu }}</p>
+            <p>RAM: {{ .Ram }}</p>
+            <p>Storage: {{ .Storage }}</p>
+          </div>
+          {{ end }}
+        </div>
+        {{ else }}
+        <p>No computers found</p>
+        {{ end }}
+      </div>
+      <div class="flex flex-col mt-8">
         <p class="text-4xl">My Clusters:</p>
-        {{ range .UserClusters }}
+        {{ if .UserClusters }}
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 my-2">
+          {{ range .UserClusters }}
+          <div class="p-4 rounded-md border">
+            <p>ID: {{ .ClusterId }}</p>
+            <p>Name: {{ .ClusterName }}</p>
+            <p>Status: {{ .ClusterStatus }}</p>
+            <button
+              type="button"
+              class="p-2 bg-blue-700 rounded-md text-white hover:cursor-pointer"
+            >
+              Check
+            </button>
+          </div>
+          {{ end }}
+        </div>
         {{ else }}
         <p>No cluster found</p>
         {{ end }}

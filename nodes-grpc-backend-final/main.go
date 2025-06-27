@@ -7,11 +7,15 @@ import (
 	"os"
 	"os/signal"
 	"time"
+    "embed"
 )
+
+//go:embed migrations/*
+var migrationsContent embed.FS
 
 func main() {
 	ginInstance := config.NewGin()
-	psqlConn := config.NewPsqlConnection()
+	psqlConn := config.NewPsqlConnection(migrationsContent)
 	redisClient := config.NewRedisConnection()
     defer psqlConn.Close()
 
@@ -28,7 +32,7 @@ func main() {
 		// WARN: for development purpose only
 		{
 			slog.Info("dropping the table...")
-			config.DropTable()
+			config.DropTable(migrationsContent)
 		}
 
 		os.Exit(0)

@@ -29,7 +29,7 @@ func (r *UserRepository) GetUserByEmail(
 	if err != nil {
 		return getUser, err
 	}
-    defer conn.Release()
+	defer conn.Release()
 
 	err = conn.QueryRow(ctx, "SELECT user_id, name, email, password, group_id FROM users WHERE email=$1",
 		user.Email,
@@ -54,14 +54,13 @@ func (r *UserRepository) GetUserById(
 	ctx context.Context,
 	user *entities.User,
 ) (*entities.User, error) {
-	getUser := new(entities.User)
-
 	conn, err := r.dbPool.Acquire(ctx)
 	if err != nil {
-		return getUser, err
+		return nil, err
 	}
-    defer conn.Release()
+	defer conn.Release()
 
+	getUser := new(entities.User)
 	err = conn.QueryRow(ctx, "SELECT user_id, name, email, password, group_id FROM users WHERE user_id=$1",
 		user.UserId,
 	).Scan(
@@ -76,6 +75,8 @@ func (r *UserRepository) GetUserById(
 		if !errors.Is(err, sql.ErrNoRows) {
 			return getUser, err
 		}
+
+		return nil, err
 	}
 
 	return getUser, nil

@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"fmt"
-	"net/http"
 	"nodes-grpc-fe/consts"
 
 	"github.com/gin-gonic/gin"
@@ -13,9 +12,7 @@ func AddTokenHeader() gin.HandlerFunc {
 		// always check the cookies
 		tokenCookies, err := c.Cookie(consts.COOKIE_NAME)
 		if err != nil || tokenCookies == "" {
-			Logout()
-			c.Redirect(http.StatusSeeOther, "/login")
-			c.Abort()
+            Logout()(c)
 			return
 		}
 

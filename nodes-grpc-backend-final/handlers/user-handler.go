@@ -8,19 +8,19 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-type UserHandlers struct {
+type UserHandler struct {
 	userService *services.UserService
 }
 
 func NewUserHandler(
 	userService *services.UserService,
-) *UserHandlers {
-	return &UserHandlers{
+) *UserHandler {
+	return &UserHandler{
 		userService: userService,
 	}
 }
 
-func (h *UserHandlers) Login(c *gin.Context) {
+func (h *UserHandler) Login(c *gin.Context) {
 	loginUser := new(models.LoginUser)
 
 	err := c.BindJSON(loginUser)
@@ -38,7 +38,7 @@ func (h *UserHandlers) Login(c *gin.Context) {
 	c.JSON(http.StatusOK, NewSuccessResponseWithData(token, "success"))
 }
 
-func (h *UserHandlers) MeUser(c *gin.Context) {
+func (h *UserHandler) MeUser(c *gin.Context) {
 	token := c.MustGet("token").(string)
 
 	user, err := h.userService.Me(c, token)

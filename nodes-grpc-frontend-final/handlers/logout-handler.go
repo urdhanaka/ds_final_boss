@@ -15,10 +15,10 @@ func Logout() gin.HandlerFunc {
 			-1,
 			"/",
 			"localhost",
-            true,
+			true,
 			true,
 		)
-        c.Header("Authorization", "")
+		c.Header("Authorization", "")
 
 		c.Redirect(http.StatusSeeOther, "/login")
 	}
