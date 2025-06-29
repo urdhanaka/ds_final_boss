@@ -54,9 +54,13 @@ func getMemoryStatus() (*model.MemoryStat, error) {
 		return nil, err
 	}
 
+	// the value returned by the stat is in bytes,
+	// convert it first to gigabytes
+	gigabytes := 1024 * 1024 * 1024
+
 	return &model.MemoryStat{
-		Memory:           int(stat.Available),
-		MaxMemory:        int(stat.Total),
+		Memory:           int(stat.Available / uint64(gigabytes)),
+		MaxMemory:        int(stat.Total / uint64(gigabytes)),
 		MemoryPercentage: stat.UsedPercent,
 	}, nil
 }
@@ -67,9 +71,11 @@ func getStorageStatus() (*model.StorageStat, error) {
 		return nil, err
 	}
 
+	gigabytes := 1024 * 1024 * 1024
+
 	return &model.StorageStat{
-		Storage:           int(stat.Free),
-		MaxStorage:        int(stat.Total),
+		Storage:           int(stat.Free / uint64(gigabytes)),
+		MaxStorage:        int(stat.Total / uint64(gigabytes)),
 		StoragePercentage: stat.UsedPercent,
 	}, nil
 }
