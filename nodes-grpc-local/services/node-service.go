@@ -24,12 +24,10 @@ import (
 )
 
 type NodeServer struct {
-	// proto rpc
 	proto_model.UnimplementedNodeServiceServer
 
-	// queue
 	queue             *queue.Queue
-	// libvirtConnection *libvirt.Connect
+	libvirtConnection *libvirt.Connect
 }
 
 func NewNodeServer(
@@ -38,7 +36,7 @@ func NewNodeServer(
 ) *NodeServer {
 	return &NodeServer{
 		queue:             queue,
-		// libvirtConnection: libvirtConnection,
+		libvirtConnection: libvirtConnection,
 	}
 }
 
@@ -60,9 +58,9 @@ func (s *NodeServer) CreateMaster(
 		Name:     instanceName,
 		IsMaster: true,
 		Token:    createMasterRequest.ClusterToken,
-		Cpu:      createMasterRequest.Requirements.Cpu,
-		Memory:   createMasterRequest.Requirements.Memory,
-		Storage:  createMasterRequest.Requirements.Storage,
+		Cpu:      int(createMasterRequest.Requirements.Cpu),
+		Memory:   int(createMasterRequest.Requirements.Memory),
+		Storage:  int(createMasterRequest.Requirements.Storage),
 	}
 
 	err := s.queue.AddToSpawnQueue(provisionCtx, virtSpecs)
@@ -118,9 +116,9 @@ func (s *NodeServer) CreateWorker(
 		IsMaster:        false,
 		MasterIpAddress: createWorkerRequest.MasterIpAddress,
 		Token:           createWorkerRequest.ClusterToken,
-		Cpu:             createWorkerRequest.Requirements.Cpu,
-		Memory:          createWorkerRequest.Requirements.Memory,
-		Storage:         createWorkerRequest.Requirements.Storage,
+		Cpu:             int(createWorkerRequest.Requirements.Cpu),
+		Memory:          int(createWorkerRequest.Requirements.Memory),
+		Storage:         int(createWorkerRequest.Requirements.Storage),
 	}
 
 	err := s.queue.AddToSpawnQueue(provisionCtx, virtSpecs)
@@ -141,8 +139,6 @@ func (s *NodeServer) CreateWorker(
 		// provisioning status
 		res.CreationStatus.Success = instanceRes.CreationStatus
 		res.CreationStatus.Message = instanceRes.Message
-
-		res.NodeStatus = instanceRes.NodeStatus
 
 	case <-provisionCtx.Done():
 		slog.Info("timeout exceeded")
@@ -176,22 +172,29 @@ func (s *NodeServer) NodeStatus(
 	return &proto_model.NodeStatusResponse{
 		NodeUsage: &proto_model.NodeUsagePercentage{
 			CpuUsagePercentage:     CpuUsage.CurrentUsage,
-			MaxVcpu:                uint64(CpuUsage.LogicalCounts),
-			FreeVcpu:               uint64(CpuUsage.FreeLogical),
-			MemoryAvailable:        memoryStat.Memory,
+			MaxVcpu:                uint32(CpuUsage.LogicalCounts),
+			FreeVcpu:               uint32(CpuUsage.FreeLogical),
+			MemoryAvailable:        uint32(memoryStat.Memory),
 			MemoryUsagePercentage:  memoryStat.MemoryPercentage,
-			StorageAvailable:       storageStatus.Storage,
+			StorageAvailable:       uint32(storageStatus.Storage),
 			StorageUsagePercentage: storageStatus.StoragePercentage,
 		},
-		NodeStatus: proto_model.Status_STATUS_AVAILABLE,
 	}, nil
 }
 
-// func (s *NodeServer) DeleteInstance(
-// 	ctx context.Context,
-// 	deleteInstanceRequest *proto_model.DeleteInstanceRequest,
-// ) (*proto_model.DeleteInstanceResponse, error) {
-// }
+func (s *NodeServer) DeleteInstance(
+	ctx context.Context,
+	deleteInstanceRequest *proto_model.DeleteInstanceRequest,
+) (*proto_model.DeleteInstanceResponse, error) {
+	deleteContext, cancel := context.WithCancel(ctx)
+	defer cancel()
+
+	s.queue.AddToDeleteQueue(deleteContext, virtualization_model.DeleteInstanceRequest{
+		Name: deleteInstanceRequest.InstanceName,
+	})
+
+	return &proto_model.DeleteInstanceResponse{}, nil
+}
 
 func StartGrpcServer(connection *InitStruct) {
 	lis, err := net.Listen("tcp", GRPC_PORT)
@@ -212,15 +215,22 @@ func StartGrpcServer(connection *InitStruct) {
 
 	// connect to main server
 	slog.Info("node is ready, connecting to main server")
-	res, err := connectToServer()
-	if err != nil {
-		slog.Error("StartGrpcServer(): failed to connect to main server",
-			"error", err.Error(),
-		)
-		os.Exit(1)
-	}
-	slog.Info("main server is responding",
-		"response", res)
+	go func() {
+		for {
+			res, err := connectToServer(connection.Lab)
+			if err != nil {
+				slog.Error("StartGrpcServer(): failed to connect to main server",
+					"error", err.Error(),
+				)
+				os.Exit(1)
+			}
+			slog.Info("main server is responding",
+				"response", res)
+
+			// sleep
+			time.Sleep(30 * time.Second)
+		}
+	}()
 
 	slog.Info(fmt.Sprintf("starting grpc server at %s", GRPC_PORT))
 
@@ -232,11 +242,18 @@ func StartGrpcServer(connection *InitStruct) {
 	}
 }
 
-func connectToServer() (string, error) {
+func connectToServer(labName string) (string, error) {
 	hostname := getHostname()
 	ipAddress := getIpAddress()
+	cpuStatus, _ := getCpuStatus()
+	storageStatus, _ := getStorageStatus()
+	memoryStatus, _ := getMemoryStatus()
 
-	body := fmt.Appendf(nil, `{"hostname":"%s","ip_address":"%s"}`, hostname, ipAddress)
+	body := fmt.Appendf(
+		nil,
+		`{"hostname":"%s","ip_address":"%s","lab_name":"%s","vcpu":"%d","storage":"%d","memory":"%d"}`,
+		hostname, ipAddress, labName, cpuStatus.LogicalCounts, storageStatus.Storage, memoryStatus.Memory,
+	)
 	req, err := http.NewRequest("POST", fmt.Sprintf("http://%s/register_node", MAIN_SERVER_URL_LOCAL), bytes.NewBuffer(body))
 	req.Header.Set("Content-Type", "application/json")
 

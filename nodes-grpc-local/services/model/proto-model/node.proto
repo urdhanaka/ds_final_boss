@@ -2,12 +2,6 @@ syntax = "proto3";
 
 option go_package = "./services/model/proto-model";
 
-enum Status {
-  STATUS_UNSPECIFIED = 0;
-  STATUS_AVAILABLE = 1;
-  STATUS_UNAVAILABLE = 2;
-}
-
 message Empty {}
 
 message CreationStatus {
@@ -17,9 +11,9 @@ message CreationStatus {
 
 message CreateNodeRequirements {
   string node_name = 1;
-  int64 cpu = 2;
-  int64 memory = 3;
-  int64 storage = 4;
+  int32 cpu = 2;
+  int32 memory = 3;
+  int32 storage = 4;
 }
 
 // create master
@@ -30,10 +24,9 @@ message CreateMasterRequest {
 }
 
 message CreateMasterResponse {
-  Status node_status = 1;
-  CreationStatus creation_status = 2;
-  string master_ip_address = 3;
-  string dashboard_token = 4;
+  CreationStatus creation_status = 1;
+  string master_ip_address = 2;
+  string dashboard_token = 3;
 }
 
 // create worker
@@ -45,23 +38,22 @@ message CreateWorkerRequest {
 }
 
 message CreateWorkerResponse {
-  Status node_status = 1;
-  CreationStatus creation_status = 2;
+  CreationStatus creation_status = 1;
 }
 
 // node status
 message NodeUsagePercentage {
   // cpu usage percentage
-  uint64 max_vcpu = 1;
-  uint64 free_vcpu = 2;
+  uint32 max_vcpu = 1;
+  uint32 free_vcpu = 2;
   double cpu_usage_percentage = 3;
 
   // storage usage percentage
-  uint64 storage_available = 4;
+  uint32 storage_available = 4;
   double storage_usage_percentage = 5;
 
   // memory usage
-  uint64 memory_available = 6;
+  uint32 memory_available = 6;
   double memory_usage_percentage = 7;
 }
 
@@ -69,7 +61,6 @@ message NodeStatusRequest {}
 
 message NodeStatusResponse {
   NodeUsagePercentage node_usage = 1;
-  Status node_status = 2;
 }
 
 message DeleteInstanceRequest {

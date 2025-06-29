@@ -729,7 +729,7 @@ func (c *LibvirtVirtualization) DeleteInstance(
 		}
 	}
 
-	// every domain is set to delete when shutdown
+	// every domain is set to be deleted when shutting down
 	// make sure the domain is not NULL
 	if domain != nil {
 		err = domain.Shutdown()
