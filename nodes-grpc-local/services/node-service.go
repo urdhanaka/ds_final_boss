@@ -70,7 +70,7 @@ func (s *NodeServer) CreateMaster(
 
 	res.DashboardToken = virtResult.DashboardToken
 	res.MasterIpAddress = virtResult.MasterIpAddress
-	res.CreationStatus.Success = virtResult.CreationStatus
+	// res.CreationStatus.Success = virtResult.CreationStatus
 	// res.CreationStatus.Message = virtResult.Message
 
 	// websocket logs
