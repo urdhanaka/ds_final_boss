@@ -241,12 +241,15 @@ func StartGrpcServer(connection *InitStruct) {
 					"error", err.Error(),
 				)
 				os.Exit(1)
-			}
-			slog.Info("main server is responding",
-				"response", res)
 
-			// sleep
-			time.Sleep(30 * time.Second)
+				time.Sleep(30 * time.Second)
+			} else {
+				slog.Info("main server is responding",
+					"response", res,
+				)
+
+				break
+			}
 		}
 	}()
 
