@@ -723,7 +723,7 @@ func (c *LibvirtVirtualization) DeleteInstance(
 				"error", err,
 			)
 
-            return err
+			return err
 		}
 	}
 
@@ -739,7 +739,7 @@ func (c *LibvirtVirtualization) DeleteInstance(
 						"error", err,
 					)
 
-                    return err
+					return err
 				}
 			}
 
@@ -751,7 +751,7 @@ func (c *LibvirtVirtualization) DeleteInstance(
 					"error", err,
 				)
 
-                return err
+				return err
 			}
 		}
 	}
@@ -765,7 +765,7 @@ func (c *LibvirtVirtualization) DeleteInstance(
 			"error", err,
 		)
 
-        return err
+		return err
 	}
 	deleteFilesCommand = fmt.Sprintf("rm %s/%s.*", NVRAM_DIR, domainName)
 	cmd = exec.Command("/bin/bash", "-c", deleteFilesCommand)
@@ -775,10 +775,10 @@ func (c *LibvirtVirtualization) DeleteInstance(
 			"error", err,
 		)
 
-        return err
+		return err
 	}
 
-    return nil
+	return nil
 }
 
 func guestAgentExecStatus(
@@ -815,6 +815,8 @@ func guestAgentExecStatus(
 			)
 			return res, err
 		}
+
+		fmt.Println("res", res)
 
 		if res.Return.Exited {
 			break
