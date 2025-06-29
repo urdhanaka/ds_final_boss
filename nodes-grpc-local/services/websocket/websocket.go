@@ -46,7 +46,6 @@ func (ws *Websocket) logHandler(w http.ResponseWriter, r *http.Request) {
 	// 			slog.Info("log channel is empty")
 	// 			break
 	// 		}
-	// 		fmt.Println(log)
 	//
 	// 		err := c.WriteMessage(websocket.TextMessage, []byte(log))
 	// 		if err != nil {

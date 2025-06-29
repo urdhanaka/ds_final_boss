@@ -2,7 +2,6 @@ package services
 
 import (
 	"fmt"
-	"nodes-grpc-local/services/queue"
 	libvirt_virtualization "nodes-grpc-local/services/virtualization/libvirt-virtualization"
 	"nodes-grpc-local/services/websocket"
 	"os"
@@ -11,14 +10,14 @@ import (
 type InitStruct struct {
 	VirtualizationService *libvirt_virtualization.LibvirtVirtualization
 	WebsocketService      *websocket.Websocket
-	QueueService          *queue.Queue
-	Lab                   string
+	// QueueService          *queue.Queue
+	Lab string
 }
 
 func NewInitStruct() *InitStruct {
-	redisClient := queue.InitRedisConnection()
+	// redisClient := queue.InitRedisConnection()
 
-	queueService := queue.NewQueue(redisClient)
+	// queueService := queue.NewQueue(redisClient)
 
 	websocketConnection := websocket.NewWebsocket()
 
@@ -29,9 +28,9 @@ func NewInitStruct() *InitStruct {
 
 	return &InitStruct{
 		VirtualizationService: libvirtService,
-		QueueService:          queueService,
-		WebsocketService:      websocketConnection,
-		Lab:                   lab,
+		// QueueService:          queueService,
+		WebsocketService: websocketConnection,
+		Lab:              lab,
 	}
 }
 

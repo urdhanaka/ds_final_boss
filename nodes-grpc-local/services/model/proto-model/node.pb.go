@@ -112,7 +112,7 @@ func (x *CreationStatus) GetMessage() string {
 type CreateNodeRequirements struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	NodeName      string                 `protobuf:"bytes,1,opt,name=node_name,json=nodeName,proto3" json:"node_name,omitempty"`
-	Cpu           int32                  `protobuf:"varint,2,opt,name=cpu,proto3" json:"cpu,omitempty"`
+	Vcpu          int32                  `protobuf:"varint,2,opt,name=vcpu,proto3" json:"vcpu,omitempty"`
 	Memory        int32                  `protobuf:"varint,3,opt,name=memory,proto3" json:"memory,omitempty"`
 	Storage       int32                  `protobuf:"varint,4,opt,name=storage,proto3" json:"storage,omitempty"`
 	unknownFields protoimpl.UnknownFields
@@ -156,9 +156,9 @@ func (x *CreateNodeRequirements) GetNodeName() string {
 	return ""
 }
 
-func (x *CreateNodeRequirements) GetCpu() int32 {
+func (x *CreateNodeRequirements) GetVcpu() int32 {
 	if x != nil {
-		return x.Cpu
+		return x.Vcpu
 	}
 	return 0
 }
@@ -675,10 +675,10 @@ const file_services_model_proto_model_node_proto_rawDesc = "" +
 	"\x05Empty\"D\n" +
 	"\x0eCreationStatus\x12\x18\n" +
 	"\asuccess\x18\x01 \x01(\bR\asuccess\x12\x18\n" +
-	"\amessage\x18\x02 \x01(\tR\amessage\"y\n" +
+	"\amessage\x18\x02 \x01(\tR\amessage\"{\n" +
 	"\x16CreateNodeRequirements\x12\x1b\n" +
-	"\tnode_name\x18\x01 \x01(\tR\bnodeName\x12\x10\n" +
-	"\x03cpu\x18\x02 \x01(\x05R\x03cpu\x12\x16\n" +
+	"\tnode_name\x18\x01 \x01(\tR\bnodeName\x12\x12\n" +
+	"\x04vcpu\x18\x02 \x01(\x05R\x04vcpu\x12\x16\n" +
 	"\x06memory\x18\x03 \x01(\x05R\x06memory\x12\x18\n" +
 	"\astorage\x18\x04 \x01(\x05R\astorage\"\x9a\x01\n" +
 	"\x13CreateMasterRequest\x12!\n" +

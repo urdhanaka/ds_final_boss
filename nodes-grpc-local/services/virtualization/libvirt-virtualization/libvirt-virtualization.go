@@ -189,8 +189,6 @@ func (c *LibvirtVirtualization) createMaster(
 	createRes.DashboardToken = string(decodedTokenBytes)
 	createRes.MasterIpAddress = string(decodedIpAddressBytes)
 
-	fmt.Println("create master response: ", createRes)
-
 	return createRes, nil
 }
 
@@ -678,8 +676,6 @@ runcmd:
 - echo "done"
 `, instanceName, masterIp, clusterToken)
 
-	fmt.Println(userDataContent)
-
 	err := os.WriteFile(filePath, []byte(userDataContent), 0644)
 	if err != nil {
 		return err
@@ -717,7 +713,7 @@ func createNetwork() error {
 
 func (c *LibvirtVirtualization) DeleteInstance(
 	domainName string,
-) {
+) error {
 	domain, err := c.libvirtConnection.LookupDomainByName(domainName)
 	if err != nil {
 		// if the err value is other than VIR_ERR_NO_DOMAIN, return err
@@ -726,6 +722,8 @@ func (c *LibvirtVirtualization) DeleteInstance(
 			slog.Error("error getting the domain",
 				"error", err,
 			)
+
+            return err
 		}
 	}
 
@@ -740,6 +738,8 @@ func (c *LibvirtVirtualization) DeleteInstance(
 					slog.Error("could not shutdown the domain, retrying after this",
 						"error", err,
 					)
+
+                    return err
 				}
 			}
 
@@ -750,6 +750,8 @@ func (c *LibvirtVirtualization) DeleteInstance(
 				slog.Error("could not destroy the domain",
 					"error", err,
 				)
+
+                return err
 			}
 		}
 	}
@@ -762,6 +764,8 @@ func (c *LibvirtVirtualization) DeleteInstance(
 		slog.Error("could not clean domain files",
 			"error", err,
 		)
+
+        return err
 	}
 	deleteFilesCommand = fmt.Sprintf("rm %s/%s.*", NVRAM_DIR, domainName)
 	cmd = exec.Command("/bin/bash", "-c", deleteFilesCommand)
@@ -770,7 +774,11 @@ func (c *LibvirtVirtualization) DeleteInstance(
 		slog.Error("could not clean domain files",
 			"error", err,
 		)
+
+        return err
 	}
+
+    return nil
 }
 
 func guestAgentExecStatus(
@@ -807,15 +815,6 @@ func guestAgentExecStatus(
 			)
 			return res, err
 		}
-
-		// if res.Return.ErrData != "" {
-		// 	decodedTokenBytes, _ := base64.StdEncoding.DecodeString(res.Return.ErrData)
-		// 	fmt.Println("err-data", string(decodedTokenBytes))
-		// }
-		// if res.Return.OutData != "" {
-		// 	decodedTokenBytes, _ := base64.StdEncoding.DecodeString(res.Return.OutData)
-		// 	fmt.Println("out-data", string(decodedTokenBytes))
-		// }
 
 		if res.Return.Exited {
 			break

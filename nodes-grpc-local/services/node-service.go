@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"bytes"
 	"context"
-	"encoding/json"
 	"fmt"
 	"io"
 	"log/slog"
@@ -26,17 +25,18 @@ import (
 type NodeServer struct {
 	proto_model.UnimplementedNodeServiceServer
 
-	queue             *queue.Queue
-	libvirtConnection *libvirt.Connect
+	// queue                 *queue.Queue
+	libvirtVirtualization *libvirt_virtualization.LibvirtVirtualization
 }
 
 func NewNodeServer(
 	queue *queue.Queue,
+	libvirtVirtualization *libvirt_virtualization.LibvirtVirtualization,
 	libvirtConnection *libvirt.Connect,
 ) *NodeServer {
 	return &NodeServer{
-		queue:             queue,
-		libvirtConnection: libvirtConnection,
+		// queue:                 queue,
+		libvirtVirtualization: libvirtVirtualization,
 	}
 }
 
@@ -58,41 +58,52 @@ func (s *NodeServer) CreateMaster(
 		Name:     instanceName,
 		IsMaster: true,
 		Token:    createMasterRequest.ClusterToken,
-		Cpu:      int(createMasterRequest.Requirements.Cpu),
+		Cpu:      int(createMasterRequest.Requirements.Vcpu),
 		Memory:   int(createMasterRequest.Requirements.Memory),
 		Storage:  int(createMasterRequest.Requirements.Storage),
 	}
 
-	err := s.queue.AddToSpawnQueue(provisionCtx, virtSpecs)
+	virtResult, err := s.libvirtVirtualization.CreateInstance(provisionCtx, &virtSpecs)
 	if err != nil {
 		return res, err
 	}
 
+	res.DashboardToken = virtResult.DashboardToken
+	res.MasterIpAddress = virtResult.MasterIpAddress
+	res.CreationStatus.Success = virtResult.CreationStatus
+	res.CreationStatus.Message = virtResult.Message
+
+	// websocket logs
 	// go sendLogs(instanceName, createMasterRequest.ClusterName)
 
-	sub := s.queue.Subscribe(ctx, instanceName)
-	defer sub.Close()
+	// err := s.queue.AddToSpawnQueue(provisionCtx, virtSpecs)
+	// if err != nil {
+	// 	return res, err
+	// }
 
-	msgCh := sub.Channel()
-	select {
-	case msg := <-msgCh:
-		instanceRes := new(virtualization_model.VirtCreateInstanceResponse)
-
-		_ = json.Unmarshal([]byte(msg.Payload), instanceRes)
-
-		res.DashboardToken = instanceRes.DashboardToken
-		res.MasterIpAddress = instanceRes.MasterIpAddress
-
-		// provisioning status
-		res.CreationStatus.Success = instanceRes.CreationStatus
-		res.CreationStatus.Message = instanceRes.Message
-
-	case <-provisionCtx.Done():
-		slog.Info("timeout exceeded")
-
-		res.CreationStatus.Success = false
-		res.CreationStatus.Message = "timeout exceeded"
-	}
+	// sub := s.queue.Subscribe(ctx, instanceName)
+	// defer sub.Close()
+	//
+	// msgCh := sub.Channel()
+	// select {
+	// case msg := <-msgCh:
+	// 	instanceRes := new(virtualization_model.VirtCreateInstanceResponse)
+	//
+	// 	_ = json.Unmarshal([]byte(msg.Payload), instanceRes)
+	//
+	// 	res.DashboardToken = instanceRes.DashboardToken
+	// 	res.MasterIpAddress = instanceRes.MasterIpAddress
+	//
+	// 	// provisioning status
+	// 	res.CreationStatus.Success = instanceRes.CreationStatus
+	// 	res.CreationStatus.Message = instanceRes.Message
+	//
+	// case <-provisionCtx.Done():
+	// 	slog.Info("timeout exceeded")
+	//
+	// 	res.CreationStatus.Success = false
+	// 	res.CreationStatus.Message = "timeout exceeded"
+	// }
 
 	return res, nil
 }
@@ -116,36 +127,44 @@ func (s *NodeServer) CreateWorker(
 		IsMaster:        false,
 		MasterIpAddress: createWorkerRequest.MasterIpAddress,
 		Token:           createWorkerRequest.ClusterToken,
-		Cpu:             int(createWorkerRequest.Requirements.Cpu),
+		Cpu:             int(createWorkerRequest.Requirements.Vcpu),
 		Memory:          int(createWorkerRequest.Requirements.Memory),
 		Storage:         int(createWorkerRequest.Requirements.Storage),
 	}
 
-	err := s.queue.AddToSpawnQueue(provisionCtx, virtSpecs)
+	virtResult, err := s.libvirtVirtualization.CreateInstance(provisionCtx, &virtSpecs)
 	if err != nil {
 		return res, err
 	}
 
-	sub := s.queue.Subscribe(ctx, instanceName)
-	defer sub.Close()
+	res.CreationStatus.Success = virtResult.CreationStatus
+	res.CreationStatus.Message = virtResult.Message
 
-	msgCh := sub.Channel()
-	select {
-	case msg := <-msgCh:
-		instanceRes := new(virtualization_model.VirtCreateInstanceResponse)
+	// err := s.queue.AddToSpawnQueue(provisionCtx, virtSpecs)
+	// if err != nil {
+	// 	return res, err
+	// }
 
-		_ = json.Unmarshal([]byte(msg.Payload), instanceRes)
-
-		// provisioning status
-		res.CreationStatus.Success = instanceRes.CreationStatus
-		res.CreationStatus.Message = instanceRes.Message
-
-	case <-provisionCtx.Done():
-		slog.Info("timeout exceeded")
-
-		res.CreationStatus.Success = false
-		res.CreationStatus.Message = "timeout exceeded"
-	}
+	// sub := s.queue.Subscribe(ctx, instanceName)
+	// defer sub.Close()
+	//
+	// msgCh := sub.Channel()
+	// select {
+	// case msg := <-msgCh:
+	// 	instanceRes := new(virtualization_model.VirtCreateInstanceResponse)
+	//
+	// 	_ = json.Unmarshal([]byte(msg.Payload), instanceRes)
+	//
+	// 	// provisioning status
+	// 	res.CreationStatus.Success = instanceRes.CreationStatus
+	// 	res.CreationStatus.Message = instanceRes.Message
+	//
+	// case <-provisionCtx.Done():
+	// 	slog.Info("timeout exceeded")
+	//
+	// 	res.CreationStatus.Success = false
+	// 	res.CreationStatus.Message = "timeout exceeded"
+	// }
 
 	return res, nil
 }
@@ -186,12 +205,10 @@ func (s *NodeServer) DeleteInstance(
 	ctx context.Context,
 	deleteInstanceRequest *proto_model.DeleteInstanceRequest,
 ) (*proto_model.DeleteInstanceResponse, error) {
-	deleteContext, cancel := context.WithCancel(ctx)
-	defer cancel()
-
-	s.queue.AddToDeleteQueue(deleteContext, virtualization_model.DeleteInstanceRequest{
-		Name: deleteInstanceRequest.InstanceName,
-	})
+	err := s.libvirtVirtualization.DeleteInstance(deleteInstanceRequest.InstanceName)
+	if err != nil {
+		return &proto_model.DeleteInstanceResponse{}, err
+	}
 
 	return &proto_model.DeleteInstanceResponse{}, nil
 }
@@ -207,11 +224,12 @@ func StartGrpcServer(connection *InitStruct) {
 
 	s := grpc.NewServer()
 	proto_model.RegisterNodeServiceServer(s, &NodeServer{
-		queue: connection.QueueService,
+		libvirtVirtualization: connection.VirtualizationService,
+		// queue: connection.QueueService,
 	})
 
 	// background job
-	startWorker(connection)
+	// startWorker(connection)
 
 	// connect to main server
 	slog.Info("node is ready, connecting to main server")
@@ -269,15 +287,15 @@ func connectToServer(labName string) (string, error) {
 	return string(respBody), nil
 }
 
-func startWorker(connection *InitStruct) {
-	worker := queue.NewWorker(
-		connection.QueueService,
-		connection.VirtualizationService,
-	)
-
-	go worker.DoSpawnWork()
-	go worker.DoDeleteWork()
-}
+// func startWorker(connection *InitStruct) {
+// 	worker := queue.NewWorker(
+// 		connection.QueueService,
+// 		connection.VirtualizationService,
+// 	)
+//
+// 	go worker.DoSpawnWork()
+// 	go worker.DoDeleteWork()
+// }
 
 func sendLogs(
 	instanceName string,
