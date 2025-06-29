@@ -269,7 +269,7 @@ func connectToServer(labName string) (string, error) {
 
 	body := fmt.Appendf(
 		nil,
-		`{"hostname":"%s","ip_address":"%s","lab_name":"%s","vcpu":"%d","storage":"%d","memory":"%d"}`,
+		`{"hostname":"%s","ip_address":"%s","lab_name":"%s","vcpu":%d,"storage":%d,"memory":%d}`,
 		hostname, ipAddress, labName, cpuStatus.LogicalCounts, storageStatus.Storage, memoryStatus.Memory,
 	)
 	req, err := http.NewRequest("POST", fmt.Sprintf("http://%s/register_node", MAIN_SERVER_URL_LOCAL), bytes.NewBuffer(body))

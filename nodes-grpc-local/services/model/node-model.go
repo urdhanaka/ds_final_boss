@@ -1,14 +1,14 @@
 package model
 
 type MemoryStat struct {
-	Memory           uint64
-	MaxMemory        uint64
+	Memory           int
+	MaxMemory        int
 	MemoryPercentage float64
 }
 
 type StorageStat struct {
-	Storage           uint64
-	MaxStorage        uint64
+	Storage           int
+	MaxStorage        int
 	StoragePercentage float64
 }
 

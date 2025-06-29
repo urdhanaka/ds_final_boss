@@ -55,8 +55,8 @@ func getMemoryStatus() (*model.MemoryStat, error) {
 	}
 
 	return &model.MemoryStat{
-		Memory:           stat.Available,
-		MaxMemory:        stat.Total,
+		Memory:           int(stat.Available),
+		MaxMemory:        int(stat.Total),
 		MemoryPercentage: stat.UsedPercent,
 	}, nil
 }
@@ -68,8 +68,8 @@ func getStorageStatus() (*model.StorageStat, error) {
 	}
 
 	return &model.StorageStat{
-		Storage:           stat.Free,
-		MaxStorage:        stat.Total,
+		Storage:           int(stat.Free),
+		MaxStorage:        int(stat.Total),
 		StoragePercentage: stat.UsedPercent,
 	}, nil
 }
