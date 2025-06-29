@@ -176,6 +176,9 @@ func (c *LibvirtVirtualization) createMaster(
 
 		return createRes, err
 	}
+
+    fmt.Println("here works")
+
 	// handle base 64 of the guest agent result
 	decodedIpAddressBytes, err := base64.StdEncoding.DecodeString(ipAddressStatus.Return.OutData)
 	if err != nil {

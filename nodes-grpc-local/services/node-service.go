@@ -71,7 +71,7 @@ func (s *NodeServer) CreateMaster(
 	res.DashboardToken = virtResult.DashboardToken
 	res.MasterIpAddress = virtResult.MasterIpAddress
 	res.CreationStatus.Success = virtResult.CreationStatus
-	res.CreationStatus.Message = virtResult.Message
+	// res.CreationStatus.Message = virtResult.Message
 
 	// websocket logs
 	// go sendLogs(instanceName, createMasterRequest.ClusterName)
@@ -138,7 +138,7 @@ func (s *NodeServer) CreateWorker(
 	}
 
 	res.CreationStatus.Success = virtResult.CreationStatus
-	res.CreationStatus.Message = virtResult.Message
+	// res.CreationStatus.Message = virtResult.Message
 
 	// err := s.queue.AddToSpawnQueue(provisionCtx, virtSpecs)
 	// if err != nil {
