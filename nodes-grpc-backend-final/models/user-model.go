@@ -20,7 +20,7 @@ type MeUserReturn struct {
 	GroupId        int       `json:"group_id"`
 	Group          string    `json:"group"`
 	Vcpu           int       `json:"vcpu"`
-	Ram            int       `json:"ram"`
+	Memory         int       `json:"memory"`
 	Storage        int       `json:"storage"`
 	NodeSize       int       `json:"node_size"`
 	CurrentCluster int       `json:"current_cluster"`

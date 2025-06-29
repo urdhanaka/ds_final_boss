@@ -28,7 +28,7 @@ func (r *NodeRepository) AddNode(ctx context.Context, node *entities.Node) error
 	_, err = conn.Exec(
 		ctx,
 		"INSERT INTO nodes (node_id, hostname, ip_address, group_id, vcpu, ram, storage) VALUES ($1, $2, $3, $4, $5, $6, $7)",
-		node.NodeID, node.Hostname, node.IpAddress, node.GroupId, node.VCpu, node.Ram, node.Storage,
+		node.NodeID, node.Hostname, node.IpAddress, node.GroupId, node.VCpu, node.Memory, node.Storage,
 	)
 	if err != nil {
 		return err
@@ -72,4 +72,36 @@ func (r *NodeRepository) DeleteNode(ctx context.Context, node *entities.Node) er
 	}
 
 	return nil
+}
+
+func (r *NodeRepository) GetNodeByHostnameAndGroupId(
+	ctx context.Context,
+	node *entities.Node,
+) (*entities.Node, error) {
+	conn, err := r.dbPool.Acquire(ctx)
+	if err != nil {
+		return nil, err
+	}
+	defer conn.Release()
+
+	getNode := new(entities.Node)
+
+	err = conn.QueryRow(
+		ctx,
+		"SELECT * FROM nodes WHERE hostname=$1 AND group_id=$2",
+		node.Hostname, node.GroupId,
+	).Scan(
+		&getNode.NodeID,
+		&getNode.Hostname,
+		&getNode.IpAddress,
+		&getNode.GroupId,
+		&getNode.VCpu,
+		&getNode.Memory,
+		&getNode.Storage,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	return getNode, nil
 }

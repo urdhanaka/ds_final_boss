@@ -97,3 +97,27 @@ func (r *ClusterRepository) GetClusterFromClusterId(
 
 	return cluster, err
 }
+
+func (r *ClusterRepository) UpdateClusterStatusByClusterId(
+	ctx context.Context,
+	cluster *entities.Cluster,
+) error {
+	conn, err := r.dbPool.Acquire(ctx)
+	if err != nil {
+		return err
+	}
+	defer conn.Release()
+
+	_, err = conn.Exec(
+		ctx,
+		`UPDATE clusters
+        SET cluster_status=$1
+        WHERE cluster_id=$2`,
+		cluster.ClusterStatus, cluster.ClusterID,
+	)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}

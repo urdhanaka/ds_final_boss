@@ -13,28 +13,46 @@ func DashboardPageHandlers(apiClient *ApiClient) gin.HandlerFunc {
 		// me user data
 		res, err := apiClient.Me(c)
 		if err != nil || !res.Success {
-			ErrorPageHandlers(err)(c)
+			if err == nil {
+				ErrorPageHandlers(err, res)(c)
+				return
+			}
+
+			ErrorPageHandlers(err, res)(c)
+			return
 		}
+
 		meUser := &models.MeUserReturn{}
 		jsonBytes, err := json.Marshal(res.Data)
 		if err != nil {
-			ErrorPageHandlers(err)(c)
+			ErrorPageHandlers(err, nil)(c)
+			return
 		}
 		err = json.Unmarshal(jsonBytes, meUser)
 		if err != nil {
-			ErrorPageHandlers(err)(c)
+			ErrorPageHandlers(err, nil)(c)
+			return
 		}
 
 		// group nodes data
 		res, err = apiClient.GetGroupNodes(c)
+		if err != nil || !res.Success {
+			if err == nil {
+				ErrorPageHandlers(err, res)(c)
+				return
+			}
+
+			ErrorPageHandlers(err, res)(c)
+			return
+		}
 		groupNodes := &[]*models.Nodes{}
 		jsonBytes, err = json.Marshal(res.Data)
 		if err != nil {
-			ErrorPageHandlers(err)(c)
+			ErrorPageHandlers(err, nil)(c)
 		}
 		err = json.Unmarshal(jsonBytes, groupNodes)
 		if err != nil {
-			ErrorPageHandlers(err)(c)
+			ErrorPageHandlers(err, nil)(c)
 		}
 
 		// user clusters
@@ -42,18 +60,18 @@ func DashboardPageHandlers(apiClient *ApiClient) gin.HandlerFunc {
 		userClusters := &[]*models.Clusters{}
 		jsonBytes, err = json.Marshal(res.Data)
 		if err != nil {
-			ErrorPageHandlers(err)(c)
+			ErrorPageHandlers(err, res)(c)
 		}
 		err = json.Unmarshal(jsonBytes, userClusters)
 		if err != nil {
-			ErrorPageHandlers(err)(c)
+			ErrorPageHandlers(err, nil)(c)
 		}
 
 		c.HTML(http.StatusOK, "dashboard-views.html", gin.H{
 			"Name":           meUser.Name,
 			"GroupName":      meUser.Group,
 			"Vcpu":           meUser.Vcpu,
-			"Ram":            meUser.Ram,
+			"Memory":         meUser.Memory,
 			"Storage":        meUser.Storage,
 			"NodeSize":       meUser.NodeSize,
 			"CurrentCluster": meUser.CurrentCluster,

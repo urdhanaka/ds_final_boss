@@ -14,3 +14,8 @@ type Clusters struct {
 	AccessToken   string    `json:"access_token"`
 	CreatedAt     time.Time `json:"created_at"`
 }
+
+type CreateCluster struct {
+	ClusterName string   `json:"cluster_name"`
+	Nodes       []string `json:"nodes"`
+}

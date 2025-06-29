@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Dashboard</title>
+    <link rel="stylesheet" href="/public/assets/styles.css" />
+    <script
+      src="https://code.jquery.com/jquery-3.7.1.min.js"
+      integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo="
+      crossorigin="anonymous"
+    ></script>
+  </head>
+  <body class="h-screen bg-gray-50 font-mono">
+    <div id="container" class="m-8">
+      <div>
+        Hello, {{ .Name }}. You are in {{ .GroupName }} group. This group
+        resources:
+      </div>
+      <ul>
+        <li>VCPU: {{ .Vcpu }}</li>
+        <li>Memory: {{ .Memory }}</li>
+        <li>Storage: {{ .Storage }}</li>
+        <li>Node per cluster: {{ .NodeSize }}</li>
+        <li>Current cluster for this group: {{ .CurrentCluster }}</li>
+        <li>Max cluster for this group: {{ .MaxCluster }}</li>
+      </ul>
+      <div class="flex flex-col">
+        <p class="text-4xl">Group Worker Computers:</p>
+        {{ if .GroupNodes }}
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 my-2">
+          {{ range .GroupNodes }}
+          <div class="p-4 rounded-md border">
+            <p>Hostname: {{ .Hostname }}</p>
+            <p>IP address: {{ .IpAddress }}</p>
+            <p>VCPU: {{ .VCpu }}</p>
+            <p>Memory: {{ .Memory }}</p>
+            <p>Storage: {{ .Storage }}</p>
+          </div>
+          {{ end }}
+        </div>
+        <div>
+          <p class="text-2xl">Create clusters</p>
+          <div class="flex">
+            <form id="nodesSelector">
+              <label for="cluster_name" class="text-xl">cluster name:</label>
+              <input
+                type="text"
+                id="cluster_name"
+                class="border border-black text-gray-900 text-sm rounded-md block w-full p-2.5"
+                required
+              /><br />
+              <p class="text-xl">Select nodes:</p>
+              <div>
+                {{ range .GroupNodes }}
+                <div>
+                  <input
+                    type="checkbox"
+                    id="{{ .Hostname }},{{ .IpAddress }}"
+                    value="{{ .Hostname }},{{ .IpAddress }}"
+                  />
+                  <label for="{{ .Hostname }},{{ .IpAddress }}"
+                    >{{ .Hostname }},{{ .IpAddress }}</label
+                  >
+                </div>
+                {{ end }}
+              </div>
+              <button
+                type="submit"
+                class="w-full bg-blue-500 text-white p-3 rounded-lg transition hover:bg-blue-600 hover:cursor-pointer"
+              >
+                Create
+              </button>
+            </form>
+          </div>
+        </div>
+        <div id="result"></div>
+        {{ else }}
+        <p>No computers found</p>
+        {{ end }}
+      </div>
+    </div>
+
+    <!-- script starts here -->
+    <script>
+      $("#nodesSelector").on("submit", function (e) {
+        e.preventDefault();
+
+        const selectedValues = [];
+        let clusterName = "";
+
+        // get the nodes checked
+        $('input[type="checkbox"]:checked').each(function () {
+          selectedValues.push($(this).val());
+        });
+
+        // id="cluster_name"
+        clusterName = $("#cluster_name").val();
+
+        if (selectedValues.length === 0) {
+          $("#result").html(
+            '<p style="color: red;">Please select at least one option.</p>',
+          );
+          return;
+        } else if (clusterName === "") {
+          $("#result").html(
+            '<p style="color: red;">Please input the cluster name.</p>',
+          );
+        }
+
+        $("#result").html("<p>Sending data...</p>");
+
+        $.ajax({
+          url: "/create-cluster",
+          method: "POST",
+          contentType: "application/json",
+          data: JSON.stringify({
+            cluster_name: clusterName,
+            nodes: selectedValues,
+          }),
+          success: function (response) {
+            $("#result").html(
+              '<p style="color: green;">Success! Response: ' +
+                JSON.stringify(response) +
+                "</p>",
+            );
+          },
+          error: function (xhr, status, error) {
+            $("#result").html(
+              '<p style="color: red;">Error: ' + error + "</p>",
+            );
+          },
+        });
+      });
+    </script>
+  </body>
+</html>

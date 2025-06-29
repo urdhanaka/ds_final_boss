@@ -71,7 +71,7 @@ func (s *UserService) Me(ctx context.Context, token string) (*models.MeUserRetur
 		GroupId:        user.GroupID,
 		Group:          group.Name,
 		Vcpu:           group.Vcpu,
-		Ram:            group.Ram,
+		Memory:         group.Memory,
 		Storage:        group.Storage,
 		NodeSize:       group.NodeSize,
 		CurrentCluster: group.CurrentCluster,

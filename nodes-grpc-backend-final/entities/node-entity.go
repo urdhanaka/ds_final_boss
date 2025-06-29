@@ -7,7 +7,7 @@ type Node struct {
 	Hostname  string    `json:"hostname,omitempty" db:"hostname"`     // hostname
 	IpAddress string    `json:"ip_address,omitempty" db:"ip_address"` // ip address
 	VCpu      int       `json:"vcpu" db:"vcpu"`
-	Ram       int       `json:"ram" db:"ram"`
+	Memory    int       `json:"memory" db:"memory"`
 	Storage   int       `json:"storage" db:"storage"`
 	GroupId   int       `json:"group_id,omitempty" db:"group_id"` // group ID
 }

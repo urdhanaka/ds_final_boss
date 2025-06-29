@@ -32,11 +32,12 @@ func setRouters(app *gin.Engine, resty *resty.Client) {
 	app.GET("/dashboard", handlers.AddTokenHeader(), handlers.DashboardPageHandlers(apiClient))
 
 	// create cluster
-	app.GET("/cluster", handlers.AddTokenHeader(), handlers.DashboardPageHandlers(apiClient))
-	app.POST("/cluster/create", handlers.AddTokenHeader())
+	app.GET("/create-cluster", handlers.AddTokenHeader(), handlers.CreateClusterPageHandler(apiClient))
+	app.POST("/create-cluster", handlers.AddTokenHeader(), handlers.CreateClusterHandler(apiClient))
 
 	// cluster check
 	app.GET("/cluster/:cluster_id", handlers.AddTokenHeader(), handlers.AccessCluster(apiClient))
+	app.GET("/cluster/:cluster_id/status", handlers.AddTokenHeader(), handlers.AccessClusterStatus(apiClient))
 
 	// logout
 	app.GET("/logout", handlers.Logout())

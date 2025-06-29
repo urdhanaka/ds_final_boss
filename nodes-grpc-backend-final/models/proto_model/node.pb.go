@@ -21,55 +21,6 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
-type Status int32
-
-const (
-	Status_STATUS_UNSPECIFIED Status = 0
-	Status_STATUS_AVAILABLE   Status = 1
-	Status_STATUS_UNAVAILABLE Status = 2
-)
-
-// Enum value maps for Status.
-var (
-	Status_name = map[int32]string{
-		0: "STATUS_UNSPECIFIED",
-		1: "STATUS_AVAILABLE",
-		2: "STATUS_UNAVAILABLE",
-	}
-	Status_value = map[string]int32{
-		"STATUS_UNSPECIFIED": 0,
-		"STATUS_AVAILABLE":   1,
-		"STATUS_UNAVAILABLE": 2,
-	}
-)
-
-func (x Status) Enum() *Status {
-	p := new(Status)
-	*p = x
-	return p
-}
-
-func (x Status) String() string {
-	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
-}
-
-func (Status) Descriptor() protoreflect.EnumDescriptor {
-	return file_services_model_proto_model_node_proto_enumTypes[0].Descriptor()
-}
-
-func (Status) Type() protoreflect.EnumType {
-	return &file_services_model_proto_model_node_proto_enumTypes[0]
-}
-
-func (x Status) Number() protoreflect.EnumNumber {
-	return protoreflect.EnumNumber(x)
-}
-
-// Deprecated: Use Status.Descriptor instead.
-func (Status) EnumDescriptor() ([]byte, []int) {
-	return file_services_model_proto_model_node_proto_rawDescGZIP(), []int{0}
-}
-
 type Empty struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	unknownFields protoimpl.UnknownFields
@@ -161,7 +112,7 @@ func (x *CreationStatus) GetMessage() string {
 type CreateNodeRequirements struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	NodeName      string                 `protobuf:"bytes,1,opt,name=node_name,json=nodeName,proto3" json:"node_name,omitempty"`
-	Cpu           int32                  `protobuf:"varint,2,opt,name=cpu,proto3" json:"cpu,omitempty"`
+	Vcpu          int32                  `protobuf:"varint,2,opt,name=vcpu,proto3" json:"vcpu,omitempty"`
 	Memory        int32                  `protobuf:"varint,3,opt,name=memory,proto3" json:"memory,omitempty"`
 	Storage       int32                  `protobuf:"varint,4,opt,name=storage,proto3" json:"storage,omitempty"`
 	unknownFields protoimpl.UnknownFields
@@ -205,9 +156,9 @@ func (x *CreateNodeRequirements) GetNodeName() string {
 	return ""
 }
 
-func (x *CreateNodeRequirements) GetCpu() int32 {
+func (x *CreateNodeRequirements) GetVcpu() int32 {
 	if x != nil {
-		return x.Cpu
+		return x.Vcpu
 	}
 	return 0
 }
@@ -289,10 +240,9 @@ func (x *CreateMasterRequest) GetRequirements() *CreateNodeRequirements {
 
 type CreateMasterResponse struct {
 	state           protoimpl.MessageState `protogen:"open.v1"`
-	NodeStatus      Status                 `protobuf:"varint,1,opt,name=node_status,json=nodeStatus,proto3,enum=Status" json:"node_status,omitempty"`
-	CreationStatus  *CreationStatus        `protobuf:"bytes,2,opt,name=creation_status,json=creationStatus,proto3" json:"creation_status,omitempty"`
-	MasterIpAddress string                 `protobuf:"bytes,3,opt,name=master_ip_address,json=masterIpAddress,proto3" json:"master_ip_address,omitempty"`
-	DashboardToken  string                 `protobuf:"bytes,4,opt,name=dashboard_token,json=dashboardToken,proto3" json:"dashboard_token,omitempty"`
+	CreationStatus  *CreationStatus        `protobuf:"bytes,1,opt,name=creation_status,json=creationStatus,proto3" json:"creation_status,omitempty"`
+	MasterIpAddress string                 `protobuf:"bytes,2,opt,name=master_ip_address,json=masterIpAddress,proto3" json:"master_ip_address,omitempty"`
+	DashboardToken  string                 `protobuf:"bytes,3,opt,name=dashboard_token,json=dashboardToken,proto3" json:"dashboard_token,omitempty"`
 	unknownFields   protoimpl.UnknownFields
 	sizeCache       protoimpl.SizeCache
 }
@@ -325,13 +275,6 @@ func (x *CreateMasterResponse) ProtoReflect() protoreflect.Message {
 // Deprecated: Use CreateMasterResponse.ProtoReflect.Descriptor instead.
 func (*CreateMasterResponse) Descriptor() ([]byte, []int) {
 	return file_services_model_proto_model_node_proto_rawDescGZIP(), []int{4}
-}
-
-func (x *CreateMasterResponse) GetNodeStatus() Status {
-	if x != nil {
-		return x.NodeStatus
-	}
-	return Status_STATUS_UNSPECIFIED
 }
 
 func (x *CreateMasterResponse) GetCreationStatus() *CreationStatus {
@@ -426,8 +369,7 @@ func (x *CreateWorkerRequest) GetRequirements() *CreateNodeRequirements {
 
 type CreateWorkerResponse struct {
 	state          protoimpl.MessageState `protogen:"open.v1"`
-	NodeStatus     Status                 `protobuf:"varint,1,opt,name=node_status,json=nodeStatus,proto3,enum=Status" json:"node_status,omitempty"`
-	CreationStatus *CreationStatus        `protobuf:"bytes,2,opt,name=creation_status,json=creationStatus,proto3" json:"creation_status,omitempty"`
+	CreationStatus *CreationStatus        `protobuf:"bytes,1,opt,name=creation_status,json=creationStatus,proto3" json:"creation_status,omitempty"`
 	unknownFields  protoimpl.UnknownFields
 	sizeCache      protoimpl.SizeCache
 }
@@ -460,13 +402,6 @@ func (x *CreateWorkerResponse) ProtoReflect() protoreflect.Message {
 // Deprecated: Use CreateWorkerResponse.ProtoReflect.Descriptor instead.
 func (*CreateWorkerResponse) Descriptor() ([]byte, []int) {
 	return file_services_model_proto_model_node_proto_rawDescGZIP(), []int{6}
-}
-
-func (x *CreateWorkerResponse) GetNodeStatus() Status {
-	if x != nil {
-		return x.NodeStatus
-	}
-	return Status_STATUS_UNSPECIFIED
 }
 
 func (x *CreateWorkerResponse) GetCreationStatus() *CreationStatus {
@@ -611,7 +546,6 @@ func (*NodeStatusRequest) Descriptor() ([]byte, []int) {
 type NodeStatusResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	NodeUsage     *NodeUsagePercentage   `protobuf:"bytes,1,opt,name=node_usage,json=nodeUsage,proto3" json:"node_usage,omitempty"`
-	NodeStatus    Status                 `protobuf:"varint,2,opt,name=node_status,json=nodeStatus,proto3,enum=Status" json:"node_status,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -651,13 +585,6 @@ func (x *NodeStatusResponse) GetNodeUsage() *NodeUsagePercentage {
 		return x.NodeUsage
 	}
 	return nil
-}
-
-func (x *NodeStatusResponse) GetNodeStatus() Status {
-	if x != nil {
-		return x.NodeStatus
-	}
-	return Status_STATUS_UNSPECIFIED
 }
 
 type DeleteInstanceRequest struct {
@@ -748,31 +675,27 @@ const file_services_model_proto_model_node_proto_rawDesc = "" +
 	"\x05Empty\"D\n" +
 	"\x0eCreationStatus\x12\x18\n" +
 	"\asuccess\x18\x01 \x01(\bR\asuccess\x12\x18\n" +
-	"\amessage\x18\x02 \x01(\tR\amessage\"y\n" +
+	"\amessage\x18\x02 \x01(\tR\amessage\"{\n" +
 	"\x16CreateNodeRequirements\x12\x1b\n" +
-	"\tnode_name\x18\x01 \x01(\tR\bnodeName\x12\x10\n" +
-	"\x03cpu\x18\x02 \x01(\x05R\x03cpu\x12\x16\n" +
+	"\tnode_name\x18\x01 \x01(\tR\bnodeName\x12\x12\n" +
+	"\x04vcpu\x18\x02 \x01(\x05R\x04vcpu\x12\x16\n" +
 	"\x06memory\x18\x03 \x01(\x05R\x06memory\x12\x18\n" +
 	"\astorage\x18\x04 \x01(\x05R\astorage\"\x9a\x01\n" +
 	"\x13CreateMasterRequest\x12!\n" +
 	"\fcluster_name\x18\x01 \x01(\tR\vclusterName\x12#\n" +
 	"\rcluster_token\x18\x02 \x01(\tR\fclusterToken\x12;\n" +
-	"\frequirements\x18\x03 \x01(\v2\x17.CreateNodeRequirementsR\frequirements\"\xcf\x01\n" +
-	"\x14CreateMasterResponse\x12(\n" +
-	"\vnode_status\x18\x01 \x01(\x0e2\a.StatusR\n" +
-	"nodeStatus\x128\n" +
-	"\x0fcreation_status\x18\x02 \x01(\v2\x0f.CreationStatusR\x0ecreationStatus\x12*\n" +
-	"\x11master_ip_address\x18\x03 \x01(\tR\x0fmasterIpAddress\x12'\n" +
-	"\x0fdashboard_token\x18\x04 \x01(\tR\x0edashboardToken\"\xc6\x01\n" +
+	"\frequirements\x18\x03 \x01(\v2\x17.CreateNodeRequirementsR\frequirements\"\xa5\x01\n" +
+	"\x14CreateMasterResponse\x128\n" +
+	"\x0fcreation_status\x18\x01 \x01(\v2\x0f.CreationStatusR\x0ecreationStatus\x12*\n" +
+	"\x11master_ip_address\x18\x02 \x01(\tR\x0fmasterIpAddress\x12'\n" +
+	"\x0fdashboard_token\x18\x03 \x01(\tR\x0edashboardToken\"\xc6\x01\n" +
 	"\x13CreateWorkerRequest\x12!\n" +
 	"\fcluster_name\x18\x01 \x01(\tR\vclusterName\x12#\n" +
 	"\rcluster_token\x18\x02 \x01(\tR\fclusterToken\x12*\n" +
 	"\x11master_ip_address\x18\x03 \x01(\tR\x0fmasterIpAddress\x12;\n" +
-	"\frequirements\x18\x04 \x01(\v2\x17.CreateNodeRequirementsR\frequirements\"z\n" +
-	"\x14CreateWorkerResponse\x12(\n" +
-	"\vnode_status\x18\x01 \x01(\x0e2\a.StatusR\n" +
-	"nodeStatus\x128\n" +
-	"\x0fcreation_status\x18\x02 \x01(\v2\x0f.CreationStatusR\x0ecreationStatus\"\xc9\x02\n" +
+	"\frequirements\x18\x04 \x01(\v2\x17.CreateNodeRequirementsR\frequirements\"P\n" +
+	"\x14CreateWorkerResponse\x128\n" +
+	"\x0fcreation_status\x18\x01 \x01(\v2\x0f.CreationStatusR\x0ecreationStatus\"\xc9\x02\n" +
 	"\x13NodeUsagePercentage\x12\x19\n" +
 	"\bmax_vcpu\x18\x01 \x01(\rR\amaxVcpu\x12\x1b\n" +
 	"\tfree_vcpu\x18\x02 \x01(\rR\bfreeVcpu\x120\n" +
@@ -781,19 +704,13 @@ const file_services_model_proto_model_node_proto_rawDesc = "" +
 	"\x18storage_usage_percentage\x18\x05 \x01(\x01R\x16storageUsagePercentage\x12)\n" +
 	"\x10memory_available\x18\x06 \x01(\rR\x0fmemoryAvailable\x126\n" +
 	"\x17memory_usage_percentage\x18\a \x01(\x01R\x15memoryUsagePercentage\"\x13\n" +
-	"\x11NodeStatusRequest\"s\n" +
+	"\x11NodeStatusRequest\"I\n" +
 	"\x12NodeStatusResponse\x123\n" +
 	"\n" +
-	"node_usage\x18\x01 \x01(\v2\x14.NodeUsagePercentageR\tnodeUsage\x12(\n" +
-	"\vnode_status\x18\x02 \x01(\x0e2\a.StatusR\n" +
-	"nodeStatus\"<\n" +
+	"node_usage\x18\x01 \x01(\v2\x14.NodeUsagePercentageR\tnodeUsage\"<\n" +
 	"\x15DeleteInstanceRequest\x12#\n" +
 	"\rinstance_name\x18\x01 \x01(\tR\finstanceName\"\x18\n" +
-	"\x16DeleteInstanceResponse*N\n" +
-	"\x06Status\x12\x16\n" +
-	"\x12STATUS_UNSPECIFIED\x10\x00\x12\x14\n" +
-	"\x10STATUS_AVAILABLE\x10\x01\x12\x16\n" +
-	"\x12STATUS_UNAVAILABLE\x10\x022\x89\x02\n" +
+	"\x16DeleteInstanceResponse2\x89\x02\n" +
 	"\vNodeService\x12=\n" +
 	"\fCreateMaster\x12\x14.CreateMasterRequest\x1a\x15.CreateMasterResponse\"\x00\x12=\n" +
 	"\fCreateWorker\x12\x14.CreateWorkerRequest\x1a\x15.CreateWorkerResponse\"\x00\x127\n" +
@@ -813,45 +730,40 @@ func file_services_model_proto_model_node_proto_rawDescGZIP() []byte {
 	return file_services_model_proto_model_node_proto_rawDescData
 }
 
-var file_services_model_proto_model_node_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
 var file_services_model_proto_model_node_proto_msgTypes = make([]protoimpl.MessageInfo, 12)
 var file_services_model_proto_model_node_proto_goTypes = []any{
-	(Status)(0),                    // 0: Status
-	(*Empty)(nil),                  // 1: Empty
-	(*CreationStatus)(nil),         // 2: CreationStatus
-	(*CreateNodeRequirements)(nil), // 3: CreateNodeRequirements
-	(*CreateMasterRequest)(nil),    // 4: CreateMasterRequest
-	(*CreateMasterResponse)(nil),   // 5: CreateMasterResponse
-	(*CreateWorkerRequest)(nil),    // 6: CreateWorkerRequest
-	(*CreateWorkerResponse)(nil),   // 7: CreateWorkerResponse
-	(*NodeUsagePercentage)(nil),    // 8: NodeUsagePercentage
-	(*NodeStatusRequest)(nil),      // 9: NodeStatusRequest
-	(*NodeStatusResponse)(nil),     // 10: NodeStatusResponse
-	(*DeleteInstanceRequest)(nil),  // 11: DeleteInstanceRequest
-	(*DeleteInstanceResponse)(nil), // 12: DeleteInstanceResponse
+	(*Empty)(nil),                  // 0: Empty
+	(*CreationStatus)(nil),         // 1: CreationStatus
+	(*CreateNodeRequirements)(nil), // 2: CreateNodeRequirements
+	(*CreateMasterRequest)(nil),    // 3: CreateMasterRequest
+	(*CreateMasterResponse)(nil),   // 4: CreateMasterResponse
+	(*CreateWorkerRequest)(nil),    // 5: CreateWorkerRequest
+	(*CreateWorkerResponse)(nil),   // 6: CreateWorkerResponse
+	(*NodeUsagePercentage)(nil),    // 7: NodeUsagePercentage
+	(*NodeStatusRequest)(nil),      // 8: NodeStatusRequest
+	(*NodeStatusResponse)(nil),     // 9: NodeStatusResponse
+	(*DeleteInstanceRequest)(nil),  // 10: DeleteInstanceRequest
+	(*DeleteInstanceResponse)(nil), // 11: DeleteInstanceResponse
 }
 var file_services_model_proto_model_node_proto_depIdxs = []int32{
-	3,  // 0: CreateMasterRequest.requirements:type_name -> CreateNodeRequirements
-	0,  // 1: CreateMasterResponse.node_status:type_name -> Status
-	2,  // 2: CreateMasterResponse.creation_status:type_name -> CreationStatus
-	3,  // 3: CreateWorkerRequest.requirements:type_name -> CreateNodeRequirements
-	0,  // 4: CreateWorkerResponse.node_status:type_name -> Status
-	2,  // 5: CreateWorkerResponse.creation_status:type_name -> CreationStatus
-	8,  // 6: NodeStatusResponse.node_usage:type_name -> NodeUsagePercentage
-	0,  // 7: NodeStatusResponse.node_status:type_name -> Status
-	4,  // 8: NodeService.CreateMaster:input_type -> CreateMasterRequest
-	6,  // 9: NodeService.CreateWorker:input_type -> CreateWorkerRequest
-	9,  // 10: NodeService.NodeStatus:input_type -> NodeStatusRequest
-	11, // 11: NodeService.DeleteInstance:input_type -> DeleteInstanceRequest
-	5,  // 12: NodeService.CreateMaster:output_type -> CreateMasterResponse
-	7,  // 13: NodeService.CreateWorker:output_type -> CreateWorkerResponse
-	10, // 14: NodeService.NodeStatus:output_type -> NodeStatusResponse
-	12, // 15: NodeService.DeleteInstance:output_type -> DeleteInstanceResponse
-	12, // [12:16] is the sub-list for method output_type
-	8,  // [8:12] is the sub-list for method input_type
-	8,  // [8:8] is the sub-list for extension type_name
-	8,  // [8:8] is the sub-list for extension extendee
-	0,  // [0:8] is the sub-list for field type_name
+	2,  // 0: CreateMasterRequest.requirements:type_name -> CreateNodeRequirements
+	1,  // 1: CreateMasterResponse.creation_status:type_name -> CreationStatus
+	2,  // 2: CreateWorkerRequest.requirements:type_name -> CreateNodeRequirements
+	1,  // 3: CreateWorkerResponse.creation_status:type_name -> CreationStatus
+	7,  // 4: NodeStatusResponse.node_usage:type_name -> NodeUsagePercentage
+	3,  // 5: NodeService.CreateMaster:input_type -> CreateMasterRequest
+	5,  // 6: NodeService.CreateWorker:input_type -> CreateWorkerRequest
+	8,  // 7: NodeService.NodeStatus:input_type -> NodeStatusRequest
+	10, // 8: NodeService.DeleteInstance:input_type -> DeleteInstanceRequest
+	4,  // 9: NodeService.CreateMaster:output_type -> CreateMasterResponse
+	6,  // 10: NodeService.CreateWorker:output_type -> CreateWorkerResponse
+	9,  // 11: NodeService.NodeStatus:output_type -> NodeStatusResponse
+	11, // 12: NodeService.DeleteInstance:output_type -> DeleteInstanceResponse
+	9,  // [9:13] is the sub-list for method output_type
+	5,  // [5:9] is the sub-list for method input_type
+	5,  // [5:5] is the sub-list for extension type_name
+	5,  // [5:5] is the sub-list for extension extendee
+	0,  // [0:5] is the sub-list for field type_name
 }
 
 func init() { file_services_model_proto_model_node_proto_init() }
@@ -864,14 +776,13 @@ func file_services_model_proto_model_node_proto_init() {
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_services_model_proto_model_node_proto_rawDesc), len(file_services_model_proto_model_node_proto_rawDesc)),
-			NumEnums:      1,
+			NumEnums:      0,
 			NumMessages:   12,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
 		GoTypes:           file_services_model_proto_model_node_proto_goTypes,
 		DependencyIndexes: file_services_model_proto_model_node_proto_depIdxs,
-		EnumInfos:         file_services_model_proto_model_node_proto_enumTypes,
 		MessageInfos:      file_services_model_proto_model_node_proto_msgTypes,
 	}.Build()
 	File_services_model_proto_model_node_proto = out.File

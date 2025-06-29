@@ -14,7 +14,7 @@
       </div>
       <ul>
         <li>VCPU: {{ .Vcpu }}</li>
-        <li>RAM: {{ .Ram }}</li>
+        <li>Memory: {{ .Memory }}</li>
         <li>Storage: {{ .Storage }}</li>
         <li>Node per cluster: {{ .NodeSize }}</li>
         <li>Current cluster for this group: {{ .CurrentCluster }}</li>
@@ -29,7 +29,7 @@
             <p>Hostname: {{ .Hostname }}</p>
             <p>IP address: {{ .IpAddress }}</p>
             <p>VCPU: {{ .VCpu }}</p>
-            <p>RAM: {{ .Ram }}</p>
+            <p>Memory: {{ .Memory }}</p>
             <p>Storage: {{ .Storage }}</p>
           </div>
           {{ end }}
@@ -47,12 +47,13 @@
             <p>ID: {{ .ClusterId }}</p>
             <p>Name: {{ .ClusterName }}</p>
             <p>Status: {{ .ClusterStatus }}</p>
-            <button
-              type="button"
-              class="p-2 bg-blue-700 rounded-md text-white hover:cursor-pointer"
-            >
-              Check
-            </button>
+            <a href="/cluster/{{ .ClusterId }}">
+              <div
+                class="p-3 bg-blue-700 rounded-md text-white hover:cursor-pointer hover:bg-blue-800 w-fit"
+              >
+                Check
+              </div>
+            </a>
           </div>
           {{ end }}
         </div>

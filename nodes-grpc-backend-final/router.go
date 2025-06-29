@@ -20,15 +20,16 @@ func setRouters(app *gin.Engine, dbPool *pgxpool.Pool, client *redis.Client) {
 	clusterService := services.NewClusterService(
 		clusterNodeRepository,
 		clusterRepository,
+		userRepository,
 		nodeRepository,
 		groupRepository,
 	)
 	redisQueueService := services.NewRedisJobQueue(client, clusterService)
 	jwtService := services.NewJwtService()
-	nodeService := services.NewNodeService(nodeRepository)
+	nodeService := services.NewNodeService(nodeRepository, groupRepository)
 	userService := services.NewUserService(userRepository, groupRepository, jwtService)
 
-	clusterHandler := handlers.NewClusterHandler(redisQueueService, jwtService, clusterService)
+	clusterHandler := handlers.NewClusterHandler(redisQueueService, jwtService, clusterService, userService)
 	userHandler := handlers.NewUserHandler(userService)
 	nodeHandler := handlers.NewNodeHandler(nodeService, userService)
 	otherHandler := handlers.NewOtherHandler()
@@ -38,9 +39,9 @@ func setRouters(app *gin.Engine, dbPool *pgxpool.Pool, client *redis.Client) {
 
 	clusterGroup := apiGroup.Group("/clusters")
 	{
-		clusterGroup.POST("", clusterHandler.CreateCluster)
-		clusterGroup.GET("/user-clusters", handlers.Authenticate(jwtService), clusterHandler.GetUserCluster)
-        clusterGroup.GET("/:cluster_id", handlers.Authenticate(jwtService), clusterHandler.GetClusterDetails)
+		clusterGroup.POST("", handlers.Authenticate(jwtService), clusterHandler.CreateCluster)
+		clusterGroup.GET("", handlers.Authenticate(jwtService), clusterHandler.GetUserCluster)
+		clusterGroup.GET("/:cluster_id", handlers.Authenticate(jwtService), clusterHandler.GetClusterDetails)
 	}
 
 	userGroup := apiGroup.Group("/users")

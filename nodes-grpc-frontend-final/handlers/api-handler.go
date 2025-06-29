@@ -151,7 +151,7 @@ func (api *ApiClient) GetUserClusters(c *gin.Context) (*models.ApiResponse, erro
 	resp, err := api.client.R().
 		SetHeader("Authorization", bearerToken).
 		SetResult(&models.ApiResponse{}).
-		Get(consts.BACKEND_URL + "/api/clusters/user-clusters")
+		Get(consts.BACKEND_URL + "/api/clusters")
 	if err != nil {
 		return &models.ApiResponse{}, err
 	}
@@ -183,6 +183,41 @@ func (api *ApiClient) GetClusterDetails(c *gin.Context, clusterId string) (*mode
 		SetResult(&models.ApiResponse{}).
 		SetError(&models.ApiResponse{}).
 		Get(consts.BACKEND_URL + "/api/clusters/" + clusterId)
+	if err != nil {
+		return &models.ApiResponse{}, err
+	}
+
+	if resp.StatusCode() < 300 {
+		respModel := resp.Result().(*models.ApiResponse)
+
+		return respModel, nil
+	} else {
+		respModel := resp.Error().(*models.ApiResponse)
+
+		return respModel, nil
+	}
+}
+
+func (api *ApiClient) CreateCluster(
+	c *gin.Context,
+	createClusterModel *models.CreateCluster,
+) (*models.ApiResponse, error) {
+	if !api.isServerUp() {
+		return nil, ErrServerIsNotResponding
+	}
+
+	token, tokenExists := c.Get("token")
+	if !tokenExists {
+		return nil, ErrTokenIsMissing
+	}
+
+	bearerToken := fmt.Sprintf("Bearer %s", token.(string))
+	resp, err := api.client.R().
+		SetHeader("Authorization", bearerToken).
+		SetResult(&models.ApiResponse{}).
+		SetError(&models.ApiResponse{}).
+		SetBody(createClusterModel).
+		Post(consts.BACKEND_URL + "/api/clusters")
 	if err != nil {
 		return &models.ApiResponse{}, err
 	}

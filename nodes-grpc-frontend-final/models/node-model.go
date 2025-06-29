@@ -7,7 +7,7 @@ type Nodes struct {
 	Hostname  string    `json:"hostname"`
 	IpAddress string    `json:"ip_address"`
 	VCpu      int       `json:"vcpu"`
-	Ram       int       `json:"ram"`
+	Memory    int       `json:"memory"`
 	Storage   int       `json:"storage"`
 	GroupId   int       `json:"group_id"`
 }
