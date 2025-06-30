@@ -34,8 +34,8 @@ func (r *ClusterRepository) AddCluster(
 
 	_, err = conn.Exec(
 		ctx,
-		"INSERT INTO clusters (cluster_id, name, user_id, group_id, created_at) VALUES ($1, $2, $3, $4, $5)",
-		cluster.ClusterID, cluster.ClusterName, cluster.UserID, cluster.GroupID, cluster.CreatedAt,
+		"INSERT INTO clusters (cluster_id, cluster_name, user_id, group_id, cluster_status, created_at) VALUES ($1, $2, $3, $4, $5, $6)",
+		cluster.ClusterID, cluster.ClusterName, cluster.UserID, cluster.GroupID, cluster.ClusterStatus, cluster.CreatedAt,
 	)
 	if err != nil {
 		return err
@@ -114,6 +114,53 @@ func (r *ClusterRepository) UpdateClusterStatusByClusterId(
         SET cluster_status=$1
         WHERE cluster_id=$2`,
 		cluster.ClusterStatus, cluster.ClusterID,
+	)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (r *ClusterRepository) UpdateIpAddressAndTokenByClusterId(
+	ctx context.Context,
+	cluster *entities.Cluster,
+) error {
+	conn, err := r.dbPool.Acquire(ctx)
+	if err != nil {
+		return err
+	}
+	defer conn.Release()
+
+	_, err = conn.Exec(
+		ctx,
+		`UPDATE clusters
+        SET access_token=$1, ip_address=$2
+        WHERE cluster_id=$3`,
+		cluster.AccessToken, cluster.IpAddress, cluster.ClusterID,
+	)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (r *ClusterRepository) DeleteClusterByClusterId(
+	ctx context.Context,
+	cluster *entities.Cluster,
+) error {
+	conn, err := r.dbPool.Acquire(ctx)
+	if err != nil {
+		return err
+	}
+	defer conn.Release()
+
+	_, err = conn.Exec(
+		ctx,
+		`DELETE FROM clusters
+        WHERE cluster_id=$1`,
+		cluster.ClusterID,
 	)
 	if err != nil {
 		return err

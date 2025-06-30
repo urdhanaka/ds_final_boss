@@ -29,8 +29,8 @@ type GetClusterDetails struct {
 	ClusterName   string    `json:"cluster_name"`
 	UserId        uuid.UUID `json:"user_id"`
 	ClusterStatus string    `json:"cluster_status"`
-	IpAddress     string    `json:"ip_address"`
-	AccessToken   string    `json:"access_token"`
+	IpAddress     *string   `json:"ip_address"`
+	AccessToken   *string   `json:"access_token"`
 	CreatedAt     time.Time `json:"created_at"`
 }
 

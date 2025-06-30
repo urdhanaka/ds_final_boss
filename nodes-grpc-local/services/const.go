@@ -11,4 +11,7 @@ const (
 
 	// cpu usage interval value in seconds
 	CPU_USAGE_INTERVAL = 1
+
+    // retries when connecting to main server
+    NODES_CONNECT_RETRIES = 3
 )

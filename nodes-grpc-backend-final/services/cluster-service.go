@@ -2,6 +2,7 @@ package services
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log/slog"
 	"math/rand"
@@ -47,16 +48,17 @@ func (s *ClusterService) CreateCluster(
 	createClusterContext, cancel := context.WithCancel(ctx)
 	defer cancel()
 
-	// result
 	createClusterResponse := new(models.CreateClusterResponse)
+	addClusterModel := new(models.AddCluster)
 
-	provisioningJob := job.Payload.(*models.AddCluster)
+	jsonBytes, _ := json.Marshal(job.Payload)
+	_ = json.Unmarshal(jsonBytes, addClusterModel)
 
 	clusterEntity := &entities.Cluster{
 		ClusterID:     uuid.New(),
-		ClusterName:   provisioningJob.ClusterName,
-		UserID:        provisioningJob.UserId,
-		GroupID:       provisioningJob.GroupId,
+		ClusterName:   addClusterModel.ClusterName,
+		UserID:        addClusterModel.UserId,
+		GroupID:       addClusterModel.GroupId,
 		ClusterStatus: string(entities.JOB_STATUS_QUEUED),
 		CreatedAt:     time.Now(),
 	}
@@ -68,17 +70,20 @@ func (s *ClusterService) CreateCluster(
 
 	// start the cluster creation here
 	// keep track of the nodes and the domain name
-	nodeAndDomainName := make([]string, provisioningJob.NodeSize)
+	nodeAndDomainName := []string{}
 
 	// keep track of master node creation
 	isMasterNode := true
+	currentDomainIndex := 0
 
 	// cluster token to create the cluster
 	clusterToken := createRandomString(8)
 
-	for currentDomainNumber := range provisioningJob.NodeSize {
-		pickedIndex := currentDomainNumber % provisioningJob.NodeSize
-		nodeIdentity := provisioningJob.Nodes[pickedIndex]
+	for currentDomainIndex < addClusterModel.NodeSize {
+		nodesCopy := addClusterModel.Nodes
+
+		pickedIndex := currentDomainIndex % addClusterModel.NodeSize % len(nodesCopy)
+		nodeIdentity := nodesCopy[pickedIndex]
 
 		ipAddress := strings.Split(nodeIdentity, ",")[1]
 
@@ -88,19 +93,36 @@ func (s *ClusterService) CreateCluster(
 			continue
 		}
 
+		// check if node can be used
+		nodeStatus, _ := grpcClient.NodeStatus(
+			createClusterContext,
+			&proto_model.NodeStatusRequest{},
+		)
+
+		// check resources
+		if addClusterModel.Vcpu > int(nodeStatus.FreeVcpu) ||
+			addClusterModel.Storage > int(nodeStatus.StorageAvailable) ||
+			addClusterModel.Memory > int(nodeStatus.MemoryAvailable) {
+			slog.Info("worker node has less resources than needed",
+				"resources", "vcpu",
+				"node", nodeIdentity,
+			)
+			continue
+		}
+
 		if isMasterNode {
 			domainName := createRandomString(8)
 
 			res, err := grpcClient.CreateMaster(
 				createClusterContext,
 				&proto_model.CreateMasterRequest{
-					ClusterName:  provisioningJob.ClusterName,
+					ClusterName:  addClusterModel.ClusterName,
 					ClusterToken: clusterToken,
 					Requirements: &proto_model.CreateNodeRequirements{
 						NodeName: domainName,
-						Vcpu:     int32(provisioningJob.Vcpu),
-						Memory:   int32(provisioningJob.Memory),
-						Storage:  int32(provisioningJob.Storage),
+						Vcpu:     int32(addClusterModel.Vcpu),
+						Memory:   int32(addClusterModel.Memory),
+						Storage:  int32(addClusterModel.Storage),
 					},
 				},
 			)
@@ -115,6 +137,7 @@ func (s *ClusterService) CreateCluster(
 			createClusterResponse.DashboardToken = res.DashboardToken
 			createClusterResponse.MasterIpAddress = res.MasterIpAddress
 
+			// add the masterNode to the array
 			nodeAndDomainName = append(nodeAndDomainName, fmt.Sprintf("%s,%s", ipAddress, domainName))
 		} else {
 			domainName := createRandomString(8)
@@ -122,14 +145,14 @@ func (s *ClusterService) CreateCluster(
 			_, err := grpcClient.CreateWorker(
 				createClusterContext,
 				&proto_model.CreateWorkerRequest{
-					ClusterName:     provisioningJob.ClusterName,
+					ClusterName:     addClusterModel.ClusterName,
 					ClusterToken:    clusterToken,
 					MasterIpAddress: createClusterResponse.MasterIpAddress,
 					Requirements: &proto_model.CreateNodeRequirements{
 						NodeName: domainName,
-						Vcpu:     int32(provisioningJob.Vcpu),
-						Memory:   int32(provisioningJob.Memory),
-						Storage:  int32(provisioningJob.Storage),
+						Vcpu:     int32(addClusterModel.Vcpu),
+						Memory:   int32(addClusterModel.Memory),
+						Storage:  int32(addClusterModel.Storage),
 					},
 				},
 			)
@@ -141,6 +164,19 @@ func (s *ClusterService) CreateCluster(
 
 			nodeAndDomainName = append(nodeAndDomainName, fmt.Sprintf("%s,%s", ipAddress, domainName))
 		}
+	}
+
+	err = s.clusterRepository.UpdateIpAddressAndTokenByClusterId(
+		createClusterContext,
+		&entities.Cluster{
+			ClusterID:     clusterEntity.ClusterID,
+			ClusterStatus: "",
+			IpAddress:     &createClusterResponse.MasterIpAddress,
+			AccessToken:   &createClusterResponse.DashboardToken,
+		},
+	)
+	if err != nil {
+		return createClusterResponse, err
 	}
 
 	return createClusterResponse, nil
@@ -199,6 +235,13 @@ func (s *ClusterService) GetClusterById(
 	}
 
 	return clusterDetails, nil
+}
+
+func (s *ClusterService) DeleteCluster(
+	ctx context.Context,
+	cluster *entities.Cluster,
+) error {
+	return s.clusterRepository.DeleteClusterByClusterId(ctx, cluster)
 }
 
 func (s *ClusterService) UpdateClusterStatusByClusterId(

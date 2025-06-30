@@ -817,8 +817,6 @@ func guestAgentExecStatus(
 			return res, err
 		}
 
-		fmt.Println("res", res)
-
 		if res.Return.Exited {
 			break
 		}

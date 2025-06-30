@@ -19,3 +19,8 @@ type CreateCluster struct {
 	ClusterName string   `json:"cluster_name"`
 	Nodes       []string `json:"nodes"`
 }
+
+type DeleteCluster struct {
+	ClusterId uuid.UUID `json:"cluster_id"`
+	UserId    uuid.UUID `json:"user_id"`
+}

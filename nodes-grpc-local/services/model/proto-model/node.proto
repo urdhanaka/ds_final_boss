@@ -42,25 +42,13 @@ message CreateWorkerResponse {
 }
 
 // node status
-message NodeUsagePercentage {
-  // cpu usage percentage
-  uint32 max_vcpu = 1;
-  uint32 free_vcpu = 2;
-  double cpu_usage_percentage = 3;
-
-  // storage usage percentage
-  uint32 storage_available = 4;
-  double storage_usage_percentage = 5;
-
-  // memory usage
-  uint32 memory_available = 6;
-  double memory_usage_percentage = 7;
-}
 
 message NodeStatusRequest {}
 
 message NodeStatusResponse {
-  NodeUsagePercentage node_usage = 1;
+  uint32 free_vcpu = 1;
+  uint32 storage_available = 2;
+  uint32 memory_available = 3;
 }
 
 message DeleteInstanceRequest {

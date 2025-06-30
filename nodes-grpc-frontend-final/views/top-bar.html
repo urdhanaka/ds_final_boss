@@ -1,0 +1,17 @@
+{{ define "bar" }}
+<div class="w-screen border-b flex justify-between">
+  <div class="flex gap-4">
+    <a href="/dashboard">
+      <div class="p-3 hover:cursor-pointer w-fit underline">home</div>
+    </a>
+    <a href="/create-cluster">
+      <div class="p-3 hover:cursor-pointer w-fit underline">create cluster</div>
+    </a>
+  </div>
+  <div>
+    <a href="/logout">
+      <div class="p-3 hover:cursor-pointer w-fit underline">logout</div>
+    </a>
+  </div>
+</div>
+{{ end }}

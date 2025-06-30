@@ -411,102 +411,6 @@ func (x *CreateWorkerResponse) GetCreationStatus() *CreationStatus {
 	return nil
 }
 
-// node status
-type NodeUsagePercentage struct {
-	state protoimpl.MessageState `protogen:"open.v1"`
-	// cpu usage percentage
-	MaxVcpu            uint32  `protobuf:"varint,1,opt,name=max_vcpu,json=maxVcpu,proto3" json:"max_vcpu,omitempty"`
-	FreeVcpu           uint32  `protobuf:"varint,2,opt,name=free_vcpu,json=freeVcpu,proto3" json:"free_vcpu,omitempty"`
-	CpuUsagePercentage float64 `protobuf:"fixed64,3,opt,name=cpu_usage_percentage,json=cpuUsagePercentage,proto3" json:"cpu_usage_percentage,omitempty"`
-	// storage usage percentage
-	StorageAvailable       uint32  `protobuf:"varint,4,opt,name=storage_available,json=storageAvailable,proto3" json:"storage_available,omitempty"`
-	StorageUsagePercentage float64 `protobuf:"fixed64,5,opt,name=storage_usage_percentage,json=storageUsagePercentage,proto3" json:"storage_usage_percentage,omitempty"`
-	// memory usage
-	MemoryAvailable       uint32  `protobuf:"varint,6,opt,name=memory_available,json=memoryAvailable,proto3" json:"memory_available,omitempty"`
-	MemoryUsagePercentage float64 `protobuf:"fixed64,7,opt,name=memory_usage_percentage,json=memoryUsagePercentage,proto3" json:"memory_usage_percentage,omitempty"`
-	unknownFields         protoimpl.UnknownFields
-	sizeCache             protoimpl.SizeCache
-}
-
-func (x *NodeUsagePercentage) Reset() {
-	*x = NodeUsagePercentage{}
-	mi := &file_services_model_proto_model_node_proto_msgTypes[7]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *NodeUsagePercentage) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*NodeUsagePercentage) ProtoMessage() {}
-
-func (x *NodeUsagePercentage) ProtoReflect() protoreflect.Message {
-	mi := &file_services_model_proto_model_node_proto_msgTypes[7]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use NodeUsagePercentage.ProtoReflect.Descriptor instead.
-func (*NodeUsagePercentage) Descriptor() ([]byte, []int) {
-	return file_services_model_proto_model_node_proto_rawDescGZIP(), []int{7}
-}
-
-func (x *NodeUsagePercentage) GetMaxVcpu() uint32 {
-	if x != nil {
-		return x.MaxVcpu
-	}
-	return 0
-}
-
-func (x *NodeUsagePercentage) GetFreeVcpu() uint32 {
-	if x != nil {
-		return x.FreeVcpu
-	}
-	return 0
-}
-
-func (x *NodeUsagePercentage) GetCpuUsagePercentage() float64 {
-	if x != nil {
-		return x.CpuUsagePercentage
-	}
-	return 0
-}
-
-func (x *NodeUsagePercentage) GetStorageAvailable() uint32 {
-	if x != nil {
-		return x.StorageAvailable
-	}
-	return 0
-}
-
-func (x *NodeUsagePercentage) GetStorageUsagePercentage() float64 {
-	if x != nil {
-		return x.StorageUsagePercentage
-	}
-	return 0
-}
-
-func (x *NodeUsagePercentage) GetMemoryAvailable() uint32 {
-	if x != nil {
-		return x.MemoryAvailable
-	}
-	return 0
-}
-
-func (x *NodeUsagePercentage) GetMemoryUsagePercentage() float64 {
-	if x != nil {
-		return x.MemoryUsagePercentage
-	}
-	return 0
-}
-
 type NodeStatusRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	unknownFields protoimpl.UnknownFields
@@ -515,7 +419,7 @@ type NodeStatusRequest struct {
 
 func (x *NodeStatusRequest) Reset() {
 	*x = NodeStatusRequest{}
-	mi := &file_services_model_proto_model_node_proto_msgTypes[8]
+	mi := &file_services_model_proto_model_node_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -527,7 +431,7 @@ func (x *NodeStatusRequest) String() string {
 func (*NodeStatusRequest) ProtoMessage() {}
 
 func (x *NodeStatusRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_services_model_proto_model_node_proto_msgTypes[8]
+	mi := &file_services_model_proto_model_node_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -540,19 +444,21 @@ func (x *NodeStatusRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use NodeStatusRequest.ProtoReflect.Descriptor instead.
 func (*NodeStatusRequest) Descriptor() ([]byte, []int) {
-	return file_services_model_proto_model_node_proto_rawDescGZIP(), []int{8}
+	return file_services_model_proto_model_node_proto_rawDescGZIP(), []int{7}
 }
 
 type NodeStatusResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	NodeUsage     *NodeUsagePercentage   `protobuf:"bytes,1,opt,name=node_usage,json=nodeUsage,proto3" json:"node_usage,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state            protoimpl.MessageState `protogen:"open.v1"`
+	FreeVcpu         uint32                 `protobuf:"varint,1,opt,name=free_vcpu,json=freeVcpu,proto3" json:"free_vcpu,omitempty"`
+	StorageAvailable uint32                 `protobuf:"varint,2,opt,name=storage_available,json=storageAvailable,proto3" json:"storage_available,omitempty"`
+	MemoryAvailable  uint32                 `protobuf:"varint,3,opt,name=memory_available,json=memoryAvailable,proto3" json:"memory_available,omitempty"`
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
 }
 
 func (x *NodeStatusResponse) Reset() {
 	*x = NodeStatusResponse{}
-	mi := &file_services_model_proto_model_node_proto_msgTypes[9]
+	mi := &file_services_model_proto_model_node_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -564,7 +470,7 @@ func (x *NodeStatusResponse) String() string {
 func (*NodeStatusResponse) ProtoMessage() {}
 
 func (x *NodeStatusResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_services_model_proto_model_node_proto_msgTypes[9]
+	mi := &file_services_model_proto_model_node_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -577,14 +483,28 @@ func (x *NodeStatusResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use NodeStatusResponse.ProtoReflect.Descriptor instead.
 func (*NodeStatusResponse) Descriptor() ([]byte, []int) {
-	return file_services_model_proto_model_node_proto_rawDescGZIP(), []int{9}
+	return file_services_model_proto_model_node_proto_rawDescGZIP(), []int{8}
 }
 
-func (x *NodeStatusResponse) GetNodeUsage() *NodeUsagePercentage {
+func (x *NodeStatusResponse) GetFreeVcpu() uint32 {
 	if x != nil {
-		return x.NodeUsage
+		return x.FreeVcpu
 	}
-	return nil
+	return 0
+}
+
+func (x *NodeStatusResponse) GetStorageAvailable() uint32 {
+	if x != nil {
+		return x.StorageAvailable
+	}
+	return 0
+}
+
+func (x *NodeStatusResponse) GetMemoryAvailable() uint32 {
+	if x != nil {
+		return x.MemoryAvailable
+	}
+	return 0
 }
 
 type DeleteInstanceRequest struct {
@@ -596,7 +516,7 @@ type DeleteInstanceRequest struct {
 
 func (x *DeleteInstanceRequest) Reset() {
 	*x = DeleteInstanceRequest{}
-	mi := &file_services_model_proto_model_node_proto_msgTypes[10]
+	mi := &file_services_model_proto_model_node_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -608,7 +528,7 @@ func (x *DeleteInstanceRequest) String() string {
 func (*DeleteInstanceRequest) ProtoMessage() {}
 
 func (x *DeleteInstanceRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_services_model_proto_model_node_proto_msgTypes[10]
+	mi := &file_services_model_proto_model_node_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -621,7 +541,7 @@ func (x *DeleteInstanceRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteInstanceRequest.ProtoReflect.Descriptor instead.
 func (*DeleteInstanceRequest) Descriptor() ([]byte, []int) {
-	return file_services_model_proto_model_node_proto_rawDescGZIP(), []int{10}
+	return file_services_model_proto_model_node_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *DeleteInstanceRequest) GetInstanceName() string {
@@ -639,7 +559,7 @@ type DeleteInstanceResponse struct {
 
 func (x *DeleteInstanceResponse) Reset() {
 	*x = DeleteInstanceResponse{}
-	mi := &file_services_model_proto_model_node_proto_msgTypes[11]
+	mi := &file_services_model_proto_model_node_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -651,7 +571,7 @@ func (x *DeleteInstanceResponse) String() string {
 func (*DeleteInstanceResponse) ProtoMessage() {}
 
 func (x *DeleteInstanceResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_services_model_proto_model_node_proto_msgTypes[11]
+	mi := &file_services_model_proto_model_node_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -664,7 +584,7 @@ func (x *DeleteInstanceResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteInstanceResponse.ProtoReflect.Descriptor instead.
 func (*DeleteInstanceResponse) Descriptor() ([]byte, []int) {
-	return file_services_model_proto_model_node_proto_rawDescGZIP(), []int{11}
+	return file_services_model_proto_model_node_proto_rawDescGZIP(), []int{10}
 }
 
 var File_services_model_proto_model_node_proto protoreflect.FileDescriptor
@@ -695,19 +615,12 @@ const file_services_model_proto_model_node_proto_rawDesc = "" +
 	"\x11master_ip_address\x18\x03 \x01(\tR\x0fmasterIpAddress\x12;\n" +
 	"\frequirements\x18\x04 \x01(\v2\x17.CreateNodeRequirementsR\frequirements\"P\n" +
 	"\x14CreateWorkerResponse\x128\n" +
-	"\x0fcreation_status\x18\x01 \x01(\v2\x0f.CreationStatusR\x0ecreationStatus\"\xc9\x02\n" +
-	"\x13NodeUsagePercentage\x12\x19\n" +
-	"\bmax_vcpu\x18\x01 \x01(\rR\amaxVcpu\x12\x1b\n" +
-	"\tfree_vcpu\x18\x02 \x01(\rR\bfreeVcpu\x120\n" +
-	"\x14cpu_usage_percentage\x18\x03 \x01(\x01R\x12cpuUsagePercentage\x12+\n" +
-	"\x11storage_available\x18\x04 \x01(\rR\x10storageAvailable\x128\n" +
-	"\x18storage_usage_percentage\x18\x05 \x01(\x01R\x16storageUsagePercentage\x12)\n" +
-	"\x10memory_available\x18\x06 \x01(\rR\x0fmemoryAvailable\x126\n" +
-	"\x17memory_usage_percentage\x18\a \x01(\x01R\x15memoryUsagePercentage\"\x13\n" +
-	"\x11NodeStatusRequest\"I\n" +
-	"\x12NodeStatusResponse\x123\n" +
-	"\n" +
-	"node_usage\x18\x01 \x01(\v2\x14.NodeUsagePercentageR\tnodeUsage\"<\n" +
+	"\x0fcreation_status\x18\x01 \x01(\v2\x0f.CreationStatusR\x0ecreationStatus\"\x13\n" +
+	"\x11NodeStatusRequest\"\x89\x01\n" +
+	"\x12NodeStatusResponse\x12\x1b\n" +
+	"\tfree_vcpu\x18\x01 \x01(\rR\bfreeVcpu\x12+\n" +
+	"\x11storage_available\x18\x02 \x01(\rR\x10storageAvailable\x12)\n" +
+	"\x10memory_available\x18\x03 \x01(\rR\x0fmemoryAvailable\"<\n" +
 	"\x15DeleteInstanceRequest\x12#\n" +
 	"\rinstance_name\x18\x01 \x01(\tR\finstanceName\"\x18\n" +
 	"\x16DeleteInstanceResponse2\x89\x02\n" +
@@ -730,7 +643,7 @@ func file_services_model_proto_model_node_proto_rawDescGZIP() []byte {
 	return file_services_model_proto_model_node_proto_rawDescData
 }
 
-var file_services_model_proto_model_node_proto_msgTypes = make([]protoimpl.MessageInfo, 12)
+var file_services_model_proto_model_node_proto_msgTypes = make([]protoimpl.MessageInfo, 11)
 var file_services_model_proto_model_node_proto_goTypes = []any{
 	(*Empty)(nil),                  // 0: Empty
 	(*CreationStatus)(nil),         // 1: CreationStatus
@@ -739,31 +652,29 @@ var file_services_model_proto_model_node_proto_goTypes = []any{
 	(*CreateMasterResponse)(nil),   // 4: CreateMasterResponse
 	(*CreateWorkerRequest)(nil),    // 5: CreateWorkerRequest
 	(*CreateWorkerResponse)(nil),   // 6: CreateWorkerResponse
-	(*NodeUsagePercentage)(nil),    // 7: NodeUsagePercentage
-	(*NodeStatusRequest)(nil),      // 8: NodeStatusRequest
-	(*NodeStatusResponse)(nil),     // 9: NodeStatusResponse
-	(*DeleteInstanceRequest)(nil),  // 10: DeleteInstanceRequest
-	(*DeleteInstanceResponse)(nil), // 11: DeleteInstanceResponse
+	(*NodeStatusRequest)(nil),      // 7: NodeStatusRequest
+	(*NodeStatusResponse)(nil),     // 8: NodeStatusResponse
+	(*DeleteInstanceRequest)(nil),  // 9: DeleteInstanceRequest
+	(*DeleteInstanceResponse)(nil), // 10: DeleteInstanceResponse
 }
 var file_services_model_proto_model_node_proto_depIdxs = []int32{
 	2,  // 0: CreateMasterRequest.requirements:type_name -> CreateNodeRequirements
 	1,  // 1: CreateMasterResponse.creation_status:type_name -> CreationStatus
 	2,  // 2: CreateWorkerRequest.requirements:type_name -> CreateNodeRequirements
 	1,  // 3: CreateWorkerResponse.creation_status:type_name -> CreationStatus
-	7,  // 4: NodeStatusResponse.node_usage:type_name -> NodeUsagePercentage
-	3,  // 5: NodeService.CreateMaster:input_type -> CreateMasterRequest
-	5,  // 6: NodeService.CreateWorker:input_type -> CreateWorkerRequest
-	8,  // 7: NodeService.NodeStatus:input_type -> NodeStatusRequest
-	10, // 8: NodeService.DeleteInstance:input_type -> DeleteInstanceRequest
-	4,  // 9: NodeService.CreateMaster:output_type -> CreateMasterResponse
-	6,  // 10: NodeService.CreateWorker:output_type -> CreateWorkerResponse
-	9,  // 11: NodeService.NodeStatus:output_type -> NodeStatusResponse
-	11, // 12: NodeService.DeleteInstance:output_type -> DeleteInstanceResponse
-	9,  // [9:13] is the sub-list for method output_type
-	5,  // [5:9] is the sub-list for method input_type
-	5,  // [5:5] is the sub-list for extension type_name
-	5,  // [5:5] is the sub-list for extension extendee
-	0,  // [0:5] is the sub-list for field type_name
+	3,  // 4: NodeService.CreateMaster:input_type -> CreateMasterRequest
+	5,  // 5: NodeService.CreateWorker:input_type -> CreateWorkerRequest
+	7,  // 6: NodeService.NodeStatus:input_type -> NodeStatusRequest
+	9,  // 7: NodeService.DeleteInstance:input_type -> DeleteInstanceRequest
+	4,  // 8: NodeService.CreateMaster:output_type -> CreateMasterResponse
+	6,  // 9: NodeService.CreateWorker:output_type -> CreateWorkerResponse
+	8,  // 10: NodeService.NodeStatus:output_type -> NodeStatusResponse
+	10, // 11: NodeService.DeleteInstance:output_type -> DeleteInstanceResponse
+	8,  // [8:12] is the sub-list for method output_type
+	4,  // [4:8] is the sub-list for method input_type
+	4,  // [4:4] is the sub-list for extension type_name
+	4,  // [4:4] is the sub-list for extension extendee
+	0,  // [0:4] is the sub-list for field type_name
 }
 
 func init() { file_services_model_proto_model_node_proto_init() }
@@ -777,7 +688,7 @@ func file_services_model_proto_model_node_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_services_model_proto_model_node_proto_rawDesc), len(file_services_model_proto_model_node_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   12,
+			NumMessages:   11,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

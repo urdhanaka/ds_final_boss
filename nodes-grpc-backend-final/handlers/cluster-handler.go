@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"database/sql"
 	"errors"
 	"net/http"
 	"nodes-grpc-be/entities"
@@ -121,6 +122,11 @@ func (h *ClusterHandler) GetClusterDetails(c *gin.Context) {
 
 	thisCluster, err := h.clusterService.GetClusterById(c, clusterEntities)
 	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			c.JSON(http.StatusNotFound, NewErrorResponse(err, "not found"))
+			return
+		}
+
 		c.JSON(http.StatusInternalServerError, NewErrorResponse(err, "request is invalid"))
 		return
 	}
@@ -131,4 +137,49 @@ func (h *ClusterHandler) GetClusterDetails(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, NewSuccessResponseWithData(thisCluster, "success"))
+}
+
+func (h *ClusterHandler) DeleteCluster(c *gin.Context) {
+	token, tokenExists := c.Get("token")
+	if !tokenExists {
+		c.JSON(http.StatusUnauthorized, NewErrorResponse(errors.New("request is invalid"), "request is invalid"))
+		return
+	}
+
+	clusterId := c.Params.ByName("cluster_id")
+	clusterIdUuid, err := uuid.Parse(clusterId)
+
+	userId, err := h.jwtService.GetUserIDByToken(token.(string))
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, NewErrorResponse(err, "request is invalid"))
+		return
+	}
+
+	clusterEntities := &entities.Cluster{
+		ClusterID: clusterIdUuid,
+	}
+
+	thisCluster, err := h.clusterService.GetClusterById(c, clusterEntities)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			c.JSON(http.StatusNotFound, NewErrorResponse(err, "not found"))
+			return
+		}
+
+		c.JSON(http.StatusInternalServerError, NewErrorResponse(err, "request is invalid"))
+		return
+	}
+
+	if thisCluster.UserId != userId {
+		c.JSON(http.StatusUnauthorized, NewErrorResponse(errors.New("unauthorized"), "unauthorized"))
+		return
+	}
+
+	err = h.clusterService.DeleteCluster(c, clusterEntities)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, NewErrorResponse(err, "request is invalid"))
+		return
+	}
+
+	c.JSON(http.StatusOK, NewSuccessResponse("success"))
 }

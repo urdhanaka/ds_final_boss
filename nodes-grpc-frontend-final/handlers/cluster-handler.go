@@ -7,6 +7,7 @@ import (
 	"nodes-grpc-fe/models"
 
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 )
 
 func CreateClusterPageHandler(apiClient *ApiClient) gin.HandlerFunc {
@@ -83,15 +84,30 @@ func AccessCluster(apiClient *ApiClient) gin.HandlerFunc {
 		ErrorPageHandlers(err, res)
 
 		thisCluster := &models.Clusters{}
-		jsonBytes, err = json.Marshal(res.Data)
-		if err != nil {
-			ErrorPageHandlers(err, nil)
-			return
-		}
-		err = json.Unmarshal(jsonBytes, thisCluster)
-		if err != nil {
-			ErrorPageHandlers(err, nil)
-			return
+		if res.Data != nil {
+			jsonBytes, err = json.Marshal(res.Data)
+			if err != nil {
+				ErrorPageHandlers(err, nil)
+				return
+			}
+			err = json.Unmarshal(jsonBytes, thisCluster)
+			if err != nil {
+				ErrorPageHandlers(err, nil)
+				return
+			}
+
+			c.HTML(http.StatusOK, "cluster-views.html", gin.H{
+				"Name":           meUser.Name,
+				"GroupName":      meUser.Group,
+				"Vcpu":           meUser.Vcpu,
+				"Memory":         meUser.Memory,
+				"Storage":        meUser.Storage,
+				"NodeSize":       meUser.NodeSize,
+				"CurrentCluster": meUser.CurrentCluster,
+				"MaxCluster":     meUser.MaxCluster,
+				"Cluster":        *thisCluster,
+			})
+            return
 		}
 
 		c.HTML(http.StatusOK, "cluster-views.html", gin.H{
@@ -103,16 +119,42 @@ func AccessCluster(apiClient *ApiClient) gin.HandlerFunc {
 			"NodeSize":       meUser.NodeSize,
 			"CurrentCluster": meUser.CurrentCluster,
 			"MaxCluster":     meUser.MaxCluster,
-			"Cluster":        *thisCluster,
 		})
+	}
+}
+
+func DeleteCluster(apiClient *ApiClient) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		clusterId := c.Params.ByName("cluster_id")
+
+		res, err := apiClient.Me(c)
+		ErrorPageHandlers(err, res)
+
+		meUser := &models.MeUserReturn{}
+		jsonBytes, err := json.Marshal(res.Data)
+		if err != nil {
+			ErrorPageHandlers(err, nil)
+			return
+		}
+		err = json.Unmarshal(jsonBytes, meUser)
+		if err != nil {
+			ErrorPageHandlers(err, nil)
+			return
+		}
+
+		UuidParseId, _ := uuid.Parse(clusterId)
+		deleteClusterModel := &models.DeleteCluster{
+			ClusterId: UuidParseId,
+			UserId:    meUser.UserId,
+		}
+
+		res, err = apiClient.DeleteCluster(c, deleteClusterModel)
+		ErrorPageHandlers(err, res)
 	}
 }
 
 func AccessClusterStatus(apiClient *ApiClient) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		// clusterId := c.Params.ByName("cluster_id")
-		// res, err := apiClient.Me(c)
-		// ErrorPageHandlers(err, res)
 		c.HTML(http.StatusOK, "cluster-status.html", gin.H{})
 	}
 }

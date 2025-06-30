@@ -37,6 +37,7 @@ func setRouters(app *gin.Engine, resty *resty.Client) {
 
 	// cluster check
 	app.GET("/cluster/:cluster_id", handlers.AddTokenHeader(), handlers.AccessCluster(apiClient))
+	app.DELETE("/cluster/:cluster_id/delete", handlers.AddTokenHeader(), handlers.DeleteCluster(apiClient))
 	app.GET("/cluster/:cluster_id/status", handlers.AddTokenHeader(), handlers.AccessClusterStatus(apiClient))
 
 	// logout

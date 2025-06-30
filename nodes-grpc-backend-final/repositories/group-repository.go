@@ -2,6 +2,7 @@ package repositories
 
 import (
 	"context"
+	"fmt"
 	"nodes-grpc-be/entities"
 
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -40,9 +41,11 @@ func (r *GroupRepository) GetGroupByName(
 		&group.Memory,
 		&group.Storage,
 		&group.NodeSize,
+        &group.CurrentCluster,
 		&group.MaxCluster,
 	)
 	if err != nil {
+        fmt.Println("here", err)
 		return group, err
 	}
 

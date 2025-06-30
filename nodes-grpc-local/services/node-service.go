@@ -191,15 +191,9 @@ func (s *NodeServer) NodeStatus(
 	}
 
 	return &proto_model.NodeStatusResponse{
-		NodeUsage: &proto_model.NodeUsagePercentage{
-			CpuUsagePercentage:     CpuUsage.CurrentUsage,
-			MaxVcpu:                uint32(CpuUsage.LogicalCounts),
-			FreeVcpu:               uint32(CpuUsage.FreeLogical),
-			MemoryAvailable:        uint32(memoryStat.Memory),
-			MemoryUsagePercentage:  memoryStat.MemoryPercentage,
-			StorageAvailable:       uint32(storageStatus.Storage),
-			StorageUsagePercentage: storageStatus.StoragePercentage,
-		},
+		FreeVcpu:         uint32(CpuUsage.LogicalCounts) - uint32(CpuUsage.FreeLogical),
+		MemoryAvailable:  uint32(memoryStat.Memory),
+		StorageAvailable: uint32(storageStatus.Storage),
 	}, nil
 }
 
@@ -236,15 +230,19 @@ func StartGrpcServer(connection *InitStruct) {
 	// connect to main server
 	slog.Info("node is ready, connecting to main server")
 	go func() {
-		for {
-			res, err := connectToServer(connection.Lab)
+		var res string
+		var err error
+
+		for range NODES_CONNECT_RETRIES {
+			res, err = connectToServer(connection.Lab)
 			if err != nil {
 				slog.Error("StartGrpcServer(): failed to connect to main server",
 					"error", err.Error(),
 				)
-				os.Exit(1)
 
 				time.Sleep(30 * time.Second)
+
+				continue
 			} else {
 				slog.Info("main server is responding",
 					"response", res,
@@ -252,6 +250,12 @@ func StartGrpcServer(connection *InitStruct) {
 
 				break
 			}
+		}
+
+		if err != nil {
+			slog.Error("could not connect to main server",
+				"error", err,
+			)
 		}
 	}()
 

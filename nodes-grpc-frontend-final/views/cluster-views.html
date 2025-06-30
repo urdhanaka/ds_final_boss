@@ -5,8 +5,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Dashboard</title>
     <link rel="stylesheet" href="/public/assets/styles.css" />
+    <script
+      src="https://code.jquery.com/jquery-3.7.1.min.js"
+      integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo="
+      crossorigin="anonymous"
+    ></script>
   </head>
   <body class="h-screen bg-gray-50 font-mono">
+    {{ template "bar" . }}
     <div id="container" class="m-8">
       <div>
         Hello, {{ .Name }}. You are in {{ .GroupName }} group. This group
@@ -27,12 +33,72 @@
         <p>Name: {{ .Cluster.ClusterName }}</p>
         <p>Status: {{ .Cluster.ClusterStatus }}</p>
         <p>Ip address: {{ .Cluster.IpAddress }}</p>
-        <p>Access token: {{ .Cluster.AccessToken }}</p>
+        <p class="overflow-hidden text-ellipsis break-words">
+          Access token: {{ .Cluster.AccessToken }}
+        </p>
         <p>Created at: {{ .Cluster.CreatedAt }}</p>
+        <div class="flex gap-2 w-fit">
+          <button
+            id="access_button"
+            class="bg-blue-500 text-white p-3 rounded-lg transition hover:bg-blue-600 hover:cursor-pointer"
+          >
+            Access
+          </button>
+          <button
+            id="delete_button"
+            class="bg-red-500 text-white p-3 rounded-lg transition hover:bg-red-600 hover:cursor-pointer"
+          >
+            Delete
+          </button>
+          <button
+            id="logs_button"
+            class="text-black border p-3 rounded-lg transition hover:bg-gray-500 hover:text-white hover:cursor-pointer"
+          >
+            Logs
+          </button>
+        </div>
         {{ else }}
         <p>The cluster doesn't exists</p>
         {{ end }}
       </div>
     </div>
+    <script>
+      // handle access button
+      $("#access_button").on("click", function (e) {
+        e.preventDefault();
+        let isConfirmed = confirm(
+          "You are about to visit Kubernetes Dashboard. Continue?",
+        );
+        if (isConfirmed) {
+          window
+            .open("https://{{ .Cluster.IpAddress }}:8443", "_blank")
+            .focus();
+        }
+      });
+
+      // handler delete button
+      $("#delete_button").on("click", function (e) {
+        e.preventDefault();
+        let isConfirmed = confirm(
+          "You are about to delete the cluster. Continue?",
+        );
+
+        if (isConfirmed) {
+          $.ajax({
+            url: "/cluster/{{ .Cluster.ClusterId }}/delete",
+            method: "DELETE",
+            contentType: "application/json",
+            success: function (response) {
+              alert(JSON.stringify(response));
+              window.location.href = "/dashboard";
+            },
+          });
+        } else {
+          window.location.href = "/dashboard";
+        }
+      });
+
+      $("logs_button").on("click", function (e) {});
+    </script>
   </body>
 </html>

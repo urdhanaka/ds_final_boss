@@ -54,7 +54,6 @@ func (jq *RedisJobQueue) AddJob(
 
 	job.Type = jobType
 	job.Status = entities.JOB_STATUS_QUEUED
-	job.CreatedAt = time.Now()
 	job.Retries = 0
 	job.MaxRetries = MAX_JOB_RETRIES
 
@@ -70,6 +69,7 @@ func (jq *RedisJobQueue) AddJob(
 	}
 
 	// insert according to the job type
+	// only 2 types of job.Type
 	if job.Type == entities.JOB_TYPE_PROVISIONING {
 		if err := jq.client.LPush(ctx, jq.provisioningQueueName, job.ID).Err(); err != nil {
 			return fmt.Errorf("failed to queue job: %w", err)
@@ -111,11 +111,14 @@ func (jq *RedisJobQueue) updateJob(ctx context.Context, job *entities.Job) error
 	if err != nil {
 		return err
 	}
-
 	status := job.Status
-	provisioningJob := job.Payload.(*models.AddCluster)
+	jobPop := new(models.AddCluster)
+
+	jobPayloadBytes, _ := json.Marshal(job.Payload)
+	err = json.Unmarshal(jobPayloadBytes, jobPop)
+
 	updatedClusterEntity := &entities.Cluster{
-		ClusterID:     provisioningJob.ClusterId,
+		ClusterID:     jobPop.ClusterId,
 		ClusterStatus: string(status),
 	}
 
@@ -138,28 +141,20 @@ func (jq *RedisJobQueue) processJob(ctx context.Context, job *entities.Job) {
 
 	switch job.Type {
 	case entities.JOB_TYPE_PROVISIONING:
-        result, err = jq.clusterService.CreateCluster(ctx, job)
-		// err = fmt.Errorf("unknown job type: %s", job.Type)
-		// case entities.JOB_TYPE_CLEANUP:
-		//     err = jq.clusterService.
+		result, err = jq.clusterService.CreateCluster(ctx, job)
+	case entities.JOB_TYPE_CLEANUP:
+		return
 	default:
 		err = fmt.Errorf("unknown job type: %s", job.Type)
 	}
 
-	now := time.Now()
-	job.CompletedAt = &now
-
 	if err != nil {
+		slog.Error("")
 		job.Retries++
 
 		if job.Retries < job.MaxRetries {
-
 			job.Status = entities.JOB_STATUS_RETRYING
 			job.Error = err
-
-			// retryKey := fmt.Sprintf("retry:%d", time.Now().Add(jq.retryDelay).Unix())
-			// jq.client.LPush(jq.ctx, retryKey, job.ID)
-			// jq.client.Expire(jq.ctx, retryKey, jq.retryDelay+time.Minute)
 		} else {
 			job.Status = entities.JOB_STATUS_FAILED
 			job.Error = err

@@ -10,6 +10,7 @@ import (
 
 const (
 	CONNECT_GRPC_COUNT = 3
+	GRPC_PORT          = ":50051"
 )
 
 func NewNodeClient(nodeIp string) (proto_model.NodeServiceClient, error) {
@@ -21,7 +22,7 @@ func NewNodeClient(nodeIp string) (proto_model.NodeServiceClient, error) {
 			"ip address", nodeIp,
 		)
 
-		conn, err = grpc.NewClient(nodeIp, grpc.WithTransportCredentials(insecure.NewCredentials()))
+		conn, err = grpc.NewClient(nodeIp+GRPC_PORT, grpc.WithTransportCredentials(insecure.NewCredentials()))
 		if err != nil {
 			slog.Error("Could not connect to grpc server, retrying...",
 				"url", nodeIp,

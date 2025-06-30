@@ -2,6 +2,7 @@ package repositories
 
 import (
 	"context"
+	"fmt"
 	"nodes-grpc-be/entities"
 
 	"github.com/jackc/pgx/v5"
@@ -27,10 +28,11 @@ func (r *NodeRepository) AddNode(ctx context.Context, node *entities.Node) error
 
 	_, err = conn.Exec(
 		ctx,
-		"INSERT INTO nodes (node_id, hostname, ip_address, group_id, vcpu, ram, storage) VALUES ($1, $2, $3, $4, $5, $6, $7)",
+		"INSERT INTO nodes (node_id, hostname, ip_address, group_id, vcpu, memory, storage) VALUES ($1, $2, $3, $4, $5, $6, $7)",
 		node.NodeID, node.Hostname, node.IpAddress, node.GroupId, node.VCpu, node.Memory, node.Storage,
 	)
 	if err != nil {
+		fmt.Println("alsjdaklsjd", err)
 		return err
 	}
 
@@ -104,4 +106,28 @@ func (r *NodeRepository) GetNodeByHostnameAndGroupId(
 	}
 
 	return getNode, nil
+}
+
+func (r *NodeRepository) UpdateNodeResourcesByNodeId(
+	ctx context.Context,
+	node *entities.Node,
+) error {
+	conn, err := r.dbPool.Acquire(ctx)
+	if err != nil {
+		return err
+	}
+	defer conn.Release()
+
+	_, err = conn.Exec(
+		ctx,
+		`UPDATE nodes
+        SET vcpu = $1, memory = $2, storage = $3
+        WHERE node_id = $4`,
+		node.VCpu, node.Memory, node.Storage, node.NodeID,
+	)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }

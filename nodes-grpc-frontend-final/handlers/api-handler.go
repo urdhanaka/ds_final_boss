@@ -232,3 +232,37 @@ func (api *ApiClient) CreateCluster(
 		return respModel, nil
 	}
 }
+
+func (api *ApiClient) DeleteCluster(
+	c *gin.Context,
+	deleteClusterModel *models.DeleteCluster,
+) (*models.ApiResponse, error) {
+	if !api.isServerUp() {
+		return nil, ErrServerIsNotResponding
+	}
+
+	token, tokenExists := c.Get("token")
+	if !tokenExists {
+		return nil, ErrTokenIsMissing
+	}
+
+	bearerToken := fmt.Sprintf("Bearer %s", token.(string))
+	resp, err := api.client.R().
+		SetHeader("Authorization", bearerToken).
+		SetResult(&models.ApiResponse{}).
+		SetError(&models.ApiResponse{}).
+		Delete(consts.BACKEND_URL + "/api/clusters/" + deleteClusterModel.ClusterId.String())
+	if err != nil {
+		return &models.ApiResponse{}, err
+	}
+
+	if resp.StatusCode() < 300 {
+		respModel := resp.Result().(*models.ApiResponse)
+
+		return respModel, nil
+	} else {
+		respModel := resp.Error().(*models.ApiResponse)
+
+		return respModel, nil
+	}
+}

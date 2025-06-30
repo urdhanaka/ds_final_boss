@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"nodes-grpc-be/handlers"
 	"nodes-grpc-be/repositories"
 	"nodes-grpc-be/services"
@@ -25,6 +26,8 @@ func setRouters(app *gin.Engine, dbPool *pgxpool.Pool, client *redis.Client) {
 		groupRepository,
 	)
 	redisQueueService := services.NewRedisJobQueue(client, clusterService)
+	redisQueueService.StartWorker(context.Background())
+
 	jwtService := services.NewJwtService()
 	nodeService := services.NewNodeService(nodeRepository, groupRepository)
 	userService := services.NewUserService(userRepository, groupRepository, jwtService)
@@ -42,6 +45,7 @@ func setRouters(app *gin.Engine, dbPool *pgxpool.Pool, client *redis.Client) {
 		clusterGroup.POST("", handlers.Authenticate(jwtService), clusterHandler.CreateCluster)
 		clusterGroup.GET("", handlers.Authenticate(jwtService), clusterHandler.GetUserCluster)
 		clusterGroup.GET("/:cluster_id", handlers.Authenticate(jwtService), clusterHandler.GetClusterDetails)
+		clusterGroup.DELETE("/:cluster_id", handlers.Authenticate(jwtService), clusterHandler.GetClusterDetails)
 	}
 
 	userGroup := apiGroup.Group("/users")
@@ -52,6 +56,7 @@ func setRouters(app *gin.Engine, dbPool *pgxpool.Pool, client *redis.Client) {
 
 	nodeGroup := apiGroup.Group("/nodes")
 	{
+		nodeGroup.POST("", nodeHandler.AddNode)
 		nodeGroup.GET("/group-nodes", handlers.Authenticate(jwtService), nodeHandler.GetGroupCluster)
 	}
 }
