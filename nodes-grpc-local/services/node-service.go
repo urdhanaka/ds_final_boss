@@ -75,7 +75,7 @@ func (s *NodeServer) CreateMaster(
 	res.CreationStatus.Message = virtResult.Message
 
 	// websocket logs
-	// go sendLogs(instanceName, createMasterRequest.ClusterName)
+	go sendLogs(instanceName, createMasterRequest.ClusterName)
 
 	// err := s.queue.AddToSpawnQueue(provisionCtx, virtSpecs)
 	// if err != nil {
@@ -322,6 +322,7 @@ func sendLogs(
 				"error", err,
 			)
 			time.Sleep(1 * time.Second)
+
 			continue
 		}
 		break
@@ -330,8 +331,8 @@ func sendLogs(
 
 	u := url.URL{
 		Scheme: "ws",
-		Host:   MAIN_SERVER_URL_LOCAL,
-		Path:   fmt.Sprintf("/ws/receive_logs/%s", clusterName),
+		Host:   MAIN_SERVER_URL_LOCAL, // directly send to the backend
+		Path:   fmt.Sprintf("/api/logs/stream/%s", clusterName),
 	}
 	c, _, err := websocket.DefaultDialer.Dial(u.String(), nil)
 	if err != nil {

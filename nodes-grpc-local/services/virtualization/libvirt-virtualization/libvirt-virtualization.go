@@ -60,11 +60,11 @@ func (c *LibvirtVirtualization) createMaster(
 
 	// defering vm cleanup in case
 	// error happens or deadline exceeded
-	// defer func() {
-	// 	if createRes.CreationStatus == false {
-	// 		c.DeleteInstance(thisInstanceName)
-	// 	}
-	// }()
+	defer func() {
+		if createRes.CreationStatus == false {
+			c.DeleteInstance(thisInstanceName)
+		}
+	}()
 
 	slog.Info(fmt.Sprintf("master node name is %s", thisInstanceName))
 	slogFunction(virtRequest.Name, thisInstanceName, "creating master instance", nil)
