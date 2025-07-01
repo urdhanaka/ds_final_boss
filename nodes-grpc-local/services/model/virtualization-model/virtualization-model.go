@@ -1,6 +1,9 @@
 package virtualization_model
 
 type CreateInstanceRequest struct {
+	// cluster name
+	ClusterName string `json:"cluster_name"`
+
 	// instance name
 	Name string `json:"name"`
 

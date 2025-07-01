@@ -56,12 +56,13 @@ func (s *NodeServer) CreateMaster(
 	instanceName := createMasterRequest.Requirements.NodeName
 
 	virtSpecs := virtualization_model.CreateInstanceRequest{
-		Name:     instanceName,
-		IsMaster: true,
-		Token:    createMasterRequest.ClusterToken,
-		Cpu:      int(createMasterRequest.Requirements.Vcpu),
-		Memory:   int(createMasterRequest.Requirements.Memory),
-		Storage:  int(createMasterRequest.Requirements.Storage),
+		ClusterName: createMasterRequest.ClusterName,
+		Name:        instanceName,
+		IsMaster:    true,
+		Token:       createMasterRequest.ClusterToken,
+		Cpu:         int(createMasterRequest.Requirements.Vcpu),
+		Memory:      int(createMasterRequest.Requirements.Memory),
+		Storage:     int(createMasterRequest.Requirements.Storage),
 	}
 
 	virtResult, err := s.libvirtVirtualization.CreateInstance(provisionCtx, &virtSpecs)
@@ -73,9 +74,6 @@ func (s *NodeServer) CreateMaster(
 	res.MasterIpAddress = virtResult.MasterIpAddress
 	res.CreationStatus.Success = virtResult.CreationStatus
 	res.CreationStatus.Message = virtResult.Message
-
-	// websocket logs
-	go sendLogs(instanceName, createMasterRequest.ClusterName)
 
 	// err := s.queue.AddToSpawnQueue(provisionCtx, virtSpecs)
 	// if err != nil {

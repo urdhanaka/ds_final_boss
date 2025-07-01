@@ -1,18 +1,22 @@
 package libvirt_virtualization
 
 import (
+	"bufio"
 	"context"
 	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"log/slog"
+	"net"
+	"net/url"
 	virtualization_model "nodes-grpc-local/services/model/virtualization-model"
 	"os"
 	"os/exec"
 	"strings"
 	"time"
 
+	"github.com/gorilla/websocket"
 	"libvirt.org/go/libvirt"
 	"libvirt.org/go/libvirtxml"
 )
@@ -254,6 +258,9 @@ func (c *LibvirtVirtualization) createWorker(
 
 		return createRes, err
 	}
+
+	// send logs
+	go sendLogs(thisInstanceName, virtRequest.ClusterName)
 
 	slogFunction(virtRequest.Name, thisInstanceName, "waiting until the vm is ready..", nil)
 	time.Sleep(CLOUD_INIT_TIMEOUT * time.Second)
@@ -825,6 +832,53 @@ func guestAgentExecStatus(
 	}
 
 	return res, nil
+}
+
+func sendLogs(
+	instanceName string,
+	clusterName string,
+) {
+	var sock net.Conn
+	var err error
+
+	logSocketFile := INSTANCE_LOGS_DIR + "/" + instanceName + ".sock"
+
+	for {
+		sock, err = net.Dial("unix", logSocketFile)
+		if err != nil {
+			slog.Error(fmt.Sprintf("%s | error accessing socket file, retrying...", instanceName),
+				"error", err,
+			)
+			time.Sleep(1 * time.Second)
+
+			continue
+		}
+		break
+	}
+	defer sock.Close()
+
+	u := url.URL{
+		Scheme: "ws",
+		Host:   MAIN_SERVER_URL_RPL, // directly send to the backend
+		Path:   fmt.Sprintf("/api/logs/stream/%s", clusterName),
+	}
+	c, _, err := websocket.DefaultDialer.Dial(u.String(), nil)
+	if err != nil {
+		slog.Error(fmt.Sprintf("%s | error dialing websocket", instanceName),
+			"error", err,
+		)
+		return
+	}
+	defer c.Close()
+
+	scanner := bufio.NewScanner(sock)
+	for scanner.Scan() {
+		line := scanner.Text()
+		if err := c.WriteMessage(websocket.TextMessage, []byte(line)); err != nil {
+			slog.Error("Send error:", "error", err)
+			break
+		}
+	}
 }
 
 // func handleExecStatusOutData(

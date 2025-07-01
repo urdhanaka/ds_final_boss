@@ -14,6 +14,8 @@ const (
 
 	// image that will be used for VM
 	BASE_IMAGE_NAME = "oracular-server-cloudimg-amd64.img"
+
+	MAIN_SERVER_URL_RPL = "10.21.73.113:8000"
 )
 
 // production environment

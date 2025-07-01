@@ -1,6 +1,8 @@
 package websocket
 
 import (
+	"fmt"
+	"log"
 	"log/slog"
 	"net"
 	"net/http"
@@ -36,8 +38,17 @@ func (ws *Websocket) logHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	defer sock.Close()
 
-	// thisHostLogChan := ws.HostnameChan[instanceName]
-	//
+	thisHostLogChan := ws.HostnameChan[instanceName]
+
+	for log := range thisHostLogChan {
+		err := c.WriteMessage(websocket.TextMessage, []byte(log))
+		if err != nil {
+			slog.Error("error on the websocket chan",
+				"error", err,
+			)
+		}
+	}
+
 	// for {
 	// 	// expect no message from client
 	// 	select {
@@ -52,13 +63,13 @@ func (ws *Websocket) logHandler(w http.ResponseWriter, r *http.Request) {
 	// 			slog.Error("write error",
 	// 				"error", err,
 	// 			)
-	// 			break
 	// 		}
 	// 	}
 	// }
 }
 
 // func sockReader(logChan <-chan string, instanceName string) {
+// 	sockFile := libvirt_virtualization.INSTANCE_LOGS_DIR + "/" + instanceName + ".sock"
 //
 // 	l, err := net.Listen("unix", sockFile)
 // 	if err != nil {
@@ -78,12 +89,12 @@ func (ws *Websocket) logHandler(w http.ResponseWriter, r *http.Request) {
 // 	}
 // }
 
-// func (ws *Websocket) Start() {
-// 	r := mux.NewRouter()
-// 	r.HandleFunc("/status/{instance_name}", ws.logHandler)
-// 	http.Handle("/", r)
-//
-// 	slog.Info(fmt.Sprintf("starting websocket service at %s", WEBSOCKET_ADDRESS))
-//
-// 	log.Fatal(http.ListenAndServe(WEBSOCKET_ADDRESS, nil))
-// }
+func (ws *Websocket) Start() {
+	r := mux.NewRouter()
+	r.HandleFunc("/status/{instance_name}", ws.logHandler)
+	http.Handle("/", r)
+
+	slog.Info(fmt.Sprintf("starting websocket service at %s", WEBSOCKET_ADDRESS))
+
+	log.Fatal(http.ListenAndServe(WEBSOCKET_ADDRESS, nil))
+}
