@@ -1,7 +1,6 @@
 package services
 
 import (
-	"math/rand"
 	"net"
 	"nodes-grpc-local/services/model"
 	"os"
@@ -14,18 +13,6 @@ import (
 	"github.com/shirou/gopsutil/v4/disk"
 	"github.com/shirou/gopsutil/v4/mem"
 )
-
-func generateRandom(stringLength int) string {
-	random := rand.New(rand.NewSource(time.Now().UnixNano()))
-	letters := []rune("abcdefghijklmnopqrstuvwxyz")
-
-	b := make([]rune, stringLength)
-	for i := range b {
-		b[i] = letters[random.Intn(len(letters))]
-	}
-
-	return string(b)
-}
 
 func getHostname() string {
 	hostname, err := os.Hostname()

@@ -11,7 +11,8 @@ type InitStruct struct {
 	VirtualizationService *libvirt_virtualization.LibvirtVirtualization
 	WebsocketService      *websocket.Websocket
 	// QueueService          *queue.Queue
-	Lab string
+	Lab          string
+	MainServerIp string
 }
 
 func NewInitStruct() *InitStruct {
@@ -24,18 +25,19 @@ func NewInitStruct() *InitStruct {
 	libvirtConnection := libvirt_virtualization.InitLibvirtConnection()
 	libvirtService := libvirt_virtualization.NewLibvirtVirtualization(libvirtConnection)
 
-	lab := handleLab()
+	input := handleInput()
 
 	return &InitStruct{
 		VirtualizationService: libvirtService,
 		// QueueService:          queueService,
 		WebsocketService: websocketConnection,
-		Lab:              lab,
+		Lab:              input[0],
+		MainServerIp:     input[1],
 	}
 }
 
 // handle which lab the computer belongs to
-func handleLab() string {
+func handleInput() []string {
 	labMapping := map[string]string{
 		"AJK":  "AJK",
 		"RPL":  "RPL",
@@ -48,19 +50,19 @@ func handleLab() string {
 	}
 
 	args := os.Args
-	if len(args) != 2 {
-		fmt.Printf("usage: %s <nama_lab>\n", args[0])
+	if len(args) != 3 {
+		fmt.Printf("usage: %s <nama_lab> <main server main server>\n", args[0])
 		fmt.Println("available lab (case sensitive): AJK, RPL, KBJ, GIGA, KCV, MCI, PKT, AP")
 		os.Exit(1)
 	}
 
-	lab, ok := labMapping[args[1]]
+	_, ok := labMapping[args[1]]
 	if !ok {
 		fmt.Println("lab is not available")
-		fmt.Printf("usage: %s <nama_lab>\n", args[0])
 		fmt.Println("available lab (case sensitive): AJK, RPL, KBJ, GIGA, KCV, MCI, PKT, AP")
+		fmt.Printf("usage: %s <nama_lab>\n", args[0])
 		os.Exit(1)
 	}
 
-	return lab
+	return args
 }

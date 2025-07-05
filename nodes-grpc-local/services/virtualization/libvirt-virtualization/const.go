@@ -12,8 +12,13 @@ const (
 	NVRAM_DIR         = "/var/lib/libvirt/qemu/nvram"
 	INSTANCE_LOGS_DIR = "/var/lib/libvirt/instance-logs"
 
+	// cloud-init related
+	NETWORK_CONFIG_PATH   = BASE_POOL_DIR + "/network-config"
+	USER_DATA_CONFIG_PATH = BASE_POOL_DIR + "/user-data"
+
 	// image that will be used for VM
-	BASE_IMAGE_NAME = "oracular-server-cloudimg-amd64.img"
+	BASE_IMAGE_NAME           = "oracular-server-cloudimg-amd64.img"
+	BASE_IMAGE_NAME_FULL_PATH = BASE_POOL_DIR + "/" + BASE_IMAGE_NAME
 
 	MAIN_SERVER_URL_RPL = "10.21.73.113:8000"
 )

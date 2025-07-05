@@ -12,14 +12,12 @@ import (
 	"net/url"
 	proto_model "nodes-grpc-local/services/model/proto-model"
 	virtualization_model "nodes-grpc-local/services/model/virtualization-model"
-	"nodes-grpc-local/services/queue"
 	libvirt_virtualization "nodes-grpc-local/services/virtualization/libvirt-virtualization"
 	"os"
 	"time"
 
 	"github.com/gorilla/websocket"
 	"google.golang.org/grpc"
-	"libvirt.org/go/libvirt"
 )
 
 type NodeServer struct {
@@ -29,16 +27,16 @@ type NodeServer struct {
 	libvirtVirtualization *libvirt_virtualization.LibvirtVirtualization
 }
 
-func NewNodeServer(
-	queue *queue.Queue,
-	libvirtVirtualization *libvirt_virtualization.LibvirtVirtualization,
-	libvirtConnection *libvirt.Connect,
-) *NodeServer {
-	return &NodeServer{
-		// queue:                 queue,
-		libvirtVirtualization: libvirtVirtualization,
-	}
-}
+// func NewNodeServer(
+// 	queue *queue.Queue,
+// 	libvirtVirtualization *libvirt_virtualization.LibvirtVirtualization,
+// 	libvirtConnection *libvirt.Connect,
+// ) *NodeServer {
+// 	return &NodeServer{
+// 		// queue:                 queue,
+// 		libvirtVirtualization: libvirtVirtualization,
+// 	}
+// }
 
 func (s *NodeServer) CreateMaster(
 	ctx context.Context,
@@ -294,6 +292,7 @@ func connectToServer(labName string) (string, error) {
 	return string(respBody), nil
 }
 
+// NOTE: might not needed
 // func startWorker(connection *InitStruct) {
 // 	worker := queue.NewWorker(
 // 		connection.QueueService,
