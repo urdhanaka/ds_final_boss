@@ -31,8 +31,8 @@ func NewInitStruct() *InitStruct {
 		VirtualizationService: libvirtService,
 		// QueueService:          queueService,
 		WebsocketService: websocketConnection,
-		Lab:              input[0],
-		MainServerIp:     input[1],
+		Lab:              input[1],
+		MainServerIp:     input[2],
 	}
 }
 
