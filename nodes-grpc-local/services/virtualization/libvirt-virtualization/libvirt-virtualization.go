@@ -122,7 +122,7 @@ func (c *LibvirtVirtualization) createMaster(
 		return createRes, err
 	}
 
-	go sendLogs(thisInstanceName, virtRequest.ClusterName)
+	go sendLogs(thisInstanceName, virtRequest.ClusterName, virtRequest.MainServerIpAddress)
 
 	slogFunction(virtRequest.ClusterName, thisInstanceName, "waiting until the vm is ready..", nil)
 	time.Sleep(CLOUD_INIT_TIMEOUT * time.Second)
