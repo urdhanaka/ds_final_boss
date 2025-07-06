@@ -870,7 +870,7 @@ func sendLogs(
 
 	u := url.URL{
 		Scheme: "ws",
-		Host:   mainServerIpAddress, // directly send to the backend
+		Host:   mainServerIpAddress + ":8000", // directly send to the backend
 		Path:   fmt.Sprintf("/api/logs/receive/%s", clusterId),
 	}
 	c, _, err := websocket.DefaultDialer.Dial(u.String(), nil)
