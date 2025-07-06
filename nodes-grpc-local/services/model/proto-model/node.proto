@@ -20,7 +20,8 @@ message CreateNodeRequirements {
 message CreateMasterRequest {
   string cluster_name = 1;
   string cluster_token = 2;
-  CreateNodeRequirements requirements = 3;
+  string cluster_id = 3;
+  CreateNodeRequirements requirements = 4;
 }
 
 message CreateMasterResponse {

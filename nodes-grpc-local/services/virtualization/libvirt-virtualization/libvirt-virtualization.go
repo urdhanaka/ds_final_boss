@@ -122,7 +122,7 @@ func (c *LibvirtVirtualization) createMaster(
 		return createRes, err
 	}
 
-	go sendLogs(thisInstanceName, virtRequest.ClusterName, virtRequest.MainServerIpAddress)
+	go sendLogs(thisInstanceName, virtRequest.MainServerIpAddress, virtRequest.ClusterId)
 
 	slogFunction(virtRequest.ClusterName, thisInstanceName, "waiting until the vm is ready..", nil)
 	time.Sleep(CLOUD_INIT_TIMEOUT * time.Second)
@@ -846,8 +846,8 @@ func guestAgentExecStatus(
 
 func sendLogs(
 	instanceName string,
-	clusterName string,
 	mainServerIpAddress string,
+	clusterId string,
 ) {
 	var sock net.Conn
 	var err error
@@ -871,7 +871,7 @@ func sendLogs(
 	u := url.URL{
 		Scheme: "ws",
 		Host:   mainServerIpAddress, // directly send to the backend
-		Path:   fmt.Sprintf("/api/logs/stream/%s", clusterName),
+		Path:   fmt.Sprintf("/api/logs/receive/%s", clusterId),
 	}
 	c, _, err := websocket.DefaultDialer.Dial(u.String(), nil)
 	if err != nil {

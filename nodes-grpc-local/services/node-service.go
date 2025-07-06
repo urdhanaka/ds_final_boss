@@ -65,6 +65,7 @@ func (s *NodeServer) CreateMaster(
 		Memory:              int(createMasterRequest.Requirements.Memory),
 		Storage:             int(createMasterRequest.Requirements.Storage),
 		MainServerIpAddress: s.mainServerIpAddress,
+		ClusterId:           createMasterRequest.ClusterId,
 	}
 
 	virtResult, err := s.libvirtVirtualization.CreateInstance(provisionCtx, &virtSpecs)
@@ -286,7 +287,7 @@ func connectToServer(
 		`{"hostname":"%s","ip_address":"%s","lab_name":"%s","vcpu":%d,"storage":%d,"memory":%d}`,
 		hostname, ipAddress, labName, cpuStatus.LogicalCounts, storageStatus.Storage, memoryStatus.Memory,
 	)
-    req, err := http.NewRequest("POST", fmt.Sprintf("http://%s/api/nodes", mainServerIp+":8000"), bytes.NewBuffer(body))
+	req, err := http.NewRequest("POST", fmt.Sprintf("http://%s/api/nodes", mainServerIp+":8000"), bytes.NewBuffer(body))
 	req.Header.Set("Content-Type", "application/json")
 
 	client := &http.Client{}

@@ -24,6 +24,9 @@ type CreateInstanceRequest struct {
 
 	// main server ip address
 	MainServerIpAddress string `json:"main_server_ip_address"`
+
+	// cluster UUID
+	ClusterId string `json:"cluster_id"`
 }
 
 type DeleteInstanceRequest struct {
