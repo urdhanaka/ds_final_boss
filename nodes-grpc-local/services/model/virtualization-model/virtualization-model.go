@@ -21,6 +21,9 @@ type CreateInstanceRequest struct {
 
 	// is the instance the master?
 	IsMaster bool `json:"isMaster"`
+
+	// main server ip address
+	MainServerIpAddress string `json:"main_server_ip_address"`
 }
 
 type DeleteInstanceRequest struct {
@@ -54,8 +57,9 @@ type ExecStatus struct {
 }
 
 type VirtCreateInstanceResponse struct {
-	MasterIpAddress string `json:"master_ip_address,omitempty"`
-	DashboardToken  string `json:"dashboard_token,omitempty"`
-	Message         string `json:"message,omitempty"`
-	CreationStatus  bool   `json:"creation_status,omitempty"`
+	KubeconfigContents []byte `json:"kubeconfig_contents,omitempty"`
+	MasterIpAddress    string `json:"master_ip_address,omitempty"`
+	DashboardToken     string `json:"dashboard_token,omitempty"`
+	Message            string `json:"message,omitempty"`
+	CreationStatus     bool   `json:"creation_status,omitempty"`
 }

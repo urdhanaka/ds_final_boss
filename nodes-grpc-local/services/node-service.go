@@ -25,6 +25,9 @@ type NodeServer struct {
 
 	// queue                 *queue.Queue
 	libvirtVirtualization *libvirt_virtualization.LibvirtVirtualization
+
+	// hacky way
+	mainServerIpAddress string
 }
 
 // func NewNodeServer(
@@ -54,13 +57,14 @@ func (s *NodeServer) CreateMaster(
 	instanceName := createMasterRequest.Requirements.NodeName
 
 	virtSpecs := virtualization_model.CreateInstanceRequest{
-		ClusterName: createMasterRequest.ClusterName,
-		Name:        instanceName,
-		IsMaster:    true,
-		Token:       createMasterRequest.ClusterToken,
-		Cpu:         int(createMasterRequest.Requirements.Vcpu),
-		Memory:      int(createMasterRequest.Requirements.Memory),
-		Storage:     int(createMasterRequest.Requirements.Storage),
+		ClusterName:         createMasterRequest.ClusterName,
+		Name:                instanceName,
+		IsMaster:            true,
+		Token:               createMasterRequest.ClusterToken,
+		Cpu:                 int(createMasterRequest.Requirements.Vcpu),
+		Memory:              int(createMasterRequest.Requirements.Memory),
+		Storage:             int(createMasterRequest.Requirements.Storage),
+		MainServerIpAddress: s.mainServerIpAddress,
 	}
 
 	virtResult, err := s.libvirtVirtualization.CreateInstance(provisionCtx, &virtSpecs)
@@ -68,6 +72,7 @@ func (s *NodeServer) CreateMaster(
 		return res, err
 	}
 
+	res.KubeconfigContents = virtResult.KubeconfigContents
 	res.DashboardToken = virtResult.DashboardToken
 	res.MasterIpAddress = virtResult.MasterIpAddress
 	res.CreationStatus.Success = virtResult.CreationStatus
@@ -217,6 +222,7 @@ func StartGrpcServer(connection *InitStruct) {
 	s := grpc.NewServer()
 	proto_model.RegisterNodeServiceServer(s, &NodeServer{
 		libvirtVirtualization: connection.VirtualizationService,
+		mainServerIpAddress:   connection.MainServerIp,
 		// queue: connection.QueueService,
 	})
 
@@ -230,7 +236,7 @@ func StartGrpcServer(connection *InitStruct) {
 		var err error
 
 		for range NODES_CONNECT_RETRIES {
-			res, err = connectToServer(connection.Lab)
+			res, err = connectToServer(connection.MainServerIp, connection.Lab)
 			if err != nil {
 				slog.Error("StartGrpcServer(): failed to connect to main server",
 					"error", err.Error(),
@@ -265,7 +271,10 @@ func StartGrpcServer(connection *InitStruct) {
 	}
 }
 
-func connectToServer(labName string) (string, error) {
+func connectToServer(
+	mainServerIp string,
+	labName string,
+) (string, error) {
 	hostname := getHostname()
 	ipAddress := getIpAddress()
 	cpuStatus, _ := getCpuStatus()
@@ -277,7 +286,7 @@ func connectToServer(labName string) (string, error) {
 		`{"hostname":"%s","ip_address":"%s","lab_name":"%s","vcpu":%d,"storage":%d,"memory":%d}`,
 		hostname, ipAddress, labName, cpuStatus.LogicalCounts, storageStatus.Storage, memoryStatus.Memory,
 	)
-	req, err := http.NewRequest("POST", fmt.Sprintf("http://%s/register_node", MAIN_SERVER_URL_LOCAL), bytes.NewBuffer(body))
+	req, err := http.NewRequest("POST", fmt.Sprintf("http://%s/register_node", mainServerIp), bytes.NewBuffer(body))
 	req.Header.Set("Content-Type", "application/json")
 
 	client := &http.Client{}

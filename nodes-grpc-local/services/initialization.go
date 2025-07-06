@@ -51,7 +51,7 @@ func handleInput() []string {
 
 	args := os.Args
 	if len(args) != 3 {
-		fmt.Printf("usage: %s <nama_lab> <main server main server>\n", args[0])
+		fmt.Printf("usage: %s <nama_lab> <main server ip address>\n", args[0])
 		fmt.Println("available lab (case sensitive): AJK, RPL, KBJ, GIGA, KCV, MCI, PKT, AP")
 		os.Exit(1)
 	}

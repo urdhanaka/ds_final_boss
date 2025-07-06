@@ -186,9 +186,25 @@ func (c *LibvirtVirtualization) createMaster(
 		return createRes, err
 	}
 
+	// getting the kubeconfig
+	getKubeConfigContentCmd := `cat NOTES.md | tr '\n' ' '`
+	getKubeConfigContentStatus, err := guestAgentExecStatus(dom, getKubeConfigContentCmd)
+	if err != nil {
+		slogFunction(virtRequest.ClusterName, thisInstanceName, "error getting kubeconfig contents", err)
+
+		return createRes, err
+	}
+	decodedKubeconfigContentsBytes, err := base64.StdEncoding.DecodeString(getKubeConfigContentStatus.Return.OutData)
+	if err != nil {
+		slogFunction(virtRequest.ClusterName, thisInstanceName, "error decoding kubernetes dashboard bytes", err)
+
+		return createRes, err
+	}
+
 	createRes.CreationStatus = true
 	createRes.DashboardToken = string(decodedTokenBytes)
 	createRes.MasterIpAddress = string(decodedIpAddressBytes)
+	createRes.KubeconfigContents = decodedKubeconfigContentsBytes
 
 	return createRes, nil
 }
@@ -259,9 +275,6 @@ func (c *LibvirtVirtualization) createWorker(
 
 		return createRes, err
 	}
-
-	// send logs
-	// go sendLogs(thisInstanceName, virtRequest.ClusterName)
 
 	slogFunction(virtRequest.ClusterName, thisInstanceName, "waiting until the vm is ready..", nil)
 	time.Sleep(CLOUD_INIT_TIMEOUT * time.Second)
@@ -834,6 +847,7 @@ func guestAgentExecStatus(
 func sendLogs(
 	instanceName string,
 	clusterName string,
+	mainServerIpAddress string,
 ) {
 	var sock net.Conn
 	var err error
@@ -856,7 +870,7 @@ func sendLogs(
 
 	u := url.URL{
 		Scheme: "ws",
-		Host:   MAIN_SERVER_URL_RPL, // directly send to the backend
+		Host:   mainServerIpAddress, // directly send to the backend
 		Path:   fmt.Sprintf("/api/logs/stream/%s", clusterName),
 	}
 	c, _, err := websocket.DefaultDialer.Dial(u.String(), nil)

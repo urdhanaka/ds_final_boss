@@ -27,6 +27,7 @@ message CreateMasterResponse {
   CreationStatus creation_status = 1;
   string master_ip_address = 2;
   string dashboard_token = 3;
+  bytes kubeconfig_contents = 4;
 }
 
 // create worker

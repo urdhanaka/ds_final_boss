@@ -239,12 +239,13 @@ func (x *CreateMasterRequest) GetRequirements() *CreateNodeRequirements {
 }
 
 type CreateMasterResponse struct {
-	state           protoimpl.MessageState `protogen:"open.v1"`
-	CreationStatus  *CreationStatus        `protobuf:"bytes,1,opt,name=creation_status,json=creationStatus,proto3" json:"creation_status,omitempty"`
-	MasterIpAddress string                 `protobuf:"bytes,2,opt,name=master_ip_address,json=masterIpAddress,proto3" json:"master_ip_address,omitempty"`
-	DashboardToken  string                 `protobuf:"bytes,3,opt,name=dashboard_token,json=dashboardToken,proto3" json:"dashboard_token,omitempty"`
-	unknownFields   protoimpl.UnknownFields
-	sizeCache       protoimpl.SizeCache
+	state              protoimpl.MessageState `protogen:"open.v1"`
+	CreationStatus     *CreationStatus        `protobuf:"bytes,1,opt,name=creation_status,json=creationStatus,proto3" json:"creation_status,omitempty"`
+	MasterIpAddress    string                 `protobuf:"bytes,2,opt,name=master_ip_address,json=masterIpAddress,proto3" json:"master_ip_address,omitempty"`
+	DashboardToken     string                 `protobuf:"bytes,3,opt,name=dashboard_token,json=dashboardToken,proto3" json:"dashboard_token,omitempty"`
+	KubeconfigContents []byte                 `protobuf:"bytes,4,opt,name=kubeconfig_contents,json=kubeconfigContents,proto3" json:"kubeconfig_contents,omitempty"`
+	unknownFields      protoimpl.UnknownFields
+	sizeCache          protoimpl.SizeCache
 }
 
 func (x *CreateMasterResponse) Reset() {
@@ -296,6 +297,13 @@ func (x *CreateMasterResponse) GetDashboardToken() string {
 		return x.DashboardToken
 	}
 	return ""
+}
+
+func (x *CreateMasterResponse) GetKubeconfigContents() []byte {
+	if x != nil {
+		return x.KubeconfigContents
+	}
+	return nil
 }
 
 // create worker
@@ -604,11 +612,12 @@ const file_services_model_proto_model_node_proto_rawDesc = "" +
 	"\x13CreateMasterRequest\x12!\n" +
 	"\fcluster_name\x18\x01 \x01(\tR\vclusterName\x12#\n" +
 	"\rcluster_token\x18\x02 \x01(\tR\fclusterToken\x12;\n" +
-	"\frequirements\x18\x03 \x01(\v2\x17.CreateNodeRequirementsR\frequirements\"\xa5\x01\n" +
+	"\frequirements\x18\x03 \x01(\v2\x17.CreateNodeRequirementsR\frequirements\"\xd6\x01\n" +
 	"\x14CreateMasterResponse\x128\n" +
 	"\x0fcreation_status\x18\x01 \x01(\v2\x0f.CreationStatusR\x0ecreationStatus\x12*\n" +
 	"\x11master_ip_address\x18\x02 \x01(\tR\x0fmasterIpAddress\x12'\n" +
-	"\x0fdashboard_token\x18\x03 \x01(\tR\x0edashboardToken\"\xc6\x01\n" +
+	"\x0fdashboard_token\x18\x03 \x01(\tR\x0edashboardToken\x12/\n" +
+	"\x13kubeconfig_contents\x18\x04 \x01(\fR\x12kubeconfigContents\"\xc6\x01\n" +
 	"\x13CreateWorkerRequest\x12!\n" +
 	"\fcluster_name\x18\x01 \x01(\tR\vclusterName\x12#\n" +
 	"\rcluster_token\x18\x02 \x01(\tR\fclusterToken\x12*\n" +
