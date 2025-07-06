@@ -187,7 +187,7 @@ func (c *LibvirtVirtualization) createMaster(
 	}
 
 	// getting the kubeconfig
-	getKubeConfigContentCmd := `cat /etc/rancher/k3s/k3s.yaml | tr '\n' ' '`
+	getKubeConfigContentCmd := `cat /etc/rancher/k3s/k3s.yaml | head -c -1`
 	getKubeConfigContentStatus, err := guestAgentExecStatus(dom, getKubeConfigContentCmd)
 	if err != nil {
 		slogFunction(virtRequest.ClusterName, thisInstanceName, "error getting kubeconfig contents", err)
@@ -205,6 +205,8 @@ func (c *LibvirtVirtualization) createMaster(
 	createRes.DashboardToken = string(decodedTokenBytes)
 	createRes.MasterIpAddress = string(decodedIpAddressBytes)
 	createRes.KubeconfigContents = decodedKubeconfigContentsBytes
+
+	slogFunction(virtRequest.ClusterName, thisInstanceName, "vm provision done", err)
 
 	return createRes, nil
 }
@@ -305,6 +307,8 @@ func (c *LibvirtVirtualization) createWorker(
 	)
 
 	createRes.CreationStatus = true
+
+	slogFunction(virtRequest.ClusterName, thisInstanceName, "vm provision done", err)
 
 	return createRes, nil
 }
@@ -873,8 +877,8 @@ func sendLogs(
 		Host:   mainServerIpAddress + ":8000", // directly send to the backend
 		Path:   fmt.Sprintf("/api/logs/receive/%s", clusterId),
 	}
-    
-    fmt.Println(u.String())
+
+	fmt.Println(u.String())
 
 	c, _, err := websocket.DefaultDialer.Dial(u.String(), nil)
 	if err != nil {
