@@ -873,6 +873,9 @@ func sendLogs(
 		Host:   mainServerIpAddress + ":8000", // directly send to the backend
 		Path:   fmt.Sprintf("/api/logs/receive/%s", clusterId),
 	}
+    
+    fmt.Println(u.String())
+
 	c, _, err := websocket.DefaultDialer.Dial(u.String(), nil)
 	if err != nil {
 		slog.Error(fmt.Sprintf("%s | error dialing websocket", instanceName),

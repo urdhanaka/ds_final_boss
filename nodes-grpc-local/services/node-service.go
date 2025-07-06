@@ -14,11 +14,14 @@ import (
 	virtualization_model "nodes-grpc-local/services/model/virtualization-model"
 	libvirt_virtualization "nodes-grpc-local/services/virtualization/libvirt-virtualization"
 	"os"
+	"sync"
 	"time"
 
 	"github.com/gorilla/websocket"
 	"google.golang.org/grpc"
 )
+
+var mut sync.Mutex
 
 type NodeServer struct {
 	proto_model.UnimplementedNodeServiceServer
@@ -45,6 +48,9 @@ func (s *NodeServer) CreateMaster(
 	ctx context.Context,
 	createMasterRequest *proto_model.CreateMasterRequest,
 ) (*proto_model.CreateMasterResponse, error) {
+	mut.Lock()
+	defer mut.Unlock()
+
 	provisionCtx, cancel := context.WithTimeout(
 		ctx,
 		time.Second*PROVISIONING_TIME,
@@ -115,6 +121,9 @@ func (s *NodeServer) CreateWorker(
 	ctx context.Context,
 	createWorkerRequest *proto_model.CreateWorkerRequest,
 ) (*proto_model.CreateWorkerResponse, error) {
+	mut.Lock()
+	defer mut.Unlock()
+
 	provisionCtx, cancel := context.WithTimeout(
 		ctx,
 		time.Second*PROVISIONING_TIME,
