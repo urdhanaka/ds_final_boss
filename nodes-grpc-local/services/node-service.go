@@ -286,7 +286,7 @@ func connectToServer(
 		`{"hostname":"%s","ip_address":"%s","lab_name":"%s","vcpu":%d,"storage":%d,"memory":%d}`,
 		hostname, ipAddress, labName, cpuStatus.LogicalCounts, storageStatus.Storage, memoryStatus.Memory,
 	)
-	req, err := http.NewRequest("POST", fmt.Sprintf("http://%s/register_node", mainServerIp), bytes.NewBuffer(body))
+    req, err := http.NewRequest("POST", fmt.Sprintf("http://%s/register_node", mainServerIp+":8000"), bytes.NewBuffer(body))
 	req.Header.Set("Content-Type", "application/json")
 
 	client := &http.Client{}
