@@ -187,7 +187,7 @@ func (c *LibvirtVirtualization) createMaster(
 	}
 
 	// getting the kubeconfig
-	getKubeConfigContentCmd := `cat NOTES.md | tr '\n' ' '`
+	getKubeConfigContentCmd := `cat /etc/rancher/k3s/k3s.yaml | tr '\n' ' '`
 	getKubeConfigContentStatus, err := guestAgentExecStatus(dom, getKubeConfigContentCmd)
 	if err != nil {
 		slogFunction(virtRequest.ClusterName, thisInstanceName, "error getting kubeconfig contents", err)
