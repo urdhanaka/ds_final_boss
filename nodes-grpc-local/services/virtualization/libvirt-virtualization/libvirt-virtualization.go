@@ -187,7 +187,7 @@ func (c *LibvirtVirtualization) createMaster(
 	}
 
 	// getting the kubeconfig
-	getKubeConfigContentCmd := fmt.Sprintf(`cat /etc/rancher/k3s/k3s.yaml | head -c -1 | sed 's/127.0.0.1/%s/g'`, string(decodedIpAddressBytes))
+	getKubeConfigContentCmd := fmt.Sprintf(`cat /etc/rancher/k3s/k3s.yaml | sed 's/127.0.0.1/%s/g' | head -c -1`, string(decodedIpAddressBytes))
 	getKubeConfigContentStatus, err := guestAgentExecStatus(dom, getKubeConfigContentCmd)
 	if err != nil {
 		slogFunction(virtRequest.ClusterName, thisInstanceName, "error getting kubeconfig contents", err)
