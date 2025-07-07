@@ -134,25 +134,6 @@ func (c *LibvirtVirtualization) createMaster(
 		return createRes, err
 	}
 
-	// check for cloud init error
-	// NOTE: might be not needed
-	longStatusCloudInitCmd := "cloud-init status --long"
-	longStatus, err := guestAgentExecStatus(dom, longStatusCloudInitCmd)
-	if err != nil {
-		slogFunction(virtRequest.ClusterName, thisInstanceName, "error exec cloud-init wait --long", err)
-
-		return createRes, err
-	}
-	decodedLongStatusBytes, err := base64.StdEncoding.DecodeString(longStatus.Return.OutData)
-	if err != nil {
-		slogFunction(virtRequest.ClusterName, thisInstanceName, "error decoding kubernetes dashboard bytes", err)
-
-		return createRes, err
-	}
-	slog.Debug("master cloud-init status --long",
-		"debug", string(decodedLongStatusBytes),
-	)
-
 	// creating token
 	kubeCreateTokenCmd := "k3s kubectl -n kubernetes-dashboard create token admin-user"
 	createTokenStatus, err := guestAgentExecStatus(dom, kubeCreateTokenCmd)
@@ -287,24 +268,6 @@ func (c *LibvirtVirtualization) createWorker(
 
 		return createRes, err
 	}
-
-	// check for cloud init error
-	longStatusCloudInitCmd := "cloud-init status --long"
-	longStatus, err := guestAgentExecStatus(dom, longStatusCloudInitCmd)
-	if err != nil {
-		slogFunction(virtRequest.ClusterName, thisInstanceName, "error exec cloud-init wait --long", err)
-
-		return createRes, err
-	}
-	decodedLongStatusBytes, err := base64.StdEncoding.DecodeString(longStatus.Return.OutData)
-	if err != nil {
-		slogFunction(virtRequest.ClusterName, thisInstanceName, "error decoding kubernetes dashboard bytes", err)
-
-		return createRes, err
-	}
-	slog.Debug("worker cloud-init status --long",
-		"debug", string(decodedLongStatusBytes),
-	)
 
 	createRes.CreationStatus = true
 
@@ -842,7 +805,7 @@ func guestAgentExecStatus(
 			break
 		}
 
-		time.Sleep(10 * time.Second)
+		time.Sleep(5 * time.Second)
 	}
 
 	return res, nil
@@ -878,8 +841,6 @@ func sendLogs(
 		Path:   fmt.Sprintf("/api/logs/receive/%s", clusterId),
 	}
 
-	fmt.Println(u.String())
-
 	c, _, err := websocket.DefaultDialer.Dial(u.String(), nil)
 	if err != nil {
 		slog.Error(fmt.Sprintf("%s | error dialing websocket", instanceName),
@@ -898,23 +859,3 @@ func sendLogs(
 		}
 	}
 }
-
-// func handleExecStatusOutData(
-// 	dom *libvirt.Domain,
-// ) ([]byte, error) {
-// 	createTokenStatus, err := guestAgentExecStatus(dom, kubeCreateTokenCmd)
-// 	if err != nil {
-// 		slogFunction(virtRequest.Name, thisInstanceName, "error creating kubernetes dashboard token", err)
-// 		c.DeleteInstance(thisInstanceName)
-//
-// 		return createRes, err
-// 	}
-// 	// handle base 64 of the guest agent result
-// 	decodedTokenBytes, err := base64.StdEncoding.DecodeString(createTokenStatus.Return.OutData)
-// 	if err != nil {
-// 		slogFunction(virtRequest.Name, thisInstanceName, "error decoding kubernetes dashboard bytes", err)
-// 		c.DeleteInstance(thisInstanceName)
-//
-// 		return createRes, err
-// 	}
-// }

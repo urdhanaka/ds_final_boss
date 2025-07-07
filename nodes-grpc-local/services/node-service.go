@@ -252,7 +252,7 @@ func StartGrpcServer(connection *InitStruct) {
 					"error", err.Error(),
 				)
 
-				time.Sleep(30 * time.Second)
+				time.Sleep(10 * time.Second)
 
 				continue
 			} else {
