@@ -699,6 +699,8 @@ func createNetwork() error {
 func (c *LibvirtVirtualization) DeleteInstance(
 	domainName string,
 ) error {
+	slog.Info(fmt.Sprintf("deleting instance %s", domainName))
+
 	domain, err := c.libvirtConnection.LookupDomainByName(domainName)
 	if err != nil {
 		// if the err value is other than VIR_ERR_NO_DOMAIN, return err
@@ -747,6 +749,7 @@ func (c *LibvirtVirtualization) DeleteInstance(
 		slog.Error("could not clean domain files",
 			"error", err,
 		)
+		return err
 	}
 	deleteFilesCommand = fmt.Sprintf("rm %s/%s.*", NVRAM_DIR, domainName)
 	cmd = exec.Command("/bin/bash", "-c", deleteFilesCommand)
@@ -755,6 +758,7 @@ func (c *LibvirtVirtualization) DeleteInstance(
 		slog.Error("could not clean domain files",
 			"error", err,
 		)
+		return err
 	}
 
 	return nil
