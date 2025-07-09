@@ -717,6 +717,8 @@ func (c *LibvirtVirtualization) DeleteInstance(
 	// every domain is set to be deleted when shutting down
 	// make sure the domain is not NULL
 	if domain != nil {
+		var err error
+
 		for i := 1; i <= SHUTDOWN_RETRIES; i++ {
 			err = domain.Shutdown()
 			if err != nil {
@@ -730,14 +732,16 @@ func (c *LibvirtVirtualization) DeleteInstance(
 			time.Sleep(5 * time.Second)
 		}
 
-		slog.Info("could not normally shut down the domain, forcing the domain to shutdown...")
-		err = domain.Destroy()
 		if err != nil {
-			slog.Error("could not destroy the domain",
-				"error", err,
-			)
+			slog.Info("could not normally shut down the domain, forcing the domain to shutdown...")
+			err = domain.Destroy()
+			if err != nil {
+				slog.Error("could not destroy the domain",
+					"error", err,
+				)
 
-			return err
+				return err
+			}
 		}
 	}
 
