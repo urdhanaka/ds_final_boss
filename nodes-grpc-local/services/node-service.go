@@ -136,6 +136,7 @@ func (s *NodeServer) CreateWorker(
 	instanceName := createWorkerRequest.Requirements.NodeName
 
 	virtSpecs := virtualization_model.CreateInstanceRequest{
+		ClusterName:     createWorkerRequest.ClusterName,
 		Name:            instanceName,
 		IsMaster:        false,
 		MasterIpAddress: createWorkerRequest.MasterIpAddress,
