@@ -43,8 +43,6 @@ message CreateWorkerResponse {
   CreationStatus creation_status = 1;
 }
 
-// node status
-
 message NodeStatusRequest {}
 
 message NodeStatusResponse {
@@ -64,8 +62,4 @@ service NodeService {
   rpc CreateWorker(CreateWorkerRequest) returns (CreateWorkerResponse) {}
   rpc NodeStatus(NodeStatusRequest) returns (NodeStatusResponse) {}
   rpc DeleteInstance(DeleteInstanceRequest) returns (DeleteInstanceResponse) {}
-  // rpc RegisterNode(RegisterNodeRequest) returns (RegisterNodeResponse) {}
-  // rpc ThisNodeStatus(Empty) returns (Temp) {}
-  // rpc Status(Empty) returns (NodeStatus) {}
-  // rpc StopNode(Empty) returns (Empty) {}
 }

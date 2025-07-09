@@ -399,13 +399,13 @@ func createBaseXml(
 			Interfaces: []libvirtxml.DomainInterface{
 				{
 					Source: &libvirtxml.DomainInterfaceSource{
-						Bridge: &libvirtxml.DomainInterfaceSourceBridge{
-							Bridge: BRIDGE_NAME,
-						},
-						// Network: &libvirtxml.DomainInterfaceSourceNetwork{
-						// 	Network: DEFAULT_BRIDGE_NAME,
-						// 	Bridge:  DEFAULT_BRIDGE_NAME,
+						// Bridge: &libvirtxml.DomainInterfaceSourceBridge{
+						// 	Bridge: BRIDGE_NAME,
 						// },
+						Network: &libvirtxml.DomainInterfaceSourceNetwork{
+							Network: DEFAULT_BRIDGE_NAME,
+							Bridge:  DEFAULT_BRIDGE_NAME,
+						},
 					},
 					Model: &libvirtxml.DomainInterfaceModel{
 						Type: "virtio",
@@ -592,12 +592,7 @@ runcmd:
   echo "wait until network is connected"
   nm-online -s
 
-  echo "running command"
-  echo "updating and upgrading packages"
-  
-  echo "installing necessary packages"
-
-  echo "installing k3s"
+  echo "running k3s"
   curl -sfL https://get.k3s.io | INSTALL_K3S_SKIP_DOWNLOAD=true INSTALL_K3S_EXEC="server --token %s" sh -s -
 
   export KUBECONFIG=/etc/rancher/k3s/k3s.yaml
@@ -610,7 +605,6 @@ runcmd:
   echo "setting up user for kubernetes dashboard"
   k3s kubectl apply -f /root/service-account.yaml -f /root/role-binding.yaml
 
-  echo "writing token and starting the dashboard..."
   echo "waiting until all pods in the kubernetes-dashboard namespaces is running"
   k3s kubectl wait pod --all --for=condition=Ready --namespace=kubernetes-dashboard --timeout=-1s
   systemctl start kube-dashboard.service
