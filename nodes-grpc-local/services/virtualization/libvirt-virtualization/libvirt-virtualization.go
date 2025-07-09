@@ -399,13 +399,13 @@ func createBaseXml(
 			Interfaces: []libvirtxml.DomainInterface{
 				{
 					Source: &libvirtxml.DomainInterfaceSource{
-						// Bridge: &libvirtxml.DomainInterfaceSourceBridge{
-						// 	Bridge: BRIDGE_NAME,
-						// },
-						Network: &libvirtxml.DomainInterfaceSourceNetwork{
-							Network: DEFAULT_BRIDGE_NAME,
-							Bridge:  DEFAULT_BRIDGE_NAME,
+						Bridge: &libvirtxml.DomainInterfaceSourceBridge{
+							Bridge: BRIDGE_NAME,
 						},
+						// Network: &libvirtxml.DomainInterfaceSourceNetwork{
+						// 	Network: DEFAULT_BRIDGE_NAME,
+						// 	Bridge:  DEFAULT_BRIDGE_NAME,
+						// },
 					},
 					Model: &libvirtxml.DomainInterfaceModel{
 						Type: "virtio",
