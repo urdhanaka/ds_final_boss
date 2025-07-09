@@ -2,7 +2,6 @@ package services
 
 import (
 	"context"
-	"fmt"
 	"log/slog"
 	"nodes-grpc-be/config"
 	"nodes-grpc-be/entities"
@@ -78,8 +77,6 @@ func (s *NodeService) AddNode(
 		Storage:   addNode.Storage,
 	}
 
-	fmt.Println("vcpu", nodeEntity.VCpu)
-
 	err = s.nodeRepository.AddNode(ctx, nodeEntity)
 	if err != nil {
 		return err
@@ -115,8 +112,6 @@ func (s *NodeService) UpdateNode(
 			)
 			continue
 		}
-
-        fmt.Println(nodeResources.MemoryAvailable)
 
 		thisNodeEntity := &entities.Node{
 			NodeID:  node.NodeId,

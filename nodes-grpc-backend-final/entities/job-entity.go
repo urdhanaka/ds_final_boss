@@ -3,6 +3,7 @@ package entities
 type (
 	JobStatus string
 	JobType   string
+	RpcStatus string
 )
 
 const (
@@ -12,8 +13,11 @@ const (
 	JOB_STATUS_RETRYING JobStatus = "retrying"
 	JOB_STATUS_FAILED   JobStatus = "failed"
 
-	JOB_TYPE_PROVISIONING JobType = "provision_job"
-	JOB_TYPE_CLEANUP      JobType = "cleanup_job"
+	NODE_NOT_ENOUGH_RESOURCES RpcStatus = "NODE_NOT_ENOUGH_RESOURCES"
+
+	JOB_TYPE_PROVISIONING      JobType = "provision_job"
+	JOB_TEST_TYPE_PROVISIONING JobType = "provision_job_test"
+	JOB_TYPE_CLEANUP           JobType = "cleanup_job"
 )
 
 type Job struct {

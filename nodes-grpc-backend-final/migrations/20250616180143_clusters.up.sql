@@ -6,6 +6,7 @@ CREATE TABLE IF NOT EXISTS clusters (
   cluster_status VARCHAR(16) NOT NULL,  -- creation status
   ip_address VARCHAR(32),               -- ip address to access the cluster dashboard
   access_token VARCHAR(1024),           -- token to access the kubernetes cluster
+  kubeconfig_contents BYTEA,            -- the kubeconfig file bytes
   created_at TIMESTAMP NOT NULL,        -- timestamp created_at
 
   CONSTRAINT fk_user_id FOREIGN KEY (user_id) REFERENCES users (user_id),

@@ -25,13 +25,17 @@ func setRouters(app *gin.Engine, dbPool *pgxpool.Pool, client *redis.Client) {
 		nodeRepository,
 		groupRepository,
 	)
+	streamManagerService := services.NewStreamManager()
 	redisQueueService := services.NewRedisJobQueue(client, clusterService)
+
+    // NOTE: START WORKER FUNCTION
 	redisQueueService.StartWorker(context.Background())
 
 	jwtService := services.NewJwtService()
 	nodeService := services.NewNodeService(nodeRepository, groupRepository)
 	userService := services.NewUserService(userRepository, groupRepository, jwtService)
 
+	websocketHandler := handlers.NewWebsocketHandler(streamManagerService)
 	clusterHandler := handlers.NewClusterHandler(redisQueueService, jwtService, clusterService, userService)
 	userHandler := handlers.NewUserHandler(userService)
 	nodeHandler := handlers.NewNodeHandler(nodeService, userService)
@@ -45,7 +49,9 @@ func setRouters(app *gin.Engine, dbPool *pgxpool.Pool, client *redis.Client) {
 		clusterGroup.POST("", handlers.Authenticate(jwtService), clusterHandler.CreateCluster)
 		clusterGroup.GET("", handlers.Authenticate(jwtService), clusterHandler.GetUserCluster)
 		clusterGroup.GET("/:cluster_id", handlers.Authenticate(jwtService), clusterHandler.GetClusterDetails)
-		clusterGroup.DELETE("/:cluster_id", handlers.Authenticate(jwtService), clusterHandler.GetClusterDetails)
+		clusterGroup.DELETE("/:cluster_id", handlers.Authenticate(jwtService), clusterHandler.DeleteCluster)
+		clusterGroup.GET("/:cluster_id/kubeconfig", handlers.Authenticate(jwtService), clusterHandler.GetClusterKubeconfig)
+		// clusterGroup.GET("/:cluster_id/logs", handlers.Authenticate(jwtService), clusterHandler.GetClusterDetails)
 	}
 
 	userGroup := apiGroup.Group("/users")
@@ -58,5 +64,11 @@ func setRouters(app *gin.Engine, dbPool *pgxpool.Pool, client *redis.Client) {
 	{
 		nodeGroup.POST("", nodeHandler.AddNode)
 		nodeGroup.GET("/group-nodes", handlers.Authenticate(jwtService), nodeHandler.GetGroupCluster)
+	}
+
+	logStreamGroup := apiGroup.Group("/logs")
+	{
+		logStreamGroup.GET("/stream/:cluster_id", websocketHandler.StreamLogs)   // send the stream
+		logStreamGroup.GET("/receive/:cluster_id", websocketHandler.ReceiveLogs) // receive the stream
 	}
 }

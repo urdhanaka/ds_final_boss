@@ -182,7 +182,8 @@ type CreateMasterRequest struct {
 	state         protoimpl.MessageState  `protogen:"open.v1"`
 	ClusterName   string                  `protobuf:"bytes,1,opt,name=cluster_name,json=clusterName,proto3" json:"cluster_name,omitempty"`
 	ClusterToken  string                  `protobuf:"bytes,2,opt,name=cluster_token,json=clusterToken,proto3" json:"cluster_token,omitempty"`
-	Requirements  *CreateNodeRequirements `protobuf:"bytes,3,opt,name=requirements,proto3" json:"requirements,omitempty"`
+	ClusterId     string                  `protobuf:"bytes,3,opt,name=cluster_id,json=clusterId,proto3" json:"cluster_id,omitempty"`
+	Requirements  *CreateNodeRequirements `protobuf:"bytes,4,opt,name=requirements,proto3" json:"requirements,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -231,6 +232,13 @@ func (x *CreateMasterRequest) GetClusterToken() string {
 	return ""
 }
 
+func (x *CreateMasterRequest) GetClusterId() string {
+	if x != nil {
+		return x.ClusterId
+	}
+	return ""
+}
+
 func (x *CreateMasterRequest) GetRequirements() *CreateNodeRequirements {
 	if x != nil {
 		return x.Requirements
@@ -239,12 +247,13 @@ func (x *CreateMasterRequest) GetRequirements() *CreateNodeRequirements {
 }
 
 type CreateMasterResponse struct {
-	state           protoimpl.MessageState `protogen:"open.v1"`
-	CreationStatus  *CreationStatus        `protobuf:"bytes,1,opt,name=creation_status,json=creationStatus,proto3" json:"creation_status,omitempty"`
-	MasterIpAddress string                 `protobuf:"bytes,2,opt,name=master_ip_address,json=masterIpAddress,proto3" json:"master_ip_address,omitempty"`
-	DashboardToken  string                 `protobuf:"bytes,3,opt,name=dashboard_token,json=dashboardToken,proto3" json:"dashboard_token,omitempty"`
-	unknownFields   protoimpl.UnknownFields
-	sizeCache       protoimpl.SizeCache
+	state              protoimpl.MessageState `protogen:"open.v1"`
+	CreationStatus     *CreationStatus        `protobuf:"bytes,1,opt,name=creation_status,json=creationStatus,proto3" json:"creation_status,omitempty"`
+	MasterIpAddress    string                 `protobuf:"bytes,2,opt,name=master_ip_address,json=masterIpAddress,proto3" json:"master_ip_address,omitempty"`
+	DashboardToken     string                 `protobuf:"bytes,3,opt,name=dashboard_token,json=dashboardToken,proto3" json:"dashboard_token,omitempty"`
+	KubeconfigContents []byte                 `protobuf:"bytes,4,opt,name=kubeconfig_contents,json=kubeconfigContents,proto3" json:"kubeconfig_contents,omitempty"`
+	unknownFields      protoimpl.UnknownFields
+	sizeCache          protoimpl.SizeCache
 }
 
 func (x *CreateMasterResponse) Reset() {
@@ -296,6 +305,13 @@ func (x *CreateMasterResponse) GetDashboardToken() string {
 		return x.DashboardToken
 	}
 	return ""
+}
+
+func (x *CreateMasterResponse) GetKubeconfigContents() []byte {
+	if x != nil {
+		return x.KubeconfigContents
+	}
+	return nil
 }
 
 // create worker
@@ -600,15 +616,18 @@ const file_services_model_proto_model_node_proto_rawDesc = "" +
 	"\tnode_name\x18\x01 \x01(\tR\bnodeName\x12\x12\n" +
 	"\x04vcpu\x18\x02 \x01(\x05R\x04vcpu\x12\x16\n" +
 	"\x06memory\x18\x03 \x01(\x05R\x06memory\x12\x18\n" +
-	"\astorage\x18\x04 \x01(\x05R\astorage\"\x9a\x01\n" +
+	"\astorage\x18\x04 \x01(\x05R\astorage\"\xb9\x01\n" +
 	"\x13CreateMasterRequest\x12!\n" +
 	"\fcluster_name\x18\x01 \x01(\tR\vclusterName\x12#\n" +
-	"\rcluster_token\x18\x02 \x01(\tR\fclusterToken\x12;\n" +
-	"\frequirements\x18\x03 \x01(\v2\x17.CreateNodeRequirementsR\frequirements\"\xa5\x01\n" +
+	"\rcluster_token\x18\x02 \x01(\tR\fclusterToken\x12\x1d\n" +
+	"\n" +
+	"cluster_id\x18\x03 \x01(\tR\tclusterId\x12;\n" +
+	"\frequirements\x18\x04 \x01(\v2\x17.CreateNodeRequirementsR\frequirements\"\xd6\x01\n" +
 	"\x14CreateMasterResponse\x128\n" +
 	"\x0fcreation_status\x18\x01 \x01(\v2\x0f.CreationStatusR\x0ecreationStatus\x12*\n" +
 	"\x11master_ip_address\x18\x02 \x01(\tR\x0fmasterIpAddress\x12'\n" +
-	"\x0fdashboard_token\x18\x03 \x01(\tR\x0edashboardToken\"\xc6\x01\n" +
+	"\x0fdashboard_token\x18\x03 \x01(\tR\x0edashboardToken\x12/\n" +
+	"\x13kubeconfig_contents\x18\x04 \x01(\fR\x12kubeconfigContents\"\xc6\x01\n" +
 	"\x13CreateWorkerRequest\x12!\n" +
 	"\fcluster_name\x18\x01 \x01(\tR\vclusterName\x12#\n" +
 	"\rcluster_token\x18\x02 \x01(\tR\fclusterToken\x12*\n" +

@@ -3,6 +3,7 @@ package config
 import (
 	"log/slog"
 	"nodes-grpc-be/models/proto_model"
+	"time"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
@@ -24,13 +25,17 @@ func NewNodeClient(nodeIp string) (proto_model.NodeServiceClient, error) {
 
 		conn, err = grpc.NewClient(nodeIp+GRPC_PORT, grpc.WithTransportCredentials(insecure.NewCredentials()))
 		if err != nil {
-			slog.Error("Could not connect to grpc server, retrying...",
+			slog.Error("could not connect to grpc server, retrying...",
 				"url", nodeIp,
 				"error", err,
 			)
 
-			continue
+            time.Sleep(1 * time.Second)
+
+            continue
 		}
+
+        break
 	}
 
 	if err != nil {

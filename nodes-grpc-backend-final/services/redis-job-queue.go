@@ -16,8 +16,8 @@ import (
 
 const (
 	MAX_JOB_RETRIES  = 3
-	PROVISION_WORKER = 1
-	CLEANUP_WORKER   = 1
+	PROVISION_WORKER = 3
+	// CLEANUP_WORKER   = 1
 )
 
 type RedisJobQueue struct {
@@ -71,10 +71,23 @@ func (jq *RedisJobQueue) AddJob(
 	// insert according to the job type
 	// only 2 types of job.Type
 	if job.Type == entities.JOB_TYPE_PROVISIONING {
+		addClusterModel := job.Payload.(*models.AddCluster)
+		err = jq.clusterService.AddClusterToDatabase(ctx, &entities.Cluster{
+			ClusterId:     addClusterModel.ClusterId,
+			ClusterName:   addClusterModel.ClusterName,
+			UserId:        addClusterModel.UserId,
+			GroupId:       addClusterModel.GroupId,
+			ClusterStatus: string(job.Status),
+			CreatedAt:     time.Now(),
+		})
+		if err != nil {
+			return fmt.Errorf("failed to queue job: %w", err)
+		}
+
 		if err := jq.client.LPush(ctx, jq.provisioningQueueName, job.ID).Err(); err != nil {
 			return fmt.Errorf("failed to queue job: %w", err)
 		}
-	} else {
+	} else if job.Type == entities.JOB_TYPE_CLEANUP {
 		if err := jq.client.LPush(ctx, jq.cleanupQueueName, job.ID).Err(); err != nil {
 			return fmt.Errorf("failed to queue job: %w", err)
 		}
@@ -102,11 +115,14 @@ func (jq *RedisJobQueue) GetJob(ctx context.Context, id string) (*entities.Job, 
 }
 
 func (jq *RedisJobQueue) StartWorker(ctx context.Context) {
-	go jq.provisionWorker(ctx)
+	for i := range PROVISION_WORKER {
+		go jq.provisionWorker(ctx, i+1)
+	}
+
 	go jq.cleanupWorker(ctx)
 }
 
-func (jq *RedisJobQueue) updateJob(ctx context.Context, job *entities.Job) error {
+func (jq *RedisJobQueue) updateJobStatus(ctx context.Context, job *entities.Job) error {
 	jobData, err := json.Marshal(job)
 	if err != nil {
 		return err
@@ -118,7 +134,7 @@ func (jq *RedisJobQueue) updateJob(ctx context.Context, job *entities.Job) error
 	err = json.Unmarshal(jobPayloadBytes, jobPop)
 
 	updatedClusterEntity := &entities.Cluster{
-		ClusterID:     jobPop.ClusterId,
+		ClusterId:     jobPop.ClusterId,
 		ClusterStatus: string(status),
 	}
 
@@ -133,28 +149,38 @@ func (jq *RedisJobQueue) updateJob(ctx context.Context, job *entities.Job) error
 }
 
 func (jq *RedisJobQueue) processJob(ctx context.Context, job *entities.Job) {
+	startTime := time.Now()
 	job.Status = entities.JOB_STATUS_WORKING
-	jq.updateJob(ctx, job)
+	jq.updateJobStatus(ctx, job)
+
+	slog.Info(fmt.Sprintf("Job %s started processing", job.ID))
 
 	var result any
 	var err error
 
 	switch job.Type {
+	case entities.JOB_TEST_TYPE_PROVISIONING:
+		result, err = jq.clusterService.CreateClusterWithoutPickTest(ctx, job)
 	case entities.JOB_TYPE_PROVISIONING:
-		result, err = jq.clusterService.CreateCluster(ctx, job)
+		result, err = jq.clusterService.CreateClusterWithoutPick(ctx, job)
 	case entities.JOB_TYPE_CLEANUP:
-		return
+		err = jq.clusterService.CleanCluster(ctx, job)
 	default:
 		err = fmt.Errorf("unknown job type: %s", job.Type)
 	}
 
+	duration := time.Since(startTime)
+
 	if err != nil {
-		slog.Error("")
+		slog.Error(fmt.Sprintf("Job %s failed after %v", job.ID, duration), "error", err)
 		job.Retries++
 
 		if job.Retries < job.MaxRetries {
-			job.Status = entities.JOB_STATUS_RETRYING
-			job.Error = err
+			// update job status
+			jq.updateJobStatus(ctx, job)
+
+			// push the
+			jq.client.LPush(ctx, jq.provisioningQueueName, job.ID)
 		} else {
 			job.Status = entities.JOB_STATUS_FAILED
 			job.Error = err
@@ -162,17 +188,17 @@ func (jq *RedisJobQueue) processJob(ctx context.Context, job *entities.Job) {
 	} else {
 		job.Status = entities.JOB_STATUS_DONE
 		job.Result = result
+		slog.Info(fmt.Sprintf("Job %s completed successfully in %v", job.ID, duration))
 	}
 
-	jq.updateJob(ctx, job)
-	slog.Info(
-		fmt.Sprintf("Job %s completed with status %s", job.ID, job.Status),
-	)
+	jq.updateJobStatus(ctx, job)
 }
 
 // worker function
-func (jq *RedisJobQueue) provisionWorker(ctx context.Context) {
-	slog.Info("provision worker started")
+func (jq *RedisJobQueue) provisionWorker(ctx context.Context, workerId int) {
+	slog.Info("provision worker started",
+		"id", workerId,
+	)
 
 	for {
 		select {

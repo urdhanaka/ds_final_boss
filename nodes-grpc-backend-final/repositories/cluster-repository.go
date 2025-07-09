@@ -35,7 +35,7 @@ func (r *ClusterRepository) AddCluster(
 	_, err = conn.Exec(
 		ctx,
 		"INSERT INTO clusters (cluster_id, cluster_name, user_id, group_id, cluster_status, created_at) VALUES ($1, $2, $3, $4, $5, $6)",
-		cluster.ClusterID, cluster.ClusterName, cluster.UserID, cluster.GroupID, cluster.ClusterStatus, cluster.CreatedAt,
+		cluster.ClusterId, cluster.ClusterName, cluster.UserId, cluster.GroupId, cluster.ClusterStatus, cluster.CreatedAt,
 	)
 	if err != nil {
 		return err
@@ -74,17 +74,46 @@ func (r *ClusterRepository) GetClusterFromClusterId(
 
 	err = conn.QueryRow(
 		ctx,
-		"SELECT * FROM clusters WHERE cluster_id=$1",
-		cluster.ClusterID,
+		"SELECT cluster_id, cluster_name, user_id, group_id, cluster_status, ip_address, access_token, created_at FROM clusters WHERE cluster_id=$1",
+		cluster.ClusterId,
 	).Scan(
-		&cluster.ClusterID,
+		&cluster.ClusterId,
 		&cluster.ClusterName,
-		&cluster.UserID,
-		&cluster.GroupID,
+		&cluster.UserId,
+		&cluster.GroupId,
 		&cluster.ClusterStatus,
 		&cluster.IpAddress,
 		&cluster.AccessToken,
 		&cluster.CreatedAt,
+	)
+	if err != nil {
+		// skip if no row is found
+		if !errors.Is(err, sql.ErrNoRows) {
+			return cluster, err
+		}
+
+		return nil, err
+	}
+
+	return cluster, err
+}
+
+func (r *ClusterRepository) GetKubeconfigFromClusterId(
+	ctx context.Context,
+	cluster *entities.Cluster,
+) (*entities.Cluster, error) {
+	conn, err := r.dbPool.Acquire(ctx)
+	if err != nil {
+		return nil, err
+	}
+	defer conn.Release()
+
+	err = conn.QueryRow(
+		ctx,
+		"SELECT kubeconfig_contents FROM clusters WHERE cluster_id=$1",
+		cluster.ClusterId,
+	).Scan(
+		&cluster.KubeconfigContents,
 	)
 	if err != nil {
 		// skip if no row is found
@@ -113,7 +142,7 @@ func (r *ClusterRepository) UpdateClusterStatusByClusterId(
 		`UPDATE clusters
         SET cluster_status=$1
         WHERE cluster_id=$2`,
-		cluster.ClusterStatus, cluster.ClusterID,
+		cluster.ClusterStatus, cluster.ClusterId,
 	)
 	if err != nil {
 		return err
@@ -135,9 +164,9 @@ func (r *ClusterRepository) UpdateIpAddressAndTokenByClusterId(
 	_, err = conn.Exec(
 		ctx,
 		`UPDATE clusters
-        SET access_token=$1, ip_address=$2
-        WHERE cluster_id=$3`,
-		cluster.AccessToken, cluster.IpAddress, cluster.ClusterID,
+        SET access_token=$1, ip_address=$2, kubeconfig_contents=$3
+        WHERE cluster_id=$4`,
+		cluster.AccessToken, cluster.IpAddress, cluster.KubeconfigContents, cluster.ClusterId,
 	)
 	if err != nil {
 		return err
@@ -160,7 +189,7 @@ func (r *ClusterRepository) DeleteClusterByClusterId(
 		ctx,
 		`DELETE FROM clusters
         WHERE cluster_id=$1`,
-		cluster.ClusterID,
+		cluster.ClusterId,
 	)
 	if err != nil {
 		return err

@@ -2,7 +2,6 @@ package repositories
 
 import (
 	"context"
-	"fmt"
 	"nodes-grpc-be/entities"
 
 	"github.com/jackc/pgx/v5"
@@ -32,7 +31,6 @@ func (r *NodeRepository) AddNode(ctx context.Context, node *entities.Node) error
 		node.NodeID, node.Hostname, node.IpAddress, node.GroupId, node.VCpu, node.Memory, node.Storage,
 	)
 	if err != nil {
-		fmt.Println("alsjdaklsjd", err)
 		return err
 	}
 
@@ -124,6 +122,58 @@ func (r *NodeRepository) UpdateNodeResourcesByNodeId(
         SET vcpu = $1, memory = $2, storage = $3
         WHERE node_id = $4`,
 		node.VCpu, node.Memory, node.Storage, node.NodeID,
+	)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (r *NodeRepository) GetNodeByIpAddress(
+	ctx context.Context,
+	node *entities.Node,
+) error {
+	conn, err := r.dbPool.Acquire(ctx)
+	if err != nil {
+		return nil
+	}
+	defer conn.Release()
+
+	err = conn.QueryRow(
+		ctx,
+		`SELECT node_id
+        FROM nodes
+        WHERE ip_address=$1`,
+		node.IpAddress,
+	).Scan(
+		&node.NodeID,
+	)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (r *NodeRepository) GetNodeIpAddressByNodeId(
+	ctx context.Context,
+	node *entities.Node,
+) error {
+	conn, err := r.dbPool.Acquire(ctx)
+	if err != nil {
+		return nil
+	}
+	defer conn.Release()
+
+	err = conn.QueryRow(
+		ctx,
+		`SELECT ip_address
+        FROM nodes
+        WHERE node_id=$1`,
+		node.NodeID,
+	).Scan(
+		&node.IpAddress,
 	)
 	if err != nil {
 		return err

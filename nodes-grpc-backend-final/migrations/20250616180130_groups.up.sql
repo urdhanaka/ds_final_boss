@@ -14,6 +14,6 @@ INSERT INTO
   groups(group_id, name, vcpu, memory, storage, node_size, current_cluster, max_cluster)
 VALUES
 -- id, name, vcpu, memory, storage, node_size, current_cluster max_cluster
-  (1,  'AJK', 2,   2,      16,      2,         0,              4),
+  (1,  'AJK', 2,   2,      16,      1,         0,              4),
   (2,  'RPL', 2,   4,      16,      2,         0,              2),
   (3,  'KBJ', 4,   4,      16,      2,         0,              4);

@@ -1,0 +1,240 @@
+package main
+
+import (
+	"context"
+	"encoding/json"
+	"fmt"
+	"log"
+	consts "nodes-grpc-be/const"
+	"nodes-grpc-be/entities"
+	"nodes-grpc-be/models"
+	"os"
+	"strconv"
+	"sync"
+	"time"
+
+	"github.com/google/uuid"
+	"github.com/redis/go-redis/v9"
+)
+
+type PerformanceTest struct {
+	redisClient *redis.Client
+}
+
+type TestResult struct {
+	JobID     string
+	StartTime time.Time
+	EndTime   time.Time
+	Duration  time.Duration
+	Status    entities.JobStatus
+	Error     string
+}
+
+func NewPerformanceTest(redisAddr string) *PerformanceTest {
+	rdb := redis.NewClient(&redis.Options{
+		Addr: redisAddr,
+	})
+
+	return &PerformanceTest{
+		redisClient: rdb,
+	}
+}
+
+func (pt *PerformanceTest) TestConcurrentVMCreation(numJobs int) {
+	ctx := context.Background()
+
+	// Test configuration
+	testJobs := make([]*entities.Job, numJobs)
+	results := make([]TestResult, numJobs)
+
+	// use AJK group only for now
+	test_user_id := uuid.MustParse("57db193c-5f9f-4e14-a25b-d50e24991144")
+	test_group_id := 1
+
+	// Create test jobs
+	for i := range numJobs {
+		job := &entities.Job{
+			ID:   uuid.New().String(),
+			Type: entities.JOB_TEST_TYPE_PROVISIONING,
+			Payload: &models.AddCluster{
+				ClusterId:   uuid.New(),
+				ClusterName: fmt.Sprintf("test-cluster-%d", i),
+				UserId:      test_user_id,
+				GroupId:     test_group_id,
+				NodeSize:    2,
+				Vcpu:        2,
+				Memory:      2,
+				Storage:     4,
+			},
+		}
+
+		testJobs[i] = job
+		results[i] = TestResult{
+			JobID:     job.ID,
+			StartTime: time.Now(),
+		}
+	}
+
+	var wg sync.WaitGroup
+
+	// Submit all jobs concurrently
+	fmt.Printf("Starting concurrent test with %d VM creations...\n", numJobs)
+	overallStartTime := time.Now()
+
+	for i, job := range testJobs {
+		wg.Add(1)
+		go func(idx int, j *entities.Job) {
+			defer wg.Done()
+
+			// Submit job to Redis queue
+			err := pt.submitJob(ctx, j)
+			if err != nil {
+				results[idx].Error = err.Error()
+				results[idx].Status = entities.JOB_STATUS_FAILED
+				results[idx].EndTime = time.Now()
+				return
+			}
+
+			// Monitor job completion without timeout
+			status, err := pt.monitorJobCompletion(ctx, j.ID)
+			results[idx].Status = status
+			results[idx].EndTime = time.Now()
+			results[idx].Duration = results[idx].EndTime.Sub(results[idx].StartTime)
+
+			if err != nil {
+				results[idx].Error = err.Error()
+			}
+		}(i, job)
+	}
+
+	wg.Wait()
+	overallEndTime := time.Now()
+	overallDuration := overallEndTime.Sub(overallStartTime)
+
+	// Print results
+	pt.printResults(results, overallDuration)
+}
+
+func (pt *PerformanceTest) submitJob(ctx context.Context, job *entities.Job) error {
+	// Simulate job submission (normally done by your job queue service)
+	job.Status = entities.JOB_STATUS_QUEUED
+	job.Retries = 0
+	job.MaxRetries = 3
+
+	jobData, err := json.Marshal(job)
+	if err != nil {
+		return fmt.Errorf("failed to marshal job: %w", err)
+	}
+
+	// Store job in Redis
+	jobKey := fmt.Sprintf("job:%s", job.ID)
+	if err := pt.redisClient.Set(ctx, jobKey, jobData, 24*time.Hour).Err(); err != nil {
+		return fmt.Errorf("failed to store job: %w", err)
+	}
+
+	// Add to provision queue
+	if err := pt.redisClient.LPush(ctx, consts.REDIS_PROVISION_NAME, job.ID).Err(); err != nil {
+		return fmt.Errorf("failed to queue job: %w", err)
+	}
+
+	return nil
+}
+
+func (pt *PerformanceTest) monitorJobCompletion(
+	ctx context.Context,
+	jobID string,
+) (entities.JobStatus, error) {
+	for {
+		jobKey := fmt.Sprintf("job:%s", jobID)
+		jobData, err := pt.redisClient.Get(ctx, jobKey).Result()
+		if err != nil {
+			if err == redis.Nil {
+				return entities.JOB_STATUS_FAILED, fmt.Errorf("job not found")
+			}
+			return entities.JOB_STATUS_FAILED, err
+		}
+
+		var job entities.Job
+		if err := json.Unmarshal([]byte(jobData), &job); err != nil {
+			return entities.JOB_STATUS_FAILED, err
+		}
+
+		switch job.Status {
+		case entities.JOB_STATUS_DONE:
+			return entities.JOB_STATUS_DONE, nil
+		case entities.JOB_STATUS_FAILED:
+			return entities.JOB_STATUS_FAILED, fmt.Errorf("job failed")
+		case entities.JOB_STATUS_QUEUED, entities.JOB_STATUS_WORKING, entities.JOB_STATUS_RETRYING:
+			time.Sleep(5 * time.Second)
+			continue
+		}
+	}
+}
+
+func (pt *PerformanceTest) printResults(results []TestResult, overallDuration time.Duration) {
+	successful := 0
+	failed := 0
+	totalDuration := time.Duration(0)
+	minDuration := time.Duration(0)
+	maxDuration := time.Duration(0)
+
+	fmt.Printf("\n=== Performance Test Results ===\n")
+	fmt.Printf("Overall Duration: %v\n", overallDuration)
+	fmt.Printf("Job Details:\n")
+
+	for i, result := range results {
+		status := ""
+		if result.Status != entities.JOB_STATUS_DONE {
+			status = "- FAILED"
+			failed++
+		} else {
+			status = "- SUCCESS"
+			successful++
+		}
+
+		fmt.Printf("Job %d [%s]: %v (%s) %s\n",
+			i+1, result.JobID[:8], result.Duration, result.Status, status)
+
+		if result.Error != "" {
+			fmt.Printf("  Error: %s\n", result.Error)
+		}
+
+		if result.Status == entities.JOB_STATUS_DONE {
+			totalDuration += result.Duration
+			if minDuration == 0 || result.Duration < minDuration {
+				minDuration = result.Duration
+			}
+			if result.Duration > maxDuration {
+				maxDuration = result.Duration
+			}
+		}
+	}
+
+	fmt.Printf("\n=== Summary ===\n")
+	fmt.Printf("Total Jobs: %d\n", len(results))
+	fmt.Printf("Successful: %d\n", successful)
+	fmt.Printf("Failed: %d\n", failed)
+
+	if successful > 0 {
+		avgDuration := totalDuration / time.Duration(successful)
+		fmt.Printf("Average Duration: %v\n", avgDuration)
+		fmt.Printf("Min Duration: %v\n", minDuration)
+		fmt.Printf("Max Duration: %v\n", maxDuration)
+	}
+}
+
+func main() {
+	redisAddr := "localhost:6379" // Change to your Redis address
+
+	numJobs := 5
+	if len(os.Args) > 1 {
+		var err error
+		numJobs, err = strconv.Atoi(os.Args[1])
+		if err != nil {
+			log.Fatal("Invalid number of jobs:", err)
+		}
+	}
+
+	pt := NewPerformanceTest(redisAddr)
+	pt.TestConcurrentVMCreation(numJobs)
+}

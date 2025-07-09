@@ -13,4 +13,5 @@ INSERT INTO
 VALUES
   ('60872bf3-54ae-49a8-99c7-cd6de9e56c20', 'AJK-User-1', 'ajk-1@mail.com', 'ajkuser1', 1),
   ('45ff9081-1192-4db8-83e5-21f21225bbf8', 'AJK-User-2', 'ajk-2@mail.com', 'ajkuser2', 1),
+  ('57db193c-5f9f-4e14-a25b-d50e24991144', 'AJK-Test', 'ajk-test@mail.com', 'ajktest', 1),
   ('a9c49af3-f969-4ea8-b89d-6fef5989ed2a', 'KBJ-User-1', 'kbj-1@mail.com', 'kbjuser1', 3);

@@ -3,6 +3,7 @@ package handlers
 import (
 	"database/sql"
 	"errors"
+	"fmt"
 	"net/http"
 	"nodes-grpc-be/entities"
 	"nodes-grpc-be/models"
@@ -46,21 +47,21 @@ func (h *ClusterHandler) CreateCluster(c *gin.Context) {
 		return
 	}
 
-	addCluster := new(models.AddCluster)
+	addCluster := &models.AddCluster{
+		ClusterId: uuid.New(),
+		UserId:    thisUser.UserId,
+		GroupId:   thisUser.GroupId,
+		Vcpu:      thisUser.Vcpu,
+		Memory:    thisUser.Memory,
+		Storage:   thisUser.Storage,
+		NodeSize:  thisUser.NodeSize,
+	}
 
 	err = c.BindJSON(addCluster)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, NewErrorResponse(err, "request is invalid"))
 		return
 	}
-
-	addCluster.ClusterId = uuid.New()
-	addCluster.UserId = thisUser.UserId
-	addCluster.GroupId = thisUser.GroupId
-	addCluster.Vcpu = thisUser.Vcpu
-	addCluster.Memory = thisUser.Memory
-	addCluster.Storage = thisUser.Storage
-	addCluster.NodeSize = thisUser.NodeSize
 
 	createClusterJob := &entities.Job{
 		Payload: addCluster,
@@ -73,6 +74,58 @@ func (h *ClusterHandler) CreateCluster(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, NewSuccessResponse("job added"))
+}
+
+func (h *ClusterHandler) DeleteCluster(c *gin.Context) {
+	token, tokenExists := c.Get("token")
+	if !tokenExists {
+		c.JSON(http.StatusUnauthorized, NewErrorResponse(errors.New("request is invalid"), "request is invalid"))
+		return
+	}
+
+	clusterId := c.Params.ByName("cluster_id")
+	clusterIdUuid, err := uuid.Parse(clusterId)
+
+	user, err := h.userService.Me(c, token.(string))
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, NewErrorResponse(err, "request is invalid"))
+		return
+	}
+
+	clusterEntities := &entities.Cluster{
+		ClusterId: clusterIdUuid,
+	}
+	deleteCluster := &models.DeleteCluster{
+		ClusterId: clusterIdUuid,
+	}
+
+	thisCluster, err := h.clusterService.GetClusterById(c, clusterEntities)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			c.JSON(http.StatusNotFound, NewErrorResponse(err, "not found"))
+			return
+		}
+
+		c.JSON(http.StatusInternalServerError, NewErrorResponse(err, "request is invalid"))
+		return
+	}
+
+	if thisCluster.UserId != user.UserId {
+		c.JSON(http.StatusUnauthorized, NewErrorResponse(errors.New("unauthorized"), "unauthorized"))
+		return
+	}
+
+	deleteClusterJob := &entities.Job{
+		Payload: deleteCluster,
+	}
+
+	err = h.redisQueueService.AddJob(c, deleteClusterJob, entities.JOB_TYPE_CLEANUP)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, NewErrorResponse(err, "request is invalid"))
+		return
+	}
+
+	c.JSON(http.StatusOK, NewSuccessResponse("success"))
 }
 
 func (h *ClusterHandler) GetUserCluster(c *gin.Context) {
@@ -109,7 +162,7 @@ func (h *ClusterHandler) GetClusterDetails(c *gin.Context) {
 	}
 
 	clusterId := c.Params.ByName("cluster_id")
-	clusterIdUuid, err := uuid.Parse(clusterId)
+	clusterIdUuid, _ := uuid.Parse(clusterId)
 	userId, err := h.jwtService.GetUserIDByToken(token.(string))
 	if err != nil {
 		c.JSON(http.StatusUnauthorized, NewErrorResponse(err, "request is invalid"))
@@ -117,7 +170,7 @@ func (h *ClusterHandler) GetClusterDetails(c *gin.Context) {
 	}
 
 	clusterEntities := &entities.Cluster{
-		ClusterID: clusterIdUuid,
+		ClusterId: clusterIdUuid,
 	}
 
 	thisCluster, err := h.clusterService.GetClusterById(c, clusterEntities)
@@ -139,8 +192,8 @@ func (h *ClusterHandler) GetClusterDetails(c *gin.Context) {
 	c.JSON(http.StatusOK, NewSuccessResponseWithData(thisCluster, "success"))
 }
 
-func (h *ClusterHandler) DeleteCluster(c *gin.Context) {
-	token, tokenExists := c.Get("token")
+func (h *ClusterHandler) GetClusterKubeconfig(c *gin.Context) {
+	_, tokenExists := c.Get("token")
 	if !tokenExists {
 		c.JSON(http.StatusUnauthorized, NewErrorResponse(errors.New("request is invalid"), "request is invalid"))
 		return
@@ -149,17 +202,11 @@ func (h *ClusterHandler) DeleteCluster(c *gin.Context) {
 	clusterId := c.Params.ByName("cluster_id")
 	clusterIdUuid, err := uuid.Parse(clusterId)
 
-	userId, err := h.jwtService.GetUserIDByToken(token.(string))
-	if err != nil {
-		c.JSON(http.StatusUnauthorized, NewErrorResponse(err, "request is invalid"))
-		return
-	}
-
 	clusterEntities := &entities.Cluster{
-		ClusterID: clusterIdUuid,
+		ClusterId: clusterIdUuid,
 	}
 
-	thisCluster, err := h.clusterService.GetClusterById(c, clusterEntities)
+	thisCluster, err := h.clusterService.GetClusterKubeconfig(c, clusterEntities)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			c.JSON(http.StatusNotFound, NewErrorResponse(err, "not found"))
@@ -170,16 +217,10 @@ func (h *ClusterHandler) DeleteCluster(c *gin.Context) {
 		return
 	}
 
-	if thisCluster.UserId != userId {
-		c.JSON(http.StatusUnauthorized, NewErrorResponse(errors.New("unauthorized"), "unauthorized"))
-		return
-	}
-
-	err = h.clusterService.DeleteCluster(c, clusterEntities)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, NewErrorResponse(err, "request is invalid"))
-		return
-	}
-
-	c.JSON(http.StatusOK, NewSuccessResponse("success"))
+	c.Header("Content-Type", "application/octet-stream")
+	c.Header(
+		"Content-Disposition",
+		fmt.Sprintf("attachment; filename=%s-kubeconfig.yaml", thisCluster.ClusterId.String()),
+	)
+	c.Data(200, "application/octet-stream", thisCluster.KubeconfigContents)
 }

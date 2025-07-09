@@ -39,7 +39,6 @@ func (s *UserService) Login(ctx context.Context, user *models.LoginUser) (string
 
 	// no user is found or password is wrong
 	if userGet == nil || userEntity.Password != userGet.Password {
-		fmt.Println("here")
 		return "", fmt.Errorf("email or password is wrong")
 	}
 

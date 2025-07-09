@@ -18,6 +18,10 @@ type AddCluster struct {
 	Nodes       []string  `json:"nodes" binding:"required"`
 }
 
+type DeleteCluster struct {
+	ClusterId uuid.UUID `json:"cluster_id"`
+}
+
 type GetUserClusters struct {
 	ClusterId     uuid.UUID `json:"cluster_id"`
 	ClusterName   string    `json:"cluster_name"`
@@ -25,16 +29,19 @@ type GetUserClusters struct {
 }
 
 type GetClusterDetails struct {
-	ClusterId     uuid.UUID `json:"cluster_id"`
-	ClusterName   string    `json:"cluster_name"`
-	UserId        uuid.UUID `json:"user_id"`
-	ClusterStatus string    `json:"cluster_status"`
-	IpAddress     *string   `json:"ip_address"`
-	AccessToken   *string   `json:"access_token"`
-	CreatedAt     time.Time `json:"created_at"`
+	ClusterId          uuid.UUID `json:"cluster_id"`
+	ClusterName        string    `json:"cluster_name"`
+	UserId             uuid.UUID `json:"user_id"`
+	GroupId            int       `json:"group_id"`
+	ClusterStatus      string    `json:"cluster_status"`
+	KubeconfigContents []byte    `json:"kubeconfig_contents"`
+	IpAddress          *string   `json:"ip_address"`
+	AccessToken        *string   `json:"access_token"`
+	CreatedAt          time.Time `json:"created_at"`
 }
 
 type CreateClusterResponse struct {
-	DashboardToken  string `json:"dashboard_token"`
-	MasterIpAddress string `json:"master_ip_address"`
+	DashboardToken     string `json:"dashboard_token"`
+	MasterIpAddress    string `json:"master_ip_address"`
+	KubeconfigContents []byte `json:"kubeconfig_contents"`
 }
