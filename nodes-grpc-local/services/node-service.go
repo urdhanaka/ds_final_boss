@@ -214,6 +214,9 @@ func (s *NodeServer) DeleteInstance(
 ) (*proto_model.DeleteInstanceResponse, error) {
 	err := s.libvirtVirtualization.DeleteInstance(deleteInstanceRequest.InstanceName)
 	if err != nil {
+		slog.Error("error deleting instance",
+			"error", err,
+		)
 		return &proto_model.DeleteInstanceResponse{}, err
 	}
 
