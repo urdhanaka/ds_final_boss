@@ -233,6 +233,37 @@ func (api *ApiClient) CreateCluster(
 	}
 }
 
+func (api *ApiClient) DownloadKubeconfig(
+	c *gin.Context,
+	clusterId string,
+) error {
+	if !api.isServerUp() {
+		return ErrServerIsNotResponding
+	}
+
+	token, tokenExists := c.Get("token")
+	if !tokenExists {
+		return ErrTokenIsMissing
+	}
+
+	bearerToken := fmt.Sprintf("Bearer %s", token.(string))
+	resp, err := api.client.R().
+		SetHeader("Authorization", bearerToken).
+		Get(consts.BACKEND_URL + "/api/clusters/" + clusterId + "/kubeconfig")
+	if err != nil {
+		return err
+	}
+	if resp.StatusCode() != 200 {
+		return fmt.Errorf("failed to download kubeconfig: %s", resp.Status())
+	}
+
+	c.Header("Content-Type", "application/octet-stream")
+	c.Header("Content-Disposition", fmt.Sprintf("attachment; filename=%s-kubeconfig.yaml", clusterId))
+	c.Data(200, "application/octet-stream", resp.Body())
+
+	return nil
+}
+
 func (api *ApiClient) DeleteCluster(
 	c *gin.Context,
 	deleteClusterModel *models.DeleteCluster,

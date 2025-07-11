@@ -51,20 +51,34 @@
                 class="border border-black text-gray-900 text-sm rounded-md block w-full p-2.5"
                 required
               /><br />
-              <p class="text-xl">Select nodes:</p>
-              <div>
-                {{ range .GroupNodes }}
+              <p class="text-xl">Select computer for every node:</p>
+              <div class="flex gap-6">
+
+                {{ range $nodeIndex := .NodeSize }}
                 <div>
-                  <input
-                    type="checkbox"
-                    id="{{ .Hostname }},{{ .IpAddress }}"
-                    value="{{ .Hostname }},{{ .IpAddress }}"
-                  />
-                  <label for="{{ .Hostname }},{{ .IpAddress }}"
-                    >{{ .Hostname }},{{ .IpAddress }}</label
-                  >
+                  {{ if (eq $nodeIndex 0) }}
+                  <p class="text-sm">Master Node:</p>
+                  {{ else }}
+                  <p class="text-sm">Worker Node {{ $nodeIndex }}</p>
+                  {{ end }}
+
+                  {{ range $.GroupNodes }}
+                  <div>
+                    <input
+                      type="radio"
+                      name="node_{{ $nodeIndex }}"
+                      id="{{ $.Hostname }},{{ $.IpAddress }}"
+                      value="{{ $.Hostname }},{{ $.IpAddress }}"
+                      required
+                    />
+                    <label for="{{ $.Hostname }},{{ $.IpAddress }}"
+                      >{{ .Hostname }},{{ .IpAddress }}</label
+                    >
+                  </div>
+                  {{ end }}
                 </div>
                 {{ end }}
+
               </div>
               <button
                 type="submit"
@@ -97,17 +111,6 @@
 
         // id="cluster_name"
         clusterName = $("#cluster_name").val();
-
-        if (selectedValues.length === 0) {
-          $("#result").html(
-            '<p style="color: red;">Please select at least one option.</p>',
-          );
-          return;
-        } else if (clusterName === "") {
-          $("#result").html(
-            '<p style="color: red;">Please input the cluster name.</p>',
-          );
-        }
 
         $("#result").html("<p>Sending data...</p>");
 

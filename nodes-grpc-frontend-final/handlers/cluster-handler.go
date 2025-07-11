@@ -107,7 +107,7 @@ func AccessCluster(apiClient *ApiClient) gin.HandlerFunc {
 				"MaxCluster":     meUser.MaxCluster,
 				"Cluster":        *thisCluster,
 			})
-            return
+			return
 		}
 
 		c.HTML(http.StatusOK, "cluster-views.html", gin.H{
@@ -155,7 +155,18 @@ func DeleteCluster(apiClient *ApiClient) gin.HandlerFunc {
 
 func AccessClusterStatus(apiClient *ApiClient) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		c.HTML(http.StatusOK, "cluster-status.html", gin.H{})
+		clusterId := c.Params.ByName("cluster_id")
+
+		// check if uuid is valid
+		err := uuid.Validate(clusterId)
+		if err != nil {
+			c.HTML(http.StatusOK, "cluster-status-invalid-id.html", nil)
+			return
+		}
+
+		c.HTML(http.StatusOK, "cluster-status.html", gin.H{
+			"ClusterId": clusterId,
+		})
 	}
 }
 
@@ -172,5 +183,16 @@ func CreateClusterHandler(apiClient *ApiClient) gin.HandlerFunc {
 		ErrorPageHandlers(err, res)
 
 		c.JSON(http.StatusOK, res)
+	}
+}
+
+func DownloadKubeconfigHandler(apiClient *ApiClient) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		clusterId := c.Params.ByName("cluster_id")
+
+		err := apiClient.DownloadKubeconfig(c, clusterId)
+		if err != nil {
+			c.JSON(500, gin.H{"error": err.Error()})
+		}
 	}
 }

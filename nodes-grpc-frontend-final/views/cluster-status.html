@@ -11,12 +11,31 @@
       href="https://cdn.jsdelivr.net/npm/@xterm/xterm@5.5.0/css/xterm.min.css"
     />
   </head>
-  <body>
+  <body class="h-screen bg-gray-50 font-mono">
+    {{ template "bar" . }}
     <div id="terminal"></div>
     <script>
       var term = new Terminal();
       term.open(document.getElementById("terminal"));
-      term.writeln("Hello, World!");
+
+      // term.writeln("Hello, World!");
+      // websockets
+      const receiveLogsUrl =
+        "ws://localhost:8000/api/logs/stream/{{ .ClusterId }}";
+      const socket = new WebSocket(receiveLogsUrl);
+
+      socket.addEventListener("message", (event) => {
+        term.writeln(event.data);
+      });
+
+      socket.addEventListener("close", () => {
+        term.writeln("--END OF LOGS--");
+        socket.close();
+      });
+
+      socket.addEventListener("error", (error) => {
+        term.writeln(`--ERROR: ${error.message}, ${error.code}--`);
+      });
     </script>
   </body>
 </html>

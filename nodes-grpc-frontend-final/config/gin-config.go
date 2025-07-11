@@ -12,7 +12,6 @@ func NewGin() *gin.Engine {
 		AllowWebSockets: true,
 		AllowHeaders:    []string{"*"},
 	}))
-    g.Use()
 
 	return g
 }

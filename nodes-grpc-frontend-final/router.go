@@ -21,7 +21,6 @@ func setRouters(app *gin.Engine, resty *resty.Client) {
 
 	apiClient := handlers.NewApiClient(resty)
 
-	//
 	app.GET("/", handlers.RedirectToLogin())
 
 	// login
@@ -39,6 +38,7 @@ func setRouters(app *gin.Engine, resty *resty.Client) {
 	app.GET("/cluster/:cluster_id", handlers.AddTokenHeader(), handlers.AccessCluster(apiClient))
 	app.DELETE("/cluster/:cluster_id/delete", handlers.AddTokenHeader(), handlers.DeleteCluster(apiClient))
 	app.GET("/cluster/:cluster_id/status", handlers.AddTokenHeader(), handlers.AccessClusterStatus(apiClient))
+	app.GET("/cluster/:cluster_id/kubeconfig", handlers.AddTokenHeader(), handlers.DownloadKubeconfigHandler(apiClient))
 
 	// logout
 	app.GET("/logout", handlers.Logout())
