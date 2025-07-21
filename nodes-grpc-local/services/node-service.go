@@ -65,8 +65,6 @@ func (s *NodeServer) CreateMaster(
 		return res, err
 	}
 
-    fmt.Println("virt result: ", virtResult)
-
 	res.KubeconfigContents = virtResult.KubeconfigContents
 	res.DashboardToken = virtResult.DashboardToken
 	res.MasterIpAddress = virtResult.MasterIpAddress

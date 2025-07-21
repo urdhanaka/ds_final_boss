@@ -187,6 +187,8 @@ func (c *LibvirtVirtualization) createMaster(
 	createRes.MasterIpAddress = string(decodedIpAddressBytes)
 	createRes.KubeconfigContents = decodedKubeconfigContentsBytes
 
+	fmt.Println("createRes", createRes)
+
 	slogFunction(virtRequest.ClusterName, thisInstanceName, "vm provision done", err)
 
 	return createRes, nil
