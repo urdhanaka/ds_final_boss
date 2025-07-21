@@ -811,6 +811,12 @@ func guestAgentExecStatus(
         fmt.Println(res)
 
 		if res.Return.Exited {
+            fmt.Println(res.Return.OutData)
+            decoded, err := base64.StdEncoding.DecodeString(res.Return.OutData)
+            if err != nil {
+                break
+            }
+            fmt.Println(string(decoded))
 			break
 		}
 
