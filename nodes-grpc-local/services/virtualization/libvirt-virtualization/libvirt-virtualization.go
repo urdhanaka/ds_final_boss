@@ -757,11 +757,11 @@ func (c *LibvirtVirtualization) DeleteInstance(
 	}
 	deleteFilesCommand = fmt.Sprintf("rm %s/%s.*", NVRAM_DIR, domainName)
 	cmd = exec.Command("/bin/bash", "-c", deleteFilesCommand)
-    out, err := cmd.CombinedOutput()
+	out, err := cmd.CombinedOutput()
 	if err != nil {
 		slog.Error("could not clean domain files",
 			"error", err,
-            "output", string(out),
+			"output", string(out),
 		)
 		return err
 	}
