@@ -167,6 +167,8 @@ func (c *LibvirtVirtualization) createMaster(
 		return createRes, err
 	}
 
+	fmt.Println("ip_address", string(decodedIpAddressBytes))
+
 	// getting the kubeconfig
 	getKubeConfigContentCmd := fmt.Sprintf(`cat /etc/rancher/k3s/k3s.yaml | sed 's/127.0.0.1/%s/g' | head -c -1`, string(decodedIpAddressBytes))
 	getKubeConfigContentStatus, err := guestAgentExecStatus(dom, getKubeConfigContentCmd)
