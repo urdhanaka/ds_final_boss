@@ -750,7 +750,7 @@ func (c *LibvirtVirtualization) DeleteInstance(
 	}
 
 	// domain files cleanup
-	deleteFilesCommand := fmt.Sprintf("rm %s/%s.*", POOL_DIR, domainName)
+	deleteFilesCommand := fmt.Sprintf(`"rm %s/%s.*"`, POOL_DIR, domainName)
 	cmd := exec.Command("/bin/bash", "-c", deleteFilesCommand)
 	err = cmd.Run()
 	if err != nil {
@@ -759,7 +759,7 @@ func (c *LibvirtVirtualization) DeleteInstance(
 		)
 		return err
 	}
-	deleteFilesCommand = fmt.Sprintf("rm %s/%s.*", NVRAM_DIR, domainName)
+	deleteFilesCommand = fmt.Sprintf(`"rm %s/%s.*"`, NVRAM_DIR, domainName)
 	cmd = exec.Command("/bin/bash", "-c", deleteFilesCommand)
 	out, err := cmd.CombinedOutput()
 	if err != nil {
