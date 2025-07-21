@@ -286,7 +286,7 @@ func createBaseXml(
 ) (string, error) {
 	instanceStorage := POOL_DIR + "/" + instanceName + ".qcow2"
 	seedFile := POOL_DIR + "/" + instanceName + ".iso"
-	logSocket := INSTANCE_LOGS_DIR + "/" + instanceName + ".sock"
+	// logSocket := INSTANCE_LOGS_DIR + "/" + instanceName + ".sock"
 
 	domConfig := &libvirtxml.Domain{
 		Type: "kvm",
@@ -432,24 +432,24 @@ func createBaseXml(
 						},
 					},
 				},
-				{
-					Source: &libvirtxml.DomainChardevSource{
-						UNIX: &libvirtxml.DomainChardevSourceUNIX{
-							Mode: "bind",
-							Path: logSocket,
-						},
-					},
-					Target: &libvirtxml.DomainSerialTarget{
-						Type: "isa-serial",
-						Port: func() *uint {
-							temp := uint(1)
-							return &temp
-						}(),
-						Model: &libvirtxml.DomainSerialTargetModel{
-							Name: "isa-serial",
-						},
-					},
-				},
+				// {
+				// 	Source: &libvirtxml.DomainChardevSource{
+				// 		UNIX: &libvirtxml.DomainChardevSourceUNIX{
+				// 			Mode: "bind",
+				// 			Path: logSocket,
+				// 		},
+				// 	},
+				// 	Target: &libvirtxml.DomainSerialTarget{
+				// 		Type: "isa-serial",
+				// 		Port: func() *uint {
+				// 			temp := uint(1)
+				// 			return &temp
+				// 		}(),
+				// 		Model: &libvirtxml.DomainSerialTargetModel{
+				// 			Name: "isa-serial",
+				// 		},
+				// 	},
+				// },
 			},
 			Consoles: []libvirtxml.DomainConsole{
 				{
