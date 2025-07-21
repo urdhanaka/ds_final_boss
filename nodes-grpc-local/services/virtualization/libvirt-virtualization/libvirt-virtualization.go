@@ -808,6 +808,8 @@ func guestAgentExecStatus(
 			return res, err
 		}
 
+        fmt.Println(res)
+
 		if res.Return.Exited {
 			break
 		}
