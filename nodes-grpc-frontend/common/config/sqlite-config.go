@@ -12,7 +12,6 @@ import (
 
 const (
 	NODE_TABLE_NAME      = "nodes"
-	DASHBOARD_TABLE_NAME = "dashboard"
 
 	FILE_NAME = "nodes.db"
 )
@@ -53,16 +52,8 @@ func NewDB() *sqlx.DB {
                 created_at  TEXT NOT NULL DEFAULT (datetime(current_timestamp, 'localtime')),
                 deleted_at  TEXT
             );
-
-            -- ui table, contains record of master node
-            -- and it's ip
-            CREATE TABLE IF NOT EXISTS %s (
-                uuid        TEXT PRIMARY KEY,
-                node_ip     TEXT,
-                created_at  TEXT NOT NULL DEFAULT (datetime(current_timestamp, 'localtime'))
-            );
             `,
-		NODE_TABLE_NAME, DASHBOARD_TABLE_NAME,
+		NODE_TABLE_NAME,
 	)
 
 	if file_not_exist {

@@ -43,7 +43,6 @@ func NewPerformanceTest(redisAddr string) *PerformanceTest {
 func (pt *PerformanceTest) TestConcurrentVMCreation(numJobs int) {
 	ctx := context.Background()
 
-	// Test configuration
 	testJobs := make([]*entities.Job, numJobs)
 	results := make([]TestResult, numJobs)
 
@@ -51,7 +50,6 @@ func (pt *PerformanceTest) TestConcurrentVMCreation(numJobs int) {
 	test_user_id := uuid.MustParse("57db193c-5f9f-4e14-a25b-d50e24991144")
 	test_group_id := 1
 
-	// Create test jobs
 	for i := range numJobs {
 		job := &entities.Job{
 			ID:   uuid.New().String(),
@@ -77,7 +75,6 @@ func (pt *PerformanceTest) TestConcurrentVMCreation(numJobs int) {
 
 	var wg sync.WaitGroup
 
-	// Submit all jobs concurrently
 	fmt.Printf("Starting concurrent test with %d VM creations...\n", numJobs)
 	overallStartTime := time.Now()
 
@@ -86,7 +83,6 @@ func (pt *PerformanceTest) TestConcurrentVMCreation(numJobs int) {
 		go func(idx int, j *entities.Job) {
 			defer wg.Done()
 
-			// Submit job to Redis queue
 			err := pt.submitJob(ctx, j)
 			if err != nil {
 				results[idx].Error = err.Error()
@@ -95,7 +91,6 @@ func (pt *PerformanceTest) TestConcurrentVMCreation(numJobs int) {
 				return
 			}
 
-			// Monitor job completion without timeout
 			status, err := pt.monitorJobCompletion(ctx, j.ID)
 			results[idx].Status = status
 			results[idx].EndTime = time.Now()
@@ -111,12 +106,10 @@ func (pt *PerformanceTest) TestConcurrentVMCreation(numJobs int) {
 	overallEndTime := time.Now()
 	overallDuration := overallEndTime.Sub(overallStartTime)
 
-	// Print results
 	pt.printResults(results, overallDuration)
 }
 
 func (pt *PerformanceTest) submitJob(ctx context.Context, job *entities.Job) error {
-	// Simulate job submission (normally done by your job queue service)
 	job.Status = entities.JOB_STATUS_QUEUED
 	job.Retries = 0
 	job.MaxRetries = 3
@@ -126,13 +119,11 @@ func (pt *PerformanceTest) submitJob(ctx context.Context, job *entities.Job) err
 		return fmt.Errorf("failed to marshal job: %w", err)
 	}
 
-	// Store job in Redis
 	jobKey := fmt.Sprintf("job:%s", job.ID)
 	if err := pt.redisClient.Set(ctx, jobKey, jobData, 24*time.Hour).Err(); err != nil {
 		return fmt.Errorf("failed to store job: %w", err)
 	}
 
-	// Add to provision queue
 	if err := pt.redisClient.LPush(ctx, consts.REDIS_PROVISION_NAME, job.ID).Err(); err != nil {
 		return fmt.Errorf("failed to queue job: %w", err)
 	}
@@ -224,7 +215,7 @@ func (pt *PerformanceTest) printResults(results []TestResult, overallDuration ti
 }
 
 func main() {
-	redisAddr := "localhost:6379" // Change to your Redis address
+	redisAddr := "localhost:6379"
 
 	numJobs := 5
 	if len(os.Args) > 1 {

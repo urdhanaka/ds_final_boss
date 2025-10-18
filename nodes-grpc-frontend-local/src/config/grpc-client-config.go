@@ -8,13 +8,13 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 )
 
-func NewNodeClient() (proto_model.NodeServiceClient, error) {
-	fullUrl := "localhost:50051"
+func NewNodeClient(nodeIp string) (proto_model.NodeServiceClient, error) {
+	// fullUrl := "localhost:50051"
 
-	conn, err := grpc.NewClient(fullUrl, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	conn, err := grpc.NewClient(nodeIp, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		slog.Error("Could not connect to grpc server",
-			"url", fullUrl,
+			"url", nodeIp,
 			"error", err,
 		)
 

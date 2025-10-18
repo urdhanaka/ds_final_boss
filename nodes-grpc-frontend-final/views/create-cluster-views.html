@@ -19,9 +19,9 @@
         resources:
       </div>
       <ul>
-        <li>VCPU: {{ .Vcpu }}</li>
-        <li>Memory: {{ .Memory }}</li>
-        <li>Storage: {{ .Storage }}</li>
+        <li class="flex gap-2">VCPU: <p id="group_vcpu">{{ .Vcpu }}</p></li>
+        <li class="flex gap-2">Memory: <p id="group_memory">{{ .Memory }}</p></li>
+        <li class="flex gap-2">Storage: <p id="group_storage">{{ .Storage }}</p></li>
         <li>Node per cluster: {{ .NodeSize }}</li>
         <li>Current cluster for this group: {{ .CurrentCluster }}</li>
         <li>Max cluster for this group: {{ .MaxCluster }}</li>
@@ -34,9 +34,9 @@
           <div class="p-4 rounded-md border">
             <p>Hostname: {{ .Hostname }}</p>
             <p>IP address: {{ .IpAddress }}</p>
-            <p>VCPU: {{ .VCpu }}</p>
-            <p>Memory: {{ .Memory }}</p>
-            <p>Storage: {{ .Storage }}</p>
+            <div class="flex gap-2">VCPU: <p id="{{ .IpAddress }}_vcpu">{{ .VCpu }}</p></div>
+            <div class="flex gap-2">Memory: <p id="{{ .IpAddress }}_memory">{{ .Memory }}</p></div>
+            <div class="flex gap-2">Storage: <p id="{{ .IpAddress }}_storage">{{ .Storage }}</p></div>
           </div>
           {{ end }}
         </div>
@@ -53,7 +53,6 @@
               /><br />
               <p class="text-xl">Select computer for every node:</p>
               <div class="flex gap-6">
-
                 {{ range $nodeIndex := .NodeSize }}
                 <div>
                   {{ if (eq $nodeIndex 0) }}
@@ -67,18 +66,17 @@
                     <input
                       type="radio"
                       name="node_{{ $nodeIndex }}"
-                      id="{{ $.Hostname }},{{ $.IpAddress }}"
-                      value="{{ $.Hostname }},{{ $.IpAddress }}"
+                      id="{{ .Hostname }},{{ .IpAddress }}"
+                      value="{{ .Hostname }},{{ .IpAddress }}"
                       required
                     />
-                    <label for="{{ $.Hostname }},{{ $.IpAddress }}"
+                    <label for="{{ .Hostname }},{{ .IpAddress }}"
                       >{{ .Hostname }},{{ .IpAddress }}</label
                     >
                   </div>
                   {{ end }}
                 </div>
                 {{ end }}
-
               </div>
               <button
                 type="submit"
@@ -105,12 +103,42 @@
         let clusterName = "";
 
         // get the nodes checked
-        $('input[type="checkbox"]:checked').each(function () {
+        $('input[type="radio"]:checked').each(function () {
           selectedValues.push($(this).val());
         });
 
         // id="cluster_name"
         clusterName = $("#cluster_name").val();
+
+        // checking
+        // for (let currentNodeIndex = 0; currentNodeIndex < selectedValues.length; currentNodeIndex++) {
+        //   var currentNode = selectedValues[currentNodeIndex];
+        //   var currentNodeIpAddress = currentNode.split(",")[1];
+        //
+        //   // // vcpu
+        //   // var group_vcpu = parseInt($("#group_vcpu").val());
+        //   // var selected_node_vcpu = parseInt($(currentNodeIpAddress + "_vcpu").val())
+        //   // if (selected_node_vcpu < group_vcpu) {
+        //   //   $("#result").html("<p>worker node " + currentNode + "not enough vcpu</p>");
+        //   // }
+        //   // return
+        //   //
+        //   // // memory
+        //   // var group_memory = parseInt($("#group_memory").val());
+        //   // var selected_node_memory = parseInt($(currentNodeIpAddress + "_memory").val())
+        //   // if (selected_node_memory < group_memory) {
+        //   //   $("#result").html("<p>worker node " + currentNode + "not enough memory</p>");
+        //   // }
+        //   // return
+        //   //
+        //   // // storage
+        //   // var group_memory = parseInt($("#group_memory").val());
+        //   // var selected_node_memory = parseInt($(currentNodeIpAddress + "_memory").val())
+        //   // if (selected_node_memory < group_memory) {
+        //   //   $("#result").html("<p>worker node " + currentNode + "not enough memory</p>");
+        //   // }
+        //   // return
+        // }
 
         $("#result").html("<p>Sending data...</p>");
 

@@ -3,7 +3,11 @@ package entity
 import "github.com/google/uuid"
 
 type Node struct {
-	ID        uuid.UUID
-	Hostname  string
-	IpAddress string
+	NodeID    uuid.UUID `json:"node_id,omitempty" db:"node_id"`       // node/worker ID
+	Hostname  string    `json:"hostname,omitempty" db:"hostname"`     // hostname
+	IpAddress string    `json:"ip_address,omitempty" db:"ip_address"` // ip address
+	Cpu       int       `json:"cpu" db:"cpu"`
+	Ram       int       `json:"ram" db:"ram"`
+	Storage   int       `json:"storage" db:"storage"`
+	GroupId   int       `json:"group_id,omitempty" db:"group_id"` // group ID
 }

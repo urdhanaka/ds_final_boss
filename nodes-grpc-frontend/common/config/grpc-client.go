@@ -16,7 +16,8 @@ func NewNodeClient(ip_address, port string) (proto.NodeServiceClient, error) {
 	if err != nil {
 		slog.Error("Could not connect to grpc server",
 			"url", fullUrl,
-			"error", err)
+			"error", err,
+		)
 
 		return nil, err
 	}

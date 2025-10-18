@@ -1,0 +1,17 @@
+package nodelist
+
+import "nodes-grpc-frontend-local/src/entity"
+
+templ NodeList(nodes []entity.Node) {
+	<div class="ml-8 mr-8 mt-2 mb-2">
+		<h2 class="font-mono">Available nodes:</h2>
+		<div class="grid grid-cols-4 font-mono gap-2">
+			for _, node := range nodes {
+				<div class="border-solid border-2 p-5 rounded-sm">
+					<p>Hostname: { node.Hostname }</p>
+					<p>IP: { node.IpAddress }</p>
+				</div>
+			}
+		</div>
+	</div>
+}

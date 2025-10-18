@@ -14,7 +14,7 @@ type DatabaseConnection struct {
 	dbConnection *sqlx.DB
 }
 
-func NewDBConnection(dbConnection *sqlx.DB) *DatabaseConnection {
+func NewDBConnection(dbConnection *sqlx.DB) DatabaseInterface {
 	return &DatabaseConnection{
 		dbConnection: dbConnection,
 	}
@@ -28,8 +28,8 @@ func (c *DatabaseConnection) Store(nodeModel NodesModel) error {
 		)
 		return err
 	}
-	_, err = tx.Exec("INSERT INTO $1 (UUID, NodeIP, VirtType) VALUES ($2, $3, $4)",
-		TABLE_NAME, nodeModel.UUID, nodeModel.NodeIP, nodeModel.VirtType,
+	_, err = tx.Exec("INSERT INTO $1 (UUID, NodeIP) VALUES ($2, $3)",
+		TABLE_NAME, nodeModel.UUID, nodeModel.NodeIP,
 	)
 	if err != nil {
 		slog.Error("db: Store(): could not insert the node data on db",

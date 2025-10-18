@@ -18,11 +18,6 @@ type DatabaseInterface interface {
 	DeleteNode(ctx context.Context, nodeModel web.Node) error
 	GetNode(ctx context.Context, nodeModel web.Node) (web.Node, error)
 	GetAllNode(ctx context.Context) ([]web.Node, error)
-
-	// ui table
-	StoreDashboard(ctx context.Context, uiModel web.Dashboard) error
-	GetDashboard(ctx context.Context, uiModel web.Dashboard) (web.Dashboard, error)
-	DeleteDashboard(ctx context.Context, uiModel web.Dashboard) error
 }
 
 type DbUsecaseImpl struct {
@@ -122,67 +117,4 @@ func (d *DbUsecaseImpl) GetAllNode(ctx context.Context) ([]web.Node, error) {
 	}
 
 	return nodes, nil
-}
-
-func (d *DbUsecaseImpl) StoreDashboard(ctx context.Context, uiModel web.Dashboard) error {
-	tx, err := d.dbConnection.Beginx()
-	if err != nil {
-		return err
-	}
-
-	_, err = tx.Exec(
-		fmt.Sprintf("INSERT INTO %s (uuid, node_ip) VALUES ($1, $2);", config.DASHBOARD_TABLE_NAME),
-		uiModel.UUID, uiModel.NodeIP,
-	)
-	if err != nil {
-		return err
-	}
-
-	err = tx.Commit()
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func (d *DbUsecaseImpl) GetDashboard(ctx context.Context, uiModel web.Dashboard) (web.Dashboard, error) {
-	ui := web.Dashboard{}
-
-	row := d.dbConnection.QueryRowx(fmt.Sprintf(`
-        SELECT node_ip FROM %s WHERE node_ip = '%s';
-    `, config.DASHBOARD_TABLE_NAME, uiModel.NodeIP))
-	err := row.StructScan(&ui)
-	if err != nil {
-		// handle empty result
-		if errors.Is(err, sql.ErrNoRows) {
-			return ui, nil
-		}
-
-		return ui, err
-	}
-
-	return ui, nil
-}
-
-func (d *DbUsecaseImpl) DeleteDashboard(ctx context.Context, uiModel web.Dashboard) error {
-	tx, err := d.dbConnection.Beginx()
-	if err != nil {
-		return err
-	}
-
-	_, err = tx.Exec(
-		fmt.Sprintf("DELETE FROM %s WHERE uuid = $1 OR node_ip = $2;", config.DASHBOARD_TABLE_NAME),
-		uiModel.UUID, uiModel.NodeIP,
-	)
-	if err != nil {
-		return err
-	}
-
-	err = tx.Commit()
-	if err != nil {
-		return err
-	}
-
-	return nil
 }

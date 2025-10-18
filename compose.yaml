@@ -1,0 +1,8 @@
+name: TA-FE-BE
+services:
+  ta-fe-service:
+    image: ta-fe:latest
+    ports:
+      - "8080:8080"
+
+  # ta-be-service:

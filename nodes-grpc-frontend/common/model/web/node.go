@@ -13,7 +13,10 @@ type GetNodesResponse struct {
 }
 
 type CreateClusterRequest struct {
-	Token string `json:"token"`
+	Memory  string `json:"memory"`
+	Vcpu    string `json:"vcpu"`
+	Storage string `json:"storage"`
+	Token   string `json:"token"`
 }
 
 type NodeRequirement struct {

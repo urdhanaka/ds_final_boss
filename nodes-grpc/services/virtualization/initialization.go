@@ -2,6 +2,7 @@ package virtualization
 
 import (
 	"fmt"
+	"log/slog"
 	"net/url"
 	"os"
 
@@ -34,9 +35,22 @@ func InitLibvirtConnection() *libvirt.Libvirt {
 }
 
 func InitIncusConnection() incus.InstanceServer {
+	slog.Info("checking incus socket...")
+
+	slog.Info("using /run/incus/unix.socket ...")
 	c, err := incus.ConnectIncusUnix("/run/incus/unix.socket", nil)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Could not connect to qemu: %s", err.Error())
+		slog.Error("error connecting to /run/incus/unix.socket",
+			"err", err.Error(),
+		)
+	}
+
+	slog.Info("using /var/lib/incus/unix.socket ...")
+	c, err = incus.ConnectIncusUnix("/var/lib/incus/unix.socket", nil)
+	if err != nil {
+		slog.Error("error connecting to /var/lib/incus/unix.socket",
+			"err", err.Error(),
+		)
 		os.Exit(1)
 	}
 

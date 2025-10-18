@@ -9,14 +9,15 @@ import "github.com/a-h/templ"
 import templruntime "github.com/a-h/templ/runtime"
 
 import "nodes-grpc-frontend/components/requirements"
-import "nodes-grpc-frontend/services/db_service"
 
 import (
+	"nodes-grpc-frontend/common/model/web"
+	"nodes-grpc-frontend/components/access-cluster"
 	"nodes-grpc-frontend/components/base"
 	"nodes-grpc-frontend/components/list"
 )
 
-func Dashboard(nodes []db_service.Node) templ.Component {
+func Dashboard(nodes []web.Node) templ.Component {
 	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
 		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
 		if templ_7745c5c3_CtxErr := ctx.Err(); templ_7745c5c3_CtxErr != nil {
@@ -58,6 +59,14 @@ func Dashboard(nodes []db_service.Node) templ.Component {
 				return templ_7745c5c3_Err
 			}
 			templ_7745c5c3_Err = list.NodeList(nodes).Render(ctx, templ_7745c5c3_Buffer)
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, " ")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			templ_7745c5c3_Err = access_cluster.AccessCluster().Render(ctx, templ_7745c5c3_Buffer)
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}

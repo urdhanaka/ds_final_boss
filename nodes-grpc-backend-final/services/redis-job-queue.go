@@ -16,7 +16,7 @@ import (
 
 const (
 	MAX_JOB_RETRIES  = 3
-	PROVISION_WORKER = 3
+	PROVISION_WORKER = 2
 	// CLEANUP_WORKER   = 1
 )
 
@@ -70,7 +70,8 @@ func (jq *RedisJobQueue) AddJob(
 
 	// insert according to the job type
 	// only 2 types of job.Type
-	if job.Type == entities.JOB_TYPE_PROVISIONING {
+	switch job.Type {
+	case entities.JOB_TYPE_PROVISIONING:
 		addClusterModel := job.Payload.(*models.AddCluster)
 		err = jq.clusterService.AddClusterToDatabase(ctx, &entities.Cluster{
 			ClusterId:     addClusterModel.ClusterId,
@@ -87,7 +88,7 @@ func (jq *RedisJobQueue) AddJob(
 		if err := jq.client.LPush(ctx, jq.provisioningQueueName, job.ID).Err(); err != nil {
 			return fmt.Errorf("failed to queue job: %w", err)
 		}
-	} else if job.Type == entities.JOB_TYPE_CLEANUP {
+	case entities.JOB_TYPE_CLEANUP:
 		if err := jq.client.LPush(ctx, jq.cleanupQueueName, job.ID).Err(); err != nil {
 			return fmt.Errorf("failed to queue job: %w", err)
 		}
@@ -116,7 +117,7 @@ func (jq *RedisJobQueue) GetJob(ctx context.Context, id string) (*entities.Job, 
 
 func (jq *RedisJobQueue) StartWorker(ctx context.Context) {
 	for i := range PROVISION_WORKER {
-		go jq.provisionWorker(ctx, i+1)
+		go jq.provisionWorker(ctx, i)
 	}
 
 	go jq.cleanupWorker(ctx)
@@ -148,7 +149,11 @@ func (jq *RedisJobQueue) updateJobStatus(ctx context.Context, job *entities.Job)
 	return jq.client.Set(ctx, jobKey, jobData, 24*time.Hour).Err()
 }
 
-func (jq *RedisJobQueue) processJob(ctx context.Context, job *entities.Job) {
+func (jq *RedisJobQueue) processJob(
+	ctx context.Context,
+	job *entities.Job,
+	workerId int,
+) {
 	startTime := time.Now()
 	job.Status = entities.JOB_STATUS_WORKING
 	jq.updateJobStatus(ctx, job)
@@ -159,10 +164,14 @@ func (jq *RedisJobQueue) processJob(ctx context.Context, job *entities.Job) {
 	var err error
 
 	switch job.Type {
+	// case entities.JOB_TEST_TYPE_PROVISIONING:
+	// 	result, err = jq.clusterService.CreateClusterWithoutPickTest(ctx, job)
 	case entities.JOB_TEST_TYPE_PROVISIONING:
-		result, err = jq.clusterService.CreateClusterWithoutPickTest(ctx, job)
+		result, err = jq.clusterService.CreateClusterFinalTest(ctx, job, workerId)
 	case entities.JOB_TYPE_PROVISIONING:
-		result, err = jq.clusterService.CreateClusterWithoutPick(ctx, job)
+		result, err = jq.clusterService.CreateClusterWithPick(ctx, job)
+	// case entities.JOB_TYPE_PROVISIONING: // NOTE: WITHOUT PICK
+	// 	result, err = jq.clusterService.CreateClusterWithoutPick(ctx, job)
 	case entities.JOB_TYPE_CLEANUP:
 		err = jq.clusterService.CleanCluster(ctx, job)
 	default:
@@ -228,7 +237,7 @@ func (jq *RedisJobQueue) provisionWorker(ctx context.Context, workerId int) {
 			}
 
 			slog.Info(fmt.Sprintf("provision worker processing job %s", jobID))
-			jq.processJob(ctx, job)
+			jq.processJob(ctx, job, workerId)
 		}
 	}
 }
@@ -264,7 +273,7 @@ func (jq *RedisJobQueue) cleanupWorker(ctx context.Context) {
 			}
 
 			slog.Info(fmt.Sprintf("cleanup worker processing job %s", jobID))
-			jq.processJob(ctx, job)
+			jq.processJob(ctx, job, 1)
 		}
 	}
 }

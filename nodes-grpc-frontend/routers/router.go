@@ -20,10 +20,10 @@ func SetRouter(fiberApp *fiber.App, dbConnection *sqlx.DB) {
 	nodeHandler := handlers.NewNodeHandler(nodeUsecase)
 
 	// static assets
+	// fiberApp.Get("assets/htmx-json-enc.js", static.New("assets/js/htmx-json-enc.js"))
+	// fiberApp.Get("assets/htmx.js", static.New("assets/js/htmx.js"))
 	fiberApp.Get("assets/styles.css", static.New("assets/css/styles.css"))
-	fiberApp.Get("assets/htmx.js", static.New("assets/js/htmx.js"))
 	fiberApp.Get("assets/script.js", static.New("assets/js/script.js"))
-	fiberApp.Get("assets/htmx-json-enc.js", static.New("assets/js/htmx-json-enc.js"))
 	fiberApp.Get("assets/oval.svg", static.New("assets/svg/oval.svg"))
 
 	// welcome page

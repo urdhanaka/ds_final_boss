@@ -12,23 +12,23 @@ type ErrorResponse struct {
 	Error   string `json:"error"`
 }
 
-func NewSuccessResponse() SuccessResponse {
+func NewSuccessResponse(message string) SuccessResponse {
 	return SuccessResponse{
 		Success: true,
-		Message: "success",
+		Message: message,
 		Data:    nil,
 	}
 }
 
-func NewErrorResponse(err error) ErrorResponse {
+func NewErrorResponse(err error, message string) ErrorResponse {
 	return ErrorResponse{
 		Success: false,
-		Message: "request error",
+		Message: message,
 		Error:   err.Error(),
 	}
 }
 
-func NewSuccessResponseWithData(data any) SuccessResponse {
+func NewSuccessResponseWithData(data any, message string) SuccessResponse {
 	return SuccessResponse{
 		Success: true,
 		Message: "success",

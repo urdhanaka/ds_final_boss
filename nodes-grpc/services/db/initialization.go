@@ -37,7 +37,7 @@ func InitDB() *sqlx.DB {
 	if file_not_exist {
 		if _, err := db.Exec(`
         CREATE TABLE Nodes (
-            UUID        BLOB PRIMARY KEY,
+        	UUID        BLOB PRIMARY KEY,
             NodeIP      TEXT,
             VirtType    TEXT
         );`); err != nil {

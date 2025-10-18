@@ -1,0 +1,1 @@
+<button type=\"button\" id=\"access-button\" class=\"invisible bg-black text-white\" onclick=\"openDashboard()\" value=\"alkdajsd\">Access cluster</button>

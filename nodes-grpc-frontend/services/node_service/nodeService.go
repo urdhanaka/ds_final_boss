@@ -14,10 +14,10 @@ import (
 )
 
 type NodeUsecase interface {
-	GetAllNodes(ctx context.Context) ([]web.Node, error)
 	RegisterNode(ctx context.Context, nodeModel *web.RegisterNodeRequest) error
-	CreateCluster(ctx context.Context, createClusterRequest *web.CreateClusterRequest) error
-	AccessCluster(ctx context.Context, token string) (web.Dashboard, error)
+	GetAllNodes(ctx context.Context) ([]web.Node, error)
+	CreateCluster(ctx context.Context, createClusterRequest *web.CreateClusterRequest) (string, error)
+	// AccessCluster(ctx context.Context, token string) (web.Dashboard, error)
 	// CheckNodesHealth(context.Context) ([]*proto_model.NodeStatus, error)
 }
 
@@ -116,13 +116,13 @@ func (u *NodeUsecaseImpl) RegisterNode(ctx context.Context, nodeModel *web.Regis
 	return nil
 }
 
-func (u *NodeUsecaseImpl) CreateCluster(ctx context.Context, createClusterRequest *web.CreateClusterRequest) error {
+func (u *NodeUsecaseImpl) CreateCluster(ctx context.Context, createClusterRequest *web.CreateClusterRequest) (string, error) {
 	masterNode, err := u.startMaster(ctx, createClusterRequest)
 	if err != nil {
 		slog.Error("Could not start master node",
 			"error", err)
 
-		return err
+		return "", err
 	}
 
 	err = u.startWorker(ctx, masterNode, createClusterRequest)
@@ -130,10 +130,10 @@ func (u *NodeUsecaseImpl) CreateCluster(ctx context.Context, createClusterReques
 		slog.Error("Could not start worker node",
 			"error", err)
 
-		return err
+		return "", err
 	}
 
-	return nil
+	return "", nil
 }
 
 func (u *NodeUsecaseImpl) startMaster(
@@ -189,6 +189,9 @@ func (u *NodeUsecaseImpl) startMaster(
 
 		return "", err
 	}
+
+	// save the master
+	u.dbInterface.StoreNode(ctx, web.Node{})
 
 	// ip address of the master
 	masterIpAddress := createMasterResponse.GetIpAddress()
@@ -255,20 +258,7 @@ func (u *NodeUsecaseImpl) startWorker(
 	return nil
 }
 
-func (u *NodeUsecaseImpl) AccessCluster(ctx context.Context, token string) (web.Dashboard, error) {
-	uiModel := web.Dashboard{
-		UUID: token,
-	}
-
-	ui, err := u.dbInterface.GetDashboard(ctx, uiModel)
-	if err != nil {
-		return ui, err
-	}
-
-	return ui, nil
-}
-
-// TODO: deprecated
+// TODO: remove on prod, used only on development phase
 // only use for testing purpose
 func (u *NodeUsecaseImpl) pickNode(ctx context.Context) (web.Node, error) {
 	allNodes, err := u.dbInterface.GetAllNode(ctx)

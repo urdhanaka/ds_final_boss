@@ -10,6 +10,7 @@ require (
 	github.com/jmoiron/sqlx v1.4.0
 	github.com/lxc/incus v0.7.0
 	github.com/mattn/go-sqlite3 v1.14.24
+	github.com/vishvananda/netlink v1.3.0
 	google.golang.org/grpc v1.71.0
 	google.golang.org/protobuf v1.36.5
 )
@@ -36,6 +37,7 @@ require (
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/pkg/sftp v1.13.6 // indirect
 	github.com/sirupsen/logrus v1.9.3 // indirect
+	github.com/vishvananda/netns v0.0.4 // indirect
 	github.com/zitadel/oidc/v2 v2.12.0 // indirect
 	go.opentelemetry.io/auto/sdk v1.1.0 // indirect
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.60.0 // indirect

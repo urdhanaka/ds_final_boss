@@ -32,11 +32,11 @@ func (h *NodeHandler) GetGroupCluster(c *gin.Context) {
 		return
 	}
 
-	err = h.nodeService.UpdateNode(c, user.GroupId)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, NewErrorResponse(err, "could not complete the request"))
-		return
-	}
+	// err = h.nodeService.UpdateNode(c, user.GroupId)
+	// if err != nil {
+	// 	c.JSON(http.StatusInternalServerError, NewErrorResponse(err, "could not complete the request"))
+	// 	return
+	// }
 
 	nodes, err := h.nodeService.GetGroupNodes(c, user.GroupId)
 	if err != nil {

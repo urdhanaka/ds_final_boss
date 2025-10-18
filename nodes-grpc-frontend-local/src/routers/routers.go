@@ -2,34 +2,36 @@ package routers
 
 import (
 	"nodes-grpc-frontend-local/src/handlers"
-	"nodes-grpc-frontend-local/src/repository"
 	"nodes-grpc-frontend-local/src/services"
 
-	"github.com/gofiber/fiber/v3"
-	"github.com/gofiber/fiber/v3/middleware/static"
-	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/gofiber/fiber/v2"
 )
 
-func SetRouters(fiberApp *fiber.App, dbPool *pgxpool.Pool) {
-	nodeRepository := repository.NewNodeRepository(dbPool)
-	nodeService := services.NewNodeService(nodeRepository)
-
+func SetRouters(fiberApp *fiber.App) {
+	nodeService := services.NewNodeService()
 	nodeHandler := handlers.NewNodeHandler(nodeService)
 
 	// set static assets
-	fiberApp.Get("assets/styles.css", static.New("src/assets/css/styles.css"))
-	fiberApp.Get("assets/script.js", static.New("src/assets/js/script.js"))
-	// fiberApp.Get("assets/oval.svg", static.New("src/assets/svg/oval.svg"))
+	fiberApp.Get("assets/styles.css", func(c *fiber.Ctx) error {
+		return c.SendFile("src/assets/css/styles.css")
+	})
+	fiberApp.Get("assets/script.js", func(c *fiber.Ctx) error {
+		return c.SendFile("src/assets/js/script.js")
+	})
 
 	// homepage
-	fiberApp.Get("/", nodeHandler.Homepage)
+	fiberApp.Get("", nodeHandler.LoginPage)
 
-	// POST, register a node
-	fiberApp.Post("/register_node", nodeHandler.RegisterNode)
+	// // POST, register a node
+	// fiberApp.Post("/register_node", nodeHandler.RegisterNode)
 
-	// POST, create the cluster
-	fiberApp.Post("/create_cluster", nodeHandler.CreateCluster)
+	// // POST, create the cluster
+	// fiberApp.Post("/create_cluster", nodeHandler.CreateCluster)
 
-	// GET, access the cluster
-	fiberApp.Get("/dashboard/:id", nodeHandler.AccessCluster)
+	// websocket
+	// fiberApp.Get("/ws/receive_logs/:cluster_name",
+	// 	websocket.New(websocketHandler.ReceiveLogs))
+	//
+	// fiberApp.Get("/ws/stream_logs/:cluster_name",
+	// 	websocket.New(websocketHandler.StreamLogs))
 }

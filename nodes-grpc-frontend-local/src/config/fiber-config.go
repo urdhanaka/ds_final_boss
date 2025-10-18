@@ -1,18 +1,16 @@
 package config
 
 import (
-	"github.com/gofiber/fiber/v3"
-	"github.com/gofiber/fiber/v3/middleware/cors"
-	fiberlogger "github.com/gofiber/fiber/v3/middleware/logger"
+	"github.com/gofiber/fiber/v2"
+	fiberlogger "github.com/gofiber/fiber/v2/middleware/logger"
 )
 
 func NewFiber() *fiber.App {
+	// app instance
 	app := fiber.New()
+
+	// middlewares
 	app.Use(fiberlogger.New())
-	app.Use(cors.New(cors.Config{
-		AllowOrigins: []string{"*"},
-		AllowHeaders: []string{"*"},
-	}))
 
 	return app
 }

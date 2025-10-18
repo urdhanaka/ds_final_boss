@@ -16,32 +16,32 @@ async function sendRequirementJson() {
     node_size: node_size,
   }
 
-  // accessClusterButton = document.getElementById("access-button")
-  // accessClusterButton.style.visibility = "visible"
+  const fetchPromise = fetch("http://localhost:3000/create_cluster", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(data)
+  });
 
   document.getElementById("wait").appendChild(document.createTextNode("creating cluster, please wait..."));
 
-  try {
-    const response = await fetch("http://localhost:3000/create_cluster", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(data)
-    });
+  // setTimeout(() => {
+  //   streamLog(name)
+  // }, 1000);
 
+  try {
+    const response = await fetchPromise;
     const result = await response.json();
 
     // streamLog()
     let tokenContent = document.createTextNode(result.data.dashboard_token);
     document.getElementById("token").appendChild(tokenContent);
 
-    // set the session key
-    // sessionKey = result;
+    document.getElementById("accessClusterButton").onclick = function() { accessCluster("https://" + result.data.master_ip_address + ":8443") };
+    document.getElementById("accessClusterButton").classList.remove("invisible")
+    document.getElementById("accessClusterButton").style.visibility = "visible"
 
-    // enable the button to access the cluster
-    // accessClusterButton = document.getElementById("access-button")
-    // accessClusterButton.style.visibility = "visible"
   } catch (error) {
     console.error('Error:', error.message);
     document.getElementById("wait").appendChild(document.createTextNode("error creating cluster: ", error.message));
@@ -50,27 +50,35 @@ async function sendRequirementJson() {
   }
 }
 
-function accessCluster() {
-  return;
+function accessCluster(url) {
+  window.open(url, '_blank').focus()
 }
 
-async function streamLog() {
-  const logTag = document.getElementById("log")
+function streamLog(clusterName) {
+  const logTag = document.getElementById("kernel-log")
 
-  let fullWebsocketUrl = "ws://localhost:3000/status/" + clusterName;
+  let fullWebsocketUrl = "ws://localhost:3000/ws/stream_logs/" + clusterName;
 
   const socket = new WebSocket(fullWebsocketUrl);
 
   socket.addEventListener("message", (event) => {
     const logLine = event.data;
-    logTag.textContent += logLine + "\n"
+
+    var pTag = document.createElement("p")
+    pTag.appendChild(document.createTextNode(logLine))
+
+    logTag.appendChild(pTag)
   });
 
   socket.addEventListener("close", () => {
-    logTag.textContent += "--END OF LOG--\n"
+    var pTag = document.createElement("p")
+    pTag.appendChild(document.createTextNode("--END OF LOG--"))
+    logTag.appendChild(pTag)
   });
 
   socket.addEventListener("error", (error) => {
-    logTag.textContent += `--ERROR OCCURED--\n${error.message}`;
+    var pTag = document.createElement("p")
+    pTag.appendChild(document.createTextNode(`--ERROR OCCURED ${error.message}--`))
+    logTag.appendChild(pTag)
   });
 }

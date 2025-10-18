@@ -2,7 +2,7 @@
 // versions:
 // - protoc-gen-go-grpc v1.5.1
 // - protoc             v5.29.3
-// source: model/proto_model/node.proto
+// source: services/model/proto-model/node.proto
 
 package proto_model
 
@@ -21,7 +21,8 @@ const _ = grpc.SupportPackageIsVersion9
 const (
 	NodeService_CreateMaster_FullMethodName   = "/NodeService/CreateMaster"
 	NodeService_CreateWorker_FullMethodName   = "/NodeService/CreateWorker"
-	NodeService_CreateInstance_FullMethodName = "/NodeService/CreateInstance"
+	NodeService_NodeStatus_FullMethodName     = "/NodeService/NodeStatus"
+	NodeService_DeleteInstance_FullMethodName = "/NodeService/DeleteInstance"
 )
 
 // NodeServiceClient is the client API for NodeService service.
@@ -30,7 +31,8 @@ const (
 type NodeServiceClient interface {
 	CreateMaster(ctx context.Context, in *CreateMasterRequest, opts ...grpc.CallOption) (*CreateMasterResponse, error)
 	CreateWorker(ctx context.Context, in *CreateWorkerRequest, opts ...grpc.CallOption) (*CreateWorkerResponse, error)
-	CreateInstance(ctx context.Context, in *CreateInstanceRequest, opts ...grpc.CallOption) (*CreateInstanceResponse, error)
+	NodeStatus(ctx context.Context, in *NodeStatusRequest, opts ...grpc.CallOption) (*NodeStatusResponse, error)
+	DeleteInstance(ctx context.Context, in *DeleteInstanceRequest, opts ...grpc.CallOption) (*DeleteInstanceResponse, error)
 }
 
 type nodeServiceClient struct {
@@ -61,10 +63,20 @@ func (c *nodeServiceClient) CreateWorker(ctx context.Context, in *CreateWorkerRe
 	return out, nil
 }
 
-func (c *nodeServiceClient) CreateInstance(ctx context.Context, in *CreateInstanceRequest, opts ...grpc.CallOption) (*CreateInstanceResponse, error) {
+func (c *nodeServiceClient) NodeStatus(ctx context.Context, in *NodeStatusRequest, opts ...grpc.CallOption) (*NodeStatusResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(CreateInstanceResponse)
-	err := c.cc.Invoke(ctx, NodeService_CreateInstance_FullMethodName, in, out, cOpts...)
+	out := new(NodeStatusResponse)
+	err := c.cc.Invoke(ctx, NodeService_NodeStatus_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *nodeServiceClient) DeleteInstance(ctx context.Context, in *DeleteInstanceRequest, opts ...grpc.CallOption) (*DeleteInstanceResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(DeleteInstanceResponse)
+	err := c.cc.Invoke(ctx, NodeService_DeleteInstance_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -77,7 +89,8 @@ func (c *nodeServiceClient) CreateInstance(ctx context.Context, in *CreateInstan
 type NodeServiceServer interface {
 	CreateMaster(context.Context, *CreateMasterRequest) (*CreateMasterResponse, error)
 	CreateWorker(context.Context, *CreateWorkerRequest) (*CreateWorkerResponse, error)
-	CreateInstance(context.Context, *CreateInstanceRequest) (*CreateInstanceResponse, error)
+	NodeStatus(context.Context, *NodeStatusRequest) (*NodeStatusResponse, error)
+	DeleteInstance(context.Context, *DeleteInstanceRequest) (*DeleteInstanceResponse, error)
 	mustEmbedUnimplementedNodeServiceServer()
 }
 
@@ -94,8 +107,11 @@ func (UnimplementedNodeServiceServer) CreateMaster(context.Context, *CreateMaste
 func (UnimplementedNodeServiceServer) CreateWorker(context.Context, *CreateWorkerRequest) (*CreateWorkerResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CreateWorker not implemented")
 }
-func (UnimplementedNodeServiceServer) CreateInstance(context.Context, *CreateInstanceRequest) (*CreateInstanceResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method CreateInstance not implemented")
+func (UnimplementedNodeServiceServer) NodeStatus(context.Context, *NodeStatusRequest) (*NodeStatusResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method NodeStatus not implemented")
+}
+func (UnimplementedNodeServiceServer) DeleteInstance(context.Context, *DeleteInstanceRequest) (*DeleteInstanceResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method DeleteInstance not implemented")
 }
 func (UnimplementedNodeServiceServer) mustEmbedUnimplementedNodeServiceServer() {}
 func (UnimplementedNodeServiceServer) testEmbeddedByValue()                     {}
@@ -154,20 +170,38 @@ func _NodeService_CreateWorker_Handler(srv interface{}, ctx context.Context, dec
 	return interceptor(ctx, in, info, handler)
 }
 
-func _NodeService_CreateInstance_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(CreateInstanceRequest)
+func _NodeService_NodeStatus_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(NodeStatusRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(NodeServiceServer).CreateInstance(ctx, in)
+		return srv.(NodeServiceServer).NodeStatus(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: NodeService_CreateInstance_FullMethodName,
+		FullMethod: NodeService_NodeStatus_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(NodeServiceServer).CreateInstance(ctx, req.(*CreateInstanceRequest))
+		return srv.(NodeServiceServer).NodeStatus(ctx, req.(*NodeStatusRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _NodeService_DeleteInstance_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DeleteInstanceRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(NodeServiceServer).DeleteInstance(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: NodeService_DeleteInstance_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(NodeServiceServer).DeleteInstance(ctx, req.(*DeleteInstanceRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -188,10 +222,14 @@ var NodeService_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _NodeService_CreateWorker_Handler,
 		},
 		{
-			MethodName: "CreateInstance",
-			Handler:    _NodeService_CreateInstance_Handler,
+			MethodName: "NodeStatus",
+			Handler:    _NodeService_NodeStatus_Handler,
+		},
+		{
+			MethodName: "DeleteInstance",
+			Handler:    _NodeService_DeleteInstance_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
-	Metadata: "model/proto_model/node.proto",
+	Metadata: "services/model/proto-model/node.proto",
 }

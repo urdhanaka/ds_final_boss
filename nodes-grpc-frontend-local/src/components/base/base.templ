@@ -70,19 +70,22 @@ templ Page(nodes []entity.Node) {
 							Create Cluster
 						</button>
 						<button
+							id="accessClusterButton"
 							type="button"
 							class="p-4 bg-blue-700 rounded-lg text-white hover:cursor-pointer invisible"
-							onclick="sendRequirementJson()"
 						>
 							Access Cluster
 						</button>
 					</div>
 				</form>
 			</div>
-      @nodelist.NodeList(nodes)
+			@nodelist.NodeList(nodes)
 			<div id="wait" class="m-8 font-mono"></div>
 			<div id="token" class="m-8 font-mono overflow-hidden text-ellipsis break-words"></div>
-			<div id="log" class="m-8"></div>
+			<div class="flex w-full">
+				<div id="kernel-log" class="m-4 font-mono flex-1"></div>
+				<div id="cloud-init-log" class="m-4 font-mono flex-1"></div>
+			</div>
 		</body>
 	</html>
 }

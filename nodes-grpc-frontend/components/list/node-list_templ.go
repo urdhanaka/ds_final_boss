@@ -8,9 +8,9 @@ package list
 import "github.com/a-h/templ"
 import templruntime "github.com/a-h/templ/runtime"
 
-import "nodes-grpc-frontend/services/db_service"
+import "nodes-grpc-frontend/common/model/web"
 
-func NodeList(nodes []db_service.Node) templ.Component {
+func NodeList(nodes []web.Node) templ.Component {
 	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
 		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
 		if templ_7745c5c3_CtxErr := ctx.Err(); templ_7745c5c3_CtxErr != nil {

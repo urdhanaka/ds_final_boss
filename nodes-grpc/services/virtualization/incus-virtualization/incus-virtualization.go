@@ -4,11 +4,11 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
-	virtualization_model "nodes-grpc/common/model/virtualization"
+	virtualization_model "nodes-grpc/services/model/virtualization-model"
 	"nodes-grpc/services/virtualization"
 	"nodes-grpc/services/virtualization/embedded"
-	virtualization_utils "nodes-grpc/services/virtualization/utils"
 	"os"
+	"os/exec"
 	"strings"
 	"time"
 
@@ -18,6 +18,10 @@ import (
 )
 
 const (
+	// bridge name
+	BRIDGE_NAME = "k3s-bridge0"
+
+	// TODO: get rid of this
 	BOTTOM_FORWARD_PORT = 49152
 	UPPER_FORWARD_PORT  = 65535
 )
@@ -36,16 +40,15 @@ func NewIncusVirtualization(
 
 // stop the instance
 //
-// because the instance is set as ephemeral, we can just poweroff it
+// because the instance is set as ephemeral, we can just turn it off
 // and it will be deleted
 func (c *IncusVirtualization) Stop(
 	ctx context.Context,
 	instanceIdentification virtualization_model.InstanceIdentification,
 ) error {
-	incusSlogFunction(nil, fmt.Sprintf(
-		"ID: %s, Stop(): stopping instance(s)...", ctx.Value("contextId")))
-
 	instanceName := instanceIdentification.InstanceID.String()
+
+	incusSlogFunction(instanceName, "stopping instance(s)...", nil)
 
 	poweroffExecReq := api.InstanceExecPost{
 		Command: []string{
@@ -57,7 +60,7 @@ func (c *IncusVirtualization) Stop(
 	if err != nil {
 		return err
 	}
-	err = poweroffExecOp.WaitContext(ctx)
+	err = poweroffExecOp.Wait()
 	if err != nil {
 		return err
 	}
@@ -73,21 +76,24 @@ func (c *IncusVirtualization) List() error {
 	return nil
 }
 
-func (c *IncusVirtualization) SpawnMaster(
+func (c *IncusVirtualization) CreateMaster(
 	ctx context.Context,
-	virtRequest virtualization_model.InstanceCreateRequest,
+	virtRequest virtualization_model.NodeCreateRequest,
 ) (string, error) {
-	slog.Info(fmt.Sprintf("%s: Spawn(): spawning incus master vm...", ctx.Value("contextId")))
-
 	instanceName := uuid.New().String()
-	err := c.spawnBase(ctx, instanceName, virtRequest)
+
+	incusSlogFunction(instanceName, "starting master instance...", nil)
+	err := c.createBase(ctx, instanceName, virtRequest)
 	if err != nil {
 		return "", err
 	}
 
-	slog.Info(fmt.Sprintf("%s: Spawn(): installing k3s...", ctx.Value("contextId")))
-
 	// installing k3s
+	incusSlogFunction(
+		instanceName,
+		"installing k3s...",
+		nil,
+	)
 	k3sExecReq := api.InstanceExecPost{
 		Command: []string{
 			"bash", "-c", "curl -sfL https://get.k3s.io | sh -s -",
@@ -102,21 +108,19 @@ func (c *IncusVirtualization) SpawnMaster(
 		Stdout: os.Stdout,
 	})
 	if err != nil {
-		slog.Error(fmt.Sprintf("%s: Spawn(): could not install k3s", ctx.Value("contextId")),
-			"error", err.Error(),
-		)
+		incusSlogFunction(instanceName, "could not install k3s", err)
+
 		return "", err
 	}
-	err = k3sExecOp.WaitContext(ctx)
+	err = k3sExecOp.Wait()
 	if err != nil {
-		slog.Error(fmt.Sprintf("%s: Spawn(): could not install k3s", ctx.Value("contextId")),
-			"error", err.Error(),
-		)
+		incusSlogFunction(instanceName, "could not install k3s", err)
+
 		return "", err
 	}
 
 	// installing helm
-	slog.Info(fmt.Sprintf("%s: Spawn(): installing helm for dashboard...", ctx.Value("contextId")))
+	incusSlogFunction(instanceName, "installing helm for dashboard...", nil)
 	helmExecReq := api.InstanceExecPost{
 		Command: []string{
 			"bash", "-c", "curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash",
@@ -127,21 +131,19 @@ func (c *IncusVirtualization) SpawnMaster(
 		Stdout: os.Stdout,
 	})
 	if err != nil {
-		slog.Error(fmt.Sprintf("%s: Spawn(): could not install helm", ctx.Value("contextId")),
-			"error", err.Error(),
-		)
+		incusSlogFunction(instanceName, "could not install helm", err)
+
 		return "", err
 	}
-	err = helmExecOp.WaitContext(ctx)
+	err = helmExecOp.Wait()
 	if err != nil {
-		slog.Error(fmt.Sprintf("%s: Spawn(): could not install helm", ctx.Value("contextId")),
-			"error", err.Error(),
-		)
+		incusSlogFunction(instanceName, "could not install helm", err)
+
 		return "", err
 	}
 
 	// setting env var for helm
-	slog.Info(fmt.Sprintf("%s: Spawn(): setting up env var for helm...", ctx.Value("contextId")))
+	incusSlogFunction(instanceName, "setting env var for helm and kubectl...", nil)
 	envExecReq := api.InstanceExecPost{
 		Command: []string{
 			"bash", "-c", "echo \"export KUBECONFIG=/etc/rancher/k3s/k3s.yaml\" >> ~/.bashrc",
@@ -150,24 +152,22 @@ func (c *IncusVirtualization) SpawnMaster(
 	}
 	envExecOp, err := c.incusConnection.ExecInstance(instanceName, envExecReq, nil)
 	if err != nil {
-		slog.Error(fmt.Sprintf("%s: Spawn(): could not set up env var", ctx.Value("contextId")),
-			"error", err.Error(),
-		)
+		incusSlogFunction(instanceName, "could not set up env var", err)
+
 		return "", err
 	}
-	err = envExecOp.WaitContext(ctx)
+	err = envExecOp.Wait()
 	if err != nil {
-		slog.Error(fmt.Sprintf("%s: Spawn(): could not set up env var", ctx.Value("contextId")),
-			"error", err.Error(),
-		)
+		incusSlogFunction(instanceName, "could not set up env var", err)
+
 		return "", err
 	}
 
 	// setting up kubernetes dashboard admin-user
-	slog.Info(fmt.Sprintf("%s: Spawn(): setting up kubernetes dashboard...", ctx.Value("contextId")))
+	incusSlogFunction(instanceName, "setting up kubernetes dashboard...", nil)
 
 	embeddedFolder := embedded.ReturnEmbedded()
-	kubectlYaml, _ := embeddedFolder.ReadFile("create-admin-user.yaml")
+	kubectlYaml, _ := embeddedFolder.ReadFile("files/create-admin-user.yaml")
 
 	kubectlExecReq := api.InstanceExecPost{
 		Command: []string{
@@ -177,58 +177,66 @@ func (c *IncusVirtualization) SpawnMaster(
 	}
 	kubectlExecOp, err := c.incusConnection.ExecInstance(instanceName, kubectlExecReq, nil)
 	if err != nil {
-		slog.Error(fmt.Sprintf("%s: Spawn(): could not set up kubernetes dashboard", ctx.Value("contextId")),
-			"error", err.Error(),
-		)
+		incusSlogFunction(instanceName, "could not set up kubernetes dashboard", err)
+
 		return "", err
 	}
-	err = kubectlExecOp.WaitContext(ctx)
+	err = kubectlExecOp.Wait()
 	if err != nil {
-		slog.Error(fmt.Sprintf("%s: Spawn(): could not set up kubernetes dashboard", ctx.Value("contextId")),
-			"error", err.Error(),
-		)
+		incusSlogFunction(instanceName, "could not set up kubernetes dashboard", err)
+
 		return "", err
 	}
 
 	// get instance ip address
-	networkAllocations, err := c.incusConnection.GetNetworkAllocations(false)
+	// ugly hack that use ip route and then grep the default line
+	ipRouteExec := exec.Command("incus", "exec", instanceName, "--", "ip", "route", "|", "grep", "default")
+	out, err := ipRouteExec.Output()
 	if err != nil {
-		slog.Error(fmt.Sprintf("%s: Spawn(): could not get instance network", ctx.Value("contextId")),
-			"error", err.Error(),
-		)
+		incusSlogFunction(instanceName, "could not get instance ip address", err)
+
 		return "", err
 	}
-	for _, allocation := range networkAllocations {
-		// skip ipv6
-		if strings.Contains(allocation.Address, ":") {
-			continue
-		}
 
-		// get the instance used address
-		if strings.Contains(allocation.UsedBy, instanceName) {
-			fullAddress := allocation.Address
-			splittedAddress := strings.Split(fullAddress, "/")
+	stringArr := strings.Fields(string(out))
+	for _, str := range stringArr {
+		// check if current str is an ip address
+		// easy way: check if string contains dot (.)
+		if strings.Contains(str, ".") {
+			ipOctets := strings.Split(str, ".")
 
-			return splittedAddress[0], nil
+			if len(ipOctets) != 4 {
+				continue
+			}
+
+			// if it is, split by the dot
+			// and check the last string
+			// if the value is not 1 (gateway), return it
+			if ipOctets[len(ipOctets)-1] != "1" {
+				return str, nil
+			}
 		}
 	}
 
-	slog.Info(fmt.Sprintf("%s: Spawn(): spawning incus master vm successful", ctx.Value("contextId")))
+	incusSlogFunction(instanceName, "spawning master instance successful", nil)
 
 	return "", nil
 }
 
-func (c *IncusVirtualization) SpawnWorker(
+func (c *IncusVirtualization) CreateWorker(
 	ctx context.Context,
-	virtRequest virtualization_model.InstanceCreateRequest,
+	virtRequest virtualization_model.NodeCreateRequest,
 ) error {
-	slog.Info(fmt.Sprintf("%s: Spawn(): spawning incus worker vm...", ctx.Value("contextId")))
-
 	instanceName := uuid.New().String()
-	err := c.spawnBase(ctx, instanceName, virtRequest)
+
+	incusSlogFunction(instanceName, "spawning worker instance", nil)
+
+	err := c.createBase(ctx, instanceName, virtRequest)
 	if err != nil {
 		return err
 	}
+
+	incusSlogFunction(instanceName, "installing k3s", nil)
 
 	execReq := api.InstanceExecPost{
 		Command: []string{
@@ -245,14 +253,18 @@ func (c *IncusVirtualization) SpawnWorker(
 		Stdout: os.Stdout,
 	})
 	if err != nil {
+		incusSlogFunction(instanceName, "error spawning worker instance", err)
+
 		return err
 	}
-	err = execOp.WaitContext(ctx)
+	err = execOp.Wait()
 	if err != nil {
+		incusSlogFunction(instanceName, "error spawning worker instance", err)
+
 		return err
 	}
 
-	slog.Info(fmt.Sprintf("%s: Spawn(): spawning incus worker vm successful", ctx.Value("contextId")))
+	incusSlogFunction(instanceName, "spawning worker instance success", nil)
 
 	return nil
 }
@@ -264,15 +276,16 @@ func (c *IncusVirtualization) StopNode(
 	return nil
 }
 
-func (c *IncusVirtualization) spawnBase(
+func (c *IncusVirtualization) createBase(
 	ctx context.Context,
 	instanceName string,
-	virtRequest virtualization_model.InstanceCreateRequest,
+	virtRequest virtualization_model.NodeCreateRequest,
 ) error {
 	embedded := embedded.ReturnEmbedded()
-
-	profileFile, err := embedded.ReadFile("user-cloud-init.yaml")
+	profileFile, err := embedded.ReadFile("files/user-cloud-init.yaml")
 	if err != nil {
+		incusSlogFunction(instanceName, "error reading cloud-init file", err)
+
 		return err
 	}
 
@@ -286,45 +299,47 @@ func (c *IncusVirtualization) spawnBase(
 				"limits.memory":        fmt.Sprintf("%dGiB", virtRequest.Memory),
 			},
 			Ephemeral: true, // delete the instance when poweroff
-			Profiles: []string{
-				"default",
+			Devices: map[string]map[string]string{
+				"eth0": {
+					"name":    "eth0",
+					"nictype": "bridged",
+					"parent":  BRIDGE_NAME,
+					"type":    "nic",
+				},
+				"root": {
+					"path": "/",
+					"pool": "default",
+					"type": "disk",
+				},
 			},
 		},
 		Name: instanceName,
 		Type: api.InstanceTypeVM,
 		Source: api.InstanceSource{
-			Type:  "image",
-			Alias: "debian/bookworm/cloud",
-			// Alias: "alpine/edge/cloud",
-			// Properties: map[string]string{
-			// 	"os":      "Debian",
-			// 	"release": "bookworm",
-			// 	"variant": "cloud",
-			// },
+			Type:     "image",
+			Alias:    "debian/bookworm/cloud",
 			Server:   "https://images.linuxcontainers.org",
 			Protocol: "simplestreams",
 		},
 		Start: true,
 	}
-
 	instanceOp, err := c.incusConnection.CreateInstance(req)
 	if err != nil {
-		slog.Error("here",
-			"err", err.Error(),
-		)
+		incusSlogFunction(instanceName, "error creating base instance", err)
+
 		return err
 	}
-	err = instanceOp.WaitContext(ctx)
+	err = instanceOp.Wait()
 	if err != nil {
-		slog.Error("here",
-			"err", err.Error(),
-		)
+		incusSlogFunction(instanceName, "error creating base instance", err)
+
 		return err
 	}
 
-	// fucking vm-agent is not automatically running
-	// wait for 20 seconds before executing any command
 	time.Sleep(time.Second * 20)
+
+	// start cloud init operation
+	incusSlogFunction(instanceName, "waiting for cloud-init operation", nil)
 
 	cloudExecReq := api.InstanceExecPost{
 		Command: []string{
@@ -334,47 +349,15 @@ func (c *IncusVirtualization) spawnBase(
 	}
 	cloudExecOp, err := c.incusConnection.ExecInstance(req.Name, cloudExecReq, nil)
 	if err != nil {
+		incusSlogFunction(instanceName, "cloud-init operation error", err)
+
 		return err
 	}
-	err = cloudExecOp.WaitContext(ctx)
+	err = cloudExecOp.Wait()
 	if err != nil {
+		incusSlogFunction(instanceName, "starting cloud-init operation error ", err)
+
 		return err
-	}
-
-	return nil
-}
-
-// TODO: proxy
-// might not needed if we can use bridge network
-func (c *IncusVirtualization) createProxy(
-	ctx context.Context,
-	instanceName string,
-) error {
-	var randomPort int
-	var err error
-
-	for true {
-		randomPort, err = virtualization_utils.GetRandomPort(BOTTOM_FORWARD_PORT, UPPER_FORWARD_PORT)
-		if err != nil {
-			return err
-		}
-
-		isPortAvailable := virtualization_utils.IsPortAvailable(randomPort)
-		if isPortAvailable {
-			break
-		}
-	}
-
-	// TODO:
-	_, _, err = c.incusConnection.GetInstance(instanceName)
-	if err != nil {
-		return err
-	}
-	// append a new device config
-	_ = map[string]map[string]string{
-		"k3s-proxy": {
-			"type": "proxy",
-		},
 	}
 
 	return nil

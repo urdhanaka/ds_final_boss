@@ -1,9 +1,12 @@
 package web
 
-import "github.com/google/uuid"
-
 type Node struct {
-	UUID      uuid.UUID `json:"uuid"`
-	IpAddress string    `json:"ip_address"`
-	GrpcPort  string    `json:"grpc_port"`
+	UUID     string `json:"uuid" db:"uuid"`
+	NodeIP   string `json:"node_ip" db:"node_ip"`
+	GrpcPort string `json:"grpc_port" db:"grpc_port"`
+}
+
+type Dashboard struct {
+	UUID   string `json:"uuid" db:"uuid"`
+	NodeIP string `json:"node_ip" db:"node_ip"`
 }

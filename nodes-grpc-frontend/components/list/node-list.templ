@@ -1,8 +1,8 @@
 package list
 
-import "nodes-grpc-frontend/services/db_service"
+import "nodes-grpc-frontend/common/model/web"
 
-templ NodeList(nodes []db_service.Node) {
+templ NodeList(nodes []web.Node) {
 <div>
   <h2>Available Nodes:</h2>
   <div class="flex">

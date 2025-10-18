@@ -28,7 +28,7 @@ func setRouters(app *gin.Engine, dbPool *pgxpool.Pool, client *redis.Client) {
 	streamManagerService := services.NewStreamManager()
 	redisQueueService := services.NewRedisJobQueue(client, clusterService)
 
-    // NOTE: START WORKER FUNCTION
+	// NOTE: START WORKER FUNCTION
 	redisQueueService.StartWorker(context.Background())
 
 	jwtService := services.NewJwtService()
@@ -51,7 +51,6 @@ func setRouters(app *gin.Engine, dbPool *pgxpool.Pool, client *redis.Client) {
 		clusterGroup.GET("/:cluster_id", handlers.Authenticate(jwtService), clusterHandler.GetClusterDetails)
 		clusterGroup.DELETE("/:cluster_id", handlers.Authenticate(jwtService), clusterHandler.DeleteCluster)
 		clusterGroup.GET("/:cluster_id/kubeconfig", handlers.Authenticate(jwtService), clusterHandler.GetClusterKubeconfig)
-		// clusterGroup.GET("/:cluster_id/logs", handlers.Authenticate(jwtService), clusterHandler.GetClusterDetails)
 	}
 
 	userGroup := apiGroup.Group("/users")

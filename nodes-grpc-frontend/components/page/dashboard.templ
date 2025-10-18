@@ -1,16 +1,18 @@
 package page
 
 import "nodes-grpc-frontend/components/requirements"
-import "nodes-grpc-frontend/services/db_service"
 
 import (
-"nodes-grpc-frontend/components/base"
-"nodes-grpc-frontend/components/list"
+	"nodes-grpc-frontend/common/model/web"
+	"nodes-grpc-frontend/components/base"
+	"nodes-grpc-frontend/components/list"
+	"nodes-grpc-frontend/components/access-cluster"
 )
 
-templ Dashboard(nodes []db_service.Node) {
-@base.Page() {
-@requirements.Requirements()
-@list.NodeList(nodes)
-}
+templ Dashboard(nodes []web.Node) {
+	@base.Page() {
+		@requirements.Requirements()
+		@list.NodeList(nodes)
+		@access_cluster.AccessCluster()
+	}
 }

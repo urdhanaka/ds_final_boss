@@ -7,8 +7,9 @@ import (
 )
 
 type Cluster struct {
-	ID        uuid.UUID
-	UserID    uuid.UUID
-	Group     uuid.UUID
-	CreatedAt time.Time
+	ClusterID uuid.UUID // cluster id
+	Name      string    // cluster name
+	UserID    uuid.UUID // user that created the cluster
+	GroupID   int       // the group the cluster belongs to
+	CreatedAt time.Time // cluster creation timedate
 }

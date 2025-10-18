@@ -77,7 +77,7 @@ func (s *NodeService) AddNode(
 		Storage:   addNode.Storage,
 	}
 
-	err = s.nodeRepository.AddNode(ctx, nodeEntity)
+	err = s.nodeRepository.AddOrUpdateNode(ctx, nodeEntity)
 	if err != nil {
 		return err
 	}
@@ -98,8 +98,9 @@ func (s *NodeService) UpdateNode(
 		grpcClient, err := config.NewNodeClient(node.IpAddress)
 		if err != nil {
 			slog.Error("could not connect to node",
-				"ip address", node.IpAddress,
+				"ip_address", node.IpAddress,
 				"hostname", node.Hostname,
+				"error", err,
 			)
 			continue
 		}
@@ -107,25 +108,28 @@ func (s *NodeService) UpdateNode(
 		nodeResources, err := grpcClient.NodeStatus(ctx, &proto_model.NodeStatusRequest{})
 		if err != nil {
 			slog.Error("could not execute NodeStatus procedure",
-				"ip address", node.IpAddress,
+				"ip_address", node.IpAddress,
 				"hostname", node.Hostname,
+				"error", err,
 			)
 			continue
 		}
 
 		thisNodeEntity := &entities.Node{
 			NodeID:  node.NodeId,
-			Memory:  int(nodeResources.MemoryAvailable),
-			VCpu:    int(nodeResources.FreeVcpu),
-			Storage: int(nodeResources.StorageAvailable),
+			Memory:  int(nodeResources.GetMemoryAvailable()),
+			VCpu:    int(nodeResources.GetFreeVcpu()),
+			Storage: int(nodeResources.GetStorageAvailable()),
 		}
 
 		err = s.nodeRepository.UpdateNodeResourcesByNodeId(ctx, thisNodeEntity)
 		if err != nil {
 			slog.Error("could not update node resources info",
-				"ip address", node.IpAddress,
+				"ip_address", node.IpAddress,
 				"hostname", node.Hostname,
+				"error", err,
 			)
+
 			continue
 		}
 	}

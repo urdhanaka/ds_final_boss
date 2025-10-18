@@ -2,7 +2,6 @@ package utils
 
 import (
 	"log/slog"
-	"math/rand"
 	"net"
 	"os"
 	"os/exec"
@@ -15,25 +14,18 @@ const (
 	// threshold for detecting if a node is used or not
 	//
 	// value > 40.0 = node is used
+	//
 	// otherwise, node is not used
 	CPU_PERCENTAGE_THRESHOLD float64 = 40.0
 
 	// time (in second) for detecting cpu usage
+	//
 	// checking cpu usage now and then checking it again 5 seconds later
 	TIME_BETWEEN_CPU_USAGE_CHECK = 5
 )
 
 type CpuStats struct {
 	User, Nice, System, Idle, Iowait, Irq, Softirq, Steal uint64
-}
-
-func GetHostname() (string, error) {
-	hostname, err := os.Hostname()
-	if err != nil {
-		return "", err
-	}
-
-	return hostname, nil
 }
 
 func GetNodeIP() (string, error) {
@@ -72,12 +64,8 @@ func GetNodeIP() (string, error) {
 			}
 		}
 
-		// handling wireless interface
-		// common wireless interface name: "wl"
-		// if the ethernet interfaces is not available,
-		// handle the wireless interface
-		// this action might not be needed
-		if strings.Index(nodeInterface.Name, "wl") == 0 {
+		if strings.Index(nodeInterface.Name, "en") == 0 ||
+			strings.Index(nodeInterface.Name, "eth") == 0 {
 			addrs, err := nodeInterface.Addrs()
 			if err != nil {
 				return "", err
@@ -97,16 +85,38 @@ func GetNodeIP() (string, error) {
 	return "", nil
 }
 
-func RandomString(length int) string {
-	random := rand.New(rand.NewSource(time.Now().UnixNano()))
-	letters := []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
-
-	b := make([]rune, length)
-	for i := range b {
-		b[i] = letters[random.Intn(len(letters))]
+// Get node (physical machine) used network interface,
+// could be ethernet or wireless, or nothing at all.
+// Returns node interface and error
+func GetNodeUsedInterface() (string, error) {
+	nodeInterfaces, err := net.Interfaces()
+	if err != nil {
+		return "", err
 	}
 
-	return string(b)
+	for _, nodeInterface := range nodeInterfaces {
+		interfaceName := nodeInterface.Name
+
+		if strings.Index(interfaceName, "lo") == 0 {
+			continue
+		}
+
+		if strings.Index(nodeInterface.Name, "en") == 0 ||
+			strings.Index(nodeInterface.Name, "eth") == 0 {
+			addrs, err := nodeInterface.Addrs()
+			if err != nil {
+				return "", err
+			}
+
+			for _, addr := range addrs {
+				if addr.Network() == "ip+net" && strings.Contains(addr.String(), ".") {
+					return nodeInterface.Name, nil
+				}
+			}
+		}
+	}
+
+	return "", nil
 }
 
 func IsNodeAvailable() bool {
@@ -212,5 +222,6 @@ func CleanK3SProcess(runningProcess *exec.Cmd) error {
 	return nil
 }
 
-func GetHostAddress() {
+func RandomIntegerPicker(bottom, upper int) (int, error) {
+	return 0, nil
 }

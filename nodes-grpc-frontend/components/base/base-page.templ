@@ -3,24 +3,23 @@ package base
 import "nodes-grpc-frontend/components/top-bar"
 
 templ Page() {
-<!DOCTYPE html>
-<html>
-
-<head>
-  <title>Dashboard</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1" charset="UTF-8"/>
-  <link rel="stylesheet" href="./assets/styles.css" />
-  <script src="./assets/htmx.js"></script>
-  <script src="./assets/htmx-json-enc.js"></script>
-  <script src="./assets/script.js"></script>
-</head>
-
-<body class="h-screen">
-  @top_bar.TopBar()
-  <div id="container" class="m-8">
-    { children... }
-  </div>
-</body>
-
-</html>
+	<!DOCTYPE html>
+	<html>
+		<head>
+			<title>Dashboard</title>
+			<meta name="viewport" content="width=device-width, initial-scale=1" charset="UTF-8"/>
+			<link rel="stylesheet" href="./assets/styles.css"/>
+			<script src="./assets/script.js"></script>
+			<!-- HTMX javascript -->
+			<!-- Might remove later, we don't need the logic provided by the htmx -->
+			<!-- <script src="./assets/htmx.js"></script> -->
+			<!-- <script src="./assets/htmx-json-enc.js"></script> -->
+		</head>
+		<body class="h-screen">
+			@top_bar.TopBar()
+			<div id="container" class="m-8">
+				{ children... }
+			</div>
+		</body>
+	</html>
 }

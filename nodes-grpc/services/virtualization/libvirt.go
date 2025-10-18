@@ -3,9 +3,11 @@ package virtualization
 import (
 	"errors"
 	"fmt"
+	"io/fs"
 	"log/slog"
-	virtualization_model "nodes-grpc/common/model/virtualization"
 	"nodes-grpc/services/db"
+	virtualization_model "nodes-grpc/services/model/virtualization-model"
+	"nodes-grpc/utils"
 	"os"
 	"strings"
 
@@ -20,8 +22,9 @@ const (
 	// libvirt-related error
 	LIBVIRT_NOT_INITIALIZED string = "libvirt connection is not initialized"
 
-	// storage pool name
-	STORAGE_POOL_NAME string = "default"
+	// storage pool related
+	STORAGE_POOL_NAME           string = "virt-tc"
+	STORAGE_POOL_DIRECTORY_PATH string = "/var/lib/libvirt/virt-tc-images"
 )
 
 type LibvirtVirtualization struct {
@@ -44,22 +47,47 @@ func (v *LibvirtVirtualization) Spawn(
 	slog.Info("Spawn(): creating vm instance using libvirt...")
 
 	if v.libvirtConnection == nil {
+		slog.Error("Spawn(): could not create vm instance",
+			"error", errors.New(LIBVIRT_NOT_INITIALIZED))
+
 		return errors.New(LIBVIRT_NOT_INITIALIZED)
 	}
 
-	_, err := v.CreateVolume(virtualization_model.VirtualizationCreateRequest{})
+	slog.Info("Spawn(): creating storage pool if not exists...")
+	err := v.CreatePool()
 	if err != nil {
-		slog.Error("Spawn(): error creating volume",
+		slog.Error("Spawn(): could not create storage pool",
 			"error", err.Error(),
 		)
+
 		return err
 	}
-	v.CreateVM(virtualization_model.VirtualizationCreateRequest{})
+
+	// err := v.CreateNetwork()
+	// if err != nil {
+	// 	slog.Error("Spawn(): error creating network",
+	// 		"error", err.Error(),
+	// 	)
+	//
+	// 	return err
+	// }
+
+	// _, err = v.CreateVolume(virtualization_model.VirtualizationCreateRequest{})
+	// if err != nil {
+	// 	slog.Error("Spawn(): error creating volume",
+	// 		"error", err.Error(),
+	// 	)
+	//
+	// 	return err
+	// }
+	// v.CreateVM(virtualization_model.VirtualizationCreateRequest{})
 
 	return nil
 }
 
-func (v *LibvirtVirtualization) Stop(virtRequest virtualization_model.InstanceIdentification) error {
+func (v *LibvirtVirtualization) Stop(
+	virtRequest virtualization_model.InstanceIdentification,
+) error {
 	return nil
 }
 
@@ -76,9 +104,6 @@ func (v LibvirtVirtualization) CreateVM(
 
 	template, err := os.ReadFile("./common/templates/domain-template.xml")
 	if err != nil {
-		slog.Error("CreateVM(): could not get template file",
-			"error", err.Error(),
-		)
 		return err
 	}
 
@@ -143,6 +168,8 @@ func (v LibvirtVirtualization) CreateVolume(
 }
 
 func (v LibvirtVirtualization) CreatePool() error {
+	slog.Info("CreatePool(): checking if storage pool is already created...")
+
 	if v.libvirtConnection == nil {
 		return errors.New(LIBVIRT_NOT_INITIALIZED)
 	}
@@ -151,15 +178,27 @@ func (v LibvirtVirtualization) CreatePool() error {
 	if err != nil {
 		// check if storage pool is not available
 		if strings.Contains(err.Error(), "no storage pool with matching name") {
+			slog.Info("CreatePool(): storage pool doesn't exists, creating...")
+			// create the directory
+			_, err := os.Stat(STORAGE_POOL_DIRECTORY_PATH)
+			if err != nil {
+				if errors.Is(err, fs.ErrNotExist) {
+					err = os.Mkdir(STORAGE_POOL_DIRECTORY_PATH, 0711)
+					if err != nil {
+						return err
+					}
+				}
+			}
+
 			_, err = v.libvirtConnection.StoragePoolCreateXML(
 				fmt.Sprintf(`
                     <pool type="dir">
                         <name>%s</name>
                         <target>
-                            <path>/var/lib/libvirt/images</path>
+                            <path>%s</path>
                         </target>
                     </pool>
-                    `, STORAGE_POOL_NAME), libvirt.StoragePoolCreateNormal)
+                    `, STORAGE_POOL_NAME, STORAGE_POOL_DIRECTORY_PATH), libvirt.StoragePoolCreateWithBuild)
 			if err != nil {
 				return err
 			}
@@ -180,11 +219,40 @@ func (v LibvirtVirtualization) CreatePool() error {
 		}
 	}
 
+	slog.Info("CreatePool(): storage pool is ready")
+
 	return nil
 }
 
 func (v LibvirtVirtualization) CreateNetwork() error {
-    v.libvirtConnection.NetworkCreateXML()
+	if v.libvirtConnection == nil {
+		return errors.New(LIBVIRT_NOT_INITIALIZED)
+	}
+
+	thisNodeInterface, err := utils.GetNodeUsedInterface()
+	if err != nil || thisNodeInterface == "" {
+		return err
+	}
+
+	if strings.Contains(thisNodeInterface, "wl") {
+		// wireless interface (wlan, wl)
+	} else {
+		// wired interface (eth, en)
+	}
+
+	_, err = os.ReadFile("./common/templates/network-template.xml")
+	if err != nil {
+		return err
+	}
+
+	// _, err = v.libvirtConnection.NetworkCreateXML(fmt.Sprintf(string(template), thisNodeInterface))
+	// if err != nil {
+	// 	slog.Error("CreateNetwork(): could not create network",
+	// 		"error", err.Error(),
+	// 	)
+	//
+	// 	return err
+	// }
 
 	return nil
 }

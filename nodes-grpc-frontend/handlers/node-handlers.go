@@ -87,10 +87,12 @@ func (h *NodeHandler) CreateCluster(c fiber.Ctx) error {
 			"error", err.Error(),
 		)
 
-		return err
+		return c.JSON(NewErrorResponse(err))
 	}
 
-	return c.SendString("test")
+	err = h.nodeUsecase.CreateCluster(c.Context(), reqBody)
+
+	return c.JSON(NewSuccessResponse())
 }
 
 func (h *NodeHandler) GetDashboard(c fiber.Ctx) (string, error) {
